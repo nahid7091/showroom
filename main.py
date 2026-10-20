@@ -9,7 +9,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from filelock import FileLock
-from passlib.context import CryptContext
 from itsdangerous import URLSafeSerializer, BadSignature
 
 # -----------------------------
@@ -19,19 +18,18 @@ APP_SECRET = os.getenv("APP_SECRET", "CHANGE_ME_SUPER_SECRET")
 DB_PATH = os.getenv("EXCEL_DB_PATH", "/data/showroom/database.xlsx")
 LOCK_PATH = DB_PATH + ".lock"
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
 
 ROLES_CAN_ADD_CAR = {"admin", "showroom_manager"}
-ROLES_CAN_DELETE_CAR = {"admin", "showroom_manager"}  # شما گفتی فقط این دو نفر
-# NOTE: فعلاً API حذف نداریم، ولی اگر اضافه شد از این استفاده کن.
+ROLES_CAN_DELETE_CAR = {"admin", "showroom_manager"}
 
 USERS_SHEET = "users"
 CARS_SHEET = "cars"
 
 REQUIRED_USER_COLS = ["user_code", "username", "password", "name", "lastname", "role"]
 REQUIRED_CAR_COLS = [
-    "car_code", "VIN", "title", "model_year","production_year", "color", "owner", "place","last_updated_at", "last_updated_by", "status"
+    "car_code", "VIN", "title", "model_year", "production_year", "color",
+    "owner", "place", "last_updated_at", "last_updated_by", "status"
 ]
 
 # -----------------------------
@@ -40,10 +38,8 @@ REQUIRED_CAR_COLS = [
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# اگر خواستی فایل‌های css/js بذاری:
 if os.path.isdir("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
-
 
 # -----------------------------
 # Excel helpers (with lock)
@@ -78,13 +74,17 @@ def save_users(users_df: pd.DataFrame):
     cars_df = read_sheet(CARS_SHEET)
     write_sheets(users_df, cars_df)
 
-
 # -----------------------------
 # Auth helpers (cookie session)
 # -----------------------------
 def set_session(response: RedirectResponse, user: dict):
-    token = serializer.dumps({"username": user["username"], "role": user["role"], "user_code": user["user_code"],
-                              "name": user["name"], "lastname": user["lastname"]})
+    token = serializer.dumps({
+        "username": user["username"],
+        "role": user["role"],
+        "user_code": user["user_code"],
+        "name": user["name"],
+        "lastname": user["lastname"],
+    })
     response.set_cookie("session", token, httponly=True, samesite="lax")
 
 def clear_session(response: RedirectResponse):
@@ -95,8 +95,7 @@ def get_current_user(request: Request) -> Optional[dict]:
     if not token:
         return None
     try:
-        data = serializer.loads(token)
-        return data
+        return serializer.loads(token)
     except BadSignature:
         return None
 
@@ -113,35 +112,48 @@ def require_role(*allowed_roles):
         return user
     return dep
 
-
 # -----------------------------
-# UI pages (simple HTML)
+# UI pages
 # -----------------------------
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
-  # مطمئن شوید فایلی به اسم login.html یا cars.html داخل پوشه templates دارید
-  return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
-    
-    
-def home(request: Request):
-    user = get_current_user(request)
-    if not user:
-        return RedirectResponse("/login", status_code=302)
-    return RedirectResponse("/cars", status_code=302)
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": None},
+    )
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": None},
+    )
 
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
     users_df = read_sheet(USERS_SHEET)
-    if users_df.empty or username not in users_df["username"].astype(str).values:
-        return templates.TemplateResponse(request=request, name="login.html", context={"error": "نام کاربری یا رمز اشتباه است."})
 
-    row = users_df[users_df["username"].astype(str) == str(username)].iloc[0].to_dict()
-    if row["password"] != password:
-        return templates.TemplateResponse(request=request, name="login.html", context={"error": "نام کاربری یا رمز اشتباه است."})
+    username = str(username).strip()
+    password = str(password)  # عمداً strip نمی‌کنیم مگر خودت بخوای
+
+    if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "نام کاربری یا رمز اشتباه است."},
+        )
+
+    row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
+
+    saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
+    if saved_password != password:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={"error": "نام کاربری یا رمز اشتباه است."},
+        )
 
     resp = RedirectResponse("/cars", status_code=302)
     set_session(resp, row)
@@ -153,7 +165,6 @@ def logout():
     clear_session(resp)
     return resp
 
-
 @app.get("/cars", response_class=HTMLResponse)
 def cars_page(
     request: Request,
@@ -164,18 +175,13 @@ def cars_page(
 ):
     cars_df = read_sheet(CARS_SHEET)
 
-    # فیلترها
     if q:
         q_lower = q.lower()
-        # سرچ روی چند ستون مهم
-        for col in ["car_code", "title", "plate", "owner", "color"]:
-            if col not in cars_df.columns:
-                continue
         mask = (
-            cars_df["car_code"].astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df["title"].astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df["plate"].astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df["owner"].astype(str).str.lower().str.contains(q_lower, na=False)
+            cars_df.get("car_code", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
+            cars_df.get("title", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
+            cars_df.get("plate", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
+            cars_df.get("owner", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False)
         )
         cars_df = cars_df[mask]
 
@@ -185,14 +191,12 @@ def cars_page(
     if place:
         cars_df = cars_df[cars_df["place"].astype(str) == str(place)]
 
-    # برای dropdownها
     all_cars_df = read_sheet(CARS_SHEET)
-    status_options = sorted(set(all_cars_df["status"].dropna().astype(str).tolist()))
-    place_options = sorted(set(all_cars_df["place"].dropna().astype(str).tolist()))
+    status_options = sorted(set(all_cars_df["status"].dropna().astype(str).tolist())) if "status" in all_cars_df.columns else []
+    place_options = sorted(set(all_cars_df["place"].dropna().astype(str).tolist())) if "place" in all_cars_df.columns else []
 
     can_add = user["role"] in ROLES_CAN_ADD_CAR
 
-    # نمایش
     cars = cars_df.fillna("").to_dict(orient="records")
     return templates.TemplateResponse(
         name="cars.html",
@@ -209,7 +213,6 @@ def cars_page(
         },
         request=request,
     )
-
 
 @app.post("/cars/add")
 def add_car(
@@ -251,7 +254,6 @@ def add_car(
     save_cars(cars_df)
     return RedirectResponse("/cars", status_code=302)
 
-
 @app.post("/cars/update_status")
 def update_status(
     request: Request,
@@ -277,9 +279,8 @@ def update_status(
     save_cars(cars_df)
     return RedirectResponse("/cars", status_code=302)
 
-
 # -----------------------------
-# Admin helper: create users (optional endpoint)
+# Admin helper: create users
 # -----------------------------
 @app.post("/admin/create_user")
 def create_user(
@@ -294,16 +295,17 @@ def create_user(
 ):
     users_df = read_sheet(USERS_SHEET)
 
-    if username in users_df["username"].astype(str).values:
+    username = str(username).strip()
+
+    if username in users_df["username"].astype(str).str.strip().values:
         raise HTTPException(status_code=400, detail="این username قبلاً ثبت شده است.")
     if user_code in users_df["user_code"].astype(str).values:
         raise HTTPException(status_code=400, detail="این کد کاربر قبلاً ثبت شده است.")
 
     row = {
         "user_code": str(user_code),
-        "username": str(username),
-        #"password": pwd_context.hash(password),
-        "password": str(password),
+        "username": username,
+        "password": str(password),  # متن ساده ذخیره می‌شود
         "name": name,
         "lastname": lastname,
         "role": role,
@@ -311,10 +313,8 @@ def create_user(
     users_df = pd.concat([users_df, pd.DataFrame([row])], ignore_index=True)
     save_users(users_df)
     return JSONResponse({"ok": True})
-    
-if __name__ == "__main__":
-    import os
-    import uvicorn
 
+if __name__ == "__main__":
+    import uvicorn
     port = int(os.environ.get("PORT", "80"))
     uvicorn.run(app, host="0.0.0.0", port=port)
