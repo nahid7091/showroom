@@ -303,3 +303,10 @@ def create_user(
     users_df = pd.concat([users_df, pd.DataFrame([row])], ignore_index=True)
     save_users(users_df)
     return JSONResponse({"ok": True})
+    
+if __name__ == "__main__":
+    import os
+    import uvicorn
+
+    port = int(os.environ.get("PORT", "80"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
