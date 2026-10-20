@@ -118,6 +118,10 @@ def require_role(*allowed_roles):
 # UI pages (simple HTML)
 # -----------------------------
 @app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+  # مطمئن شوید فایلی به اسم login.html یا cars.html داخل پوشه templates دارید
+  return templates.TemplateResponse("login.html", {"request": request})
+    
 def home(request: Request):
     user = get_current_user(request)
     if not user:
@@ -293,7 +297,8 @@ def create_user(
     row = {
         "user_code": str(user_code),
         "username": str(username),
-        "password": pwd_context.hash(password),
+        #"password": pwd_context.hash(password),
+        "password": str(password),
         "name": name,
         "lastname": lastname,
         "role": role,
