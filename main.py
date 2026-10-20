@@ -16,7 +16,7 @@ from itsdangerous import URLSafeSerializer, BadSignature
 # Config
 # -----------------------------
 APP_SECRET = os.getenv("APP_SECRET", "CHANGE_ME_SUPER_SECRET")
-DB_PATH = os.getenv("EXCEL_DB_PATH", "./database.xlsx")
+DB_PATH = os.getenv("EXCEL_DB_PATH", "/data/showroom/database.xlsx")
 LOCK_PATH = DB_PATH + ".lock"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
