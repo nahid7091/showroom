@@ -140,7 +140,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         return templates.TemplateResponse(request=request, name="login.html", context={"error": "نام کاربری یا رمز اشتباه است."})
 
     row = users_df[users_df["username"].astype(str) == str(username)].iloc[0].to_dict()
-    if not pwd_context.verify(password, str(row["password"])):
+    if row["password"] != password:
         return templates.TemplateResponse(request=request, name="login.html", context={"error": "نام کاربری یا رمز اشتباه است."})
 
     resp = RedirectResponse("/cars", status_code=302)
