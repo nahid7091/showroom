@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pandas
+openpyxl
+filelock
+passlib[bcrypt]
+python-multipart
+itsdangerous
+jinja2
