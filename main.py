@@ -29,11 +29,9 @@ ROLES_CAN_DELETE_CAR = {"admin", "showroom_manager"}  # شما گفتی فقط �
 USERS_SHEET = "users"
 CARS_SHEET = "cars"
 
-REQUIRED_USER_COLS = ["user_code", "username", "password_hash", "first_name", "last_name", "role"]
+REQUIRED_USER_COLS = ["user_code", "username", "password", "name", "lastname", "role"]
 REQUIRED_CAR_COLS = [
-    "car_code", "specs", "color", "status", "model_year", "production_year",
-    "agency_end_date", "owner_name", "plate",
-    "last_updated_by", "last_updated_at", "location"
+    "car_code", "VIN", "title", "model_year","production_year", "color", "owner", "place","last_updated_at", "last_updated_by", "status"
 ]
 
 # -----------------------------
@@ -86,7 +84,7 @@ def save_users(users_df: pd.DataFrame):
 # -----------------------------
 def set_session(response: RedirectResponse, user: dict):
     token = serializer.dumps({"username": user["username"], "role": user["role"], "user_code": user["user_code"],
-                              "first_name": user["first_name"], "last_name": user["last_name"]})
+                              "name": user["name"], "lastname": user["lastname"]})
     response.set_cookie("session", token, httponly=True, samesite="lax")
 
 def clear_session(response: RedirectResponse):
@@ -137,7 +135,7 @@ def login(request: Request, username: str = Form(...), password: str = Form(...)
         return templates.TemplateResponse("login.html", {"request": request, "error": "نام کاربری یا رمز اشتباه است."})
 
     row = users_df[users_df["username"].astype(str) == str(username)].iloc[0].to_dict()
-    if not pwd_context.verify(password, str(row["password_hash"])):
+    if not pwd_context.verify(password, str(row["password"])):
         return templates.TemplateResponse("login.html", {"request": request, "error": "نام کاربری یا رمز اشتباه است."})
 
     resp = RedirectResponse("/cars", status_code=302)
@@ -156,7 +154,7 @@ def cars_page(
     request: Request,
     q: Optional[str] = None,
     status: Optional[str] = None,
-    location: Optional[str] = None,
+    place: Optional[str] = None,
     user=Depends(require_user),
 ):
     cars_df = read_sheet(CARS_SHEET)
@@ -165,27 +163,27 @@ def cars_page(
     if q:
         q_lower = q.lower()
         # سرچ روی چند ستون مهم
-        for col in ["car_code", "specs", "plate", "owner_name", "color"]:
+        for col in ["car_code", "title", "plate", "owner", "color"]:
             if col not in cars_df.columns:
                 continue
         mask = (
             cars_df["car_code"].astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df["specs"].astype(str).str.lower().str.contains(q_lower, na=False) |
+            cars_df["title"].astype(str).str.lower().str.contains(q_lower, na=False) |
             cars_df["plate"].astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df["owner_name"].astype(str).str.lower().str.contains(q_lower, na=False)
+            cars_df["owner"].astype(str).str.lower().str.contains(q_lower, na=False)
         )
         cars_df = cars_df[mask]
 
     if status:
         cars_df = cars_df[cars_df["status"].astype(str) == str(status)]
 
-    if location:
-        cars_df = cars_df[cars_df["location"].astype(str) == str(location)]
+    if place:
+        cars_df = cars_df[cars_df["place"].astype(str) == str(place)]
 
     # برای dropdownها
     all_cars_df = read_sheet(CARS_SHEET)
     status_options = sorted(set(all_cars_df["status"].dropna().astype(str).tolist()))
-    location_options = sorted(set(all_cars_df["location"].dropna().astype(str).tolist()))
+    place_options = sorted(set(all_cars_df["place"].dropna().astype(str).tolist()))
 
     can_add = user["role"] in ROLES_CAN_ADD_CAR
 
@@ -197,9 +195,9 @@ def cars_page(
         "cars": cars,
         "q": q or "",
         "status": status or "",
-        "location": location or "",
+        "place": place or "",
         "status_options": status_options,
-        "location_options": location_options,
+        "place_options": place_options,
         "can_add": can_add,
     })
 
@@ -208,15 +206,15 @@ def cars_page(
 def add_car(
     request: Request,
     car_code: str = Form(...),
-    specs: str = Form(""),
+    title: str = Form(""),
     color: str = Form(""),
     status: str = Form("موجود"),
     model_year: str = Form(""),
     production_year: str = Form(""),
     agency_end_date: str = Form(""),
-    owner_name: str = Form(""),
+    owner: str = Form(""),
     plate: str = Form(""),
-    location: str = Form(""),
+    place: str = Form(""),
     user=Depends(require_role("admin", "showroom_manager"))
 ):
     cars_df = read_sheet(CARS_SHEET)
@@ -227,17 +225,17 @@ def add_car(
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     new_row = {
         "car_code": str(car_code),
-        "specs": specs,
+        "title": title,
         "color": color,
         "status": status,
         "model_year": model_year,
         "production_year": production_year,
         "agency_end_date": agency_end_date,
-        "owner_name": owner_name,
+        "owner": owner,
         "plate": plate,
-        "last_updated_by": f'{user["first_name"]} {user["last_name"]} ({user["user_code"]})',
+        "last_updated_by": f'{user["name"]} {user["lastname"]} ({user["user_code"]})',
         "last_updated_at": now,
-        "location": location,
+        "place": place,
     }
 
     cars_df = pd.concat([cars_df, pd.DataFrame([new_row])], ignore_index=True)
@@ -250,7 +248,7 @@ def update_status(
     request: Request,
     car_code: str = Form(...),
     status: str = Form(...),
-    location: str = Form(""),
+    place: str = Form(""),
     user=Depends(require_user)
 ):
     cars_df = read_sheet(CARS_SHEET)
@@ -260,11 +258,11 @@ def update_status(
     i = idx[0]
 
     cars_df.at[i, "status"] = status
-    if location != "":
-        cars_df.at[i, "location"] = location
+    if place != "":
+        cars_df.at[i, "place"] = place
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cars_df.at[i, "last_updated_by"] = f'{user["first_name"]} {user["last_name"]} ({user["user_code"]})'
+    cars_df.at[i, "last_updated_by"] = f'{user["name"]} {user["lastname"]} ({user["user_code"]})'
     cars_df.at[i, "last_updated_at"] = now
 
     save_cars(cars_df)
@@ -280,8 +278,8 @@ def create_user(
     user_code: str = Form(...),
     username: str = Form(...),
     password: str = Form(...),
-    first_name: str = Form(...),
-    last_name: str = Form(...),
+    name: str = Form(...),
+    lastname: str = Form(...),
     role: str = Form(...),
     admin=Depends(require_role("admin"))
 ):
@@ -295,9 +293,9 @@ def create_user(
     row = {
         "user_code": str(user_code),
         "username": str(username),
-        "password_hash": pwd_context.hash(password),
-        "first_name": first_name,
-        "last_name": last_name,
+        "password": pwd_context.hash(password),
+        "name": name,
+        "lastname": lastname,
         "role": role,
     }
     users_df = pd.concat([users_df, pd.DataFrame([row])], ignore_index=True)
