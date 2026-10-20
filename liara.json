@@ -1,9 +1,10 @@
 {
-"app":"showroom"
-"port":80
+"app":"showroom",  
+"platform": "python",
+"port":80,
 "build":{
 "location":"iran"
-}
+},
 "disks": [
   {
     "name": "database",
