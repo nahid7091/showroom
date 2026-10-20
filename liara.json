@@ -4,6 +4,9 @@
 "build":{
 "location":"iran"
 }
+"args": [
+  pip install fastapi uvicorn pandas openpyxl filelock passlib[bcrypt] python-multipart itsdangerous jinja2
+],
 "disks": [
   {
     "name": "database",
