@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fa">
+<head>
+  <meta charset="utf-8">
+  <title>لیست خودروها</title>
+  <style>
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border: 1px solid #ddd; padding: 6px; }
+    th { background: #f5f5f5; }
+  </style>
+</head>
+<body>
+  <div>
+    <b>کاربر:</b> {{user.first_name}} {{user.last_name}} | <b>نقش:</b> {{user.role}}
+    | <a href="/logout">خروج</a>
+  </div>
+
+  <h3>وضعیت خودروها</h3>
+
+  <form method="get" action="/cars">
+    <input name="q" placeholder="جستجو (کد/مشخصات/پلاک/مالک)" value="{{q}}">
+    <select name="status">
+      <option value="">همه وضعیت‌ها</option>
+      {% for s in status_options %}
+        <option value="{{s}}" {% if s==status %}selected{% endif %}>{{s}}</option>
+      {% endfor %}
+    </select>
+
+    <select name="location">
+      <option value="">همه محل‌ها</option>
+      {% for l in location_options %}
+        <option value="{{l}}" {% if l==location %}selected{% endif %}>{{l}}</option>
+      {% endfor %}
+    </select>
+
+    <button type="submit">فیلتر</button>
+  </form>
+
+  {% if can_add %}
+  <h4>افزودن خودرو (فقط مدیر/مدیر شوروم)</h4>
+  <form method="post" action="/cars/add">
+    <input name="car_code" placeholder="کد ماشین" required>
+    <input name="specs" placeholder="مشخصات">
+    <input name="color" placeholder="رنگ">
+    <input name="status" placeholder="وضعیت" value="موجود">
+    <input name="model_year" placeholder="مدل سال">
+    <input name="production_year" placeholder="سال تولید">
+    <input name="agency_end_date" placeholder="پایان وکالت">
+    <input name="owner_name" placeholder="نام مالک">
+    <input name="plate" placeholder="پلاک">
+    <input name="location" placeholder="محل خودرو">
+    <button type="submit">ثبت</button>
+  </form>
+  {% endif %}
+
+  <h4>جدول</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>کد</th><th>مشخصات</th><th>رنگ</th><th>وضعیت</th><th>پلاک</th>
+        <th>محل</th><th>آخرین تغییر دهنده</th><th>زمان</th><th>تغییر وضعیت</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for c in cars %}
+      <tr>
+        <td>{{c.car_code}}</td>
+        <td>{{c.specs}}</td>
+        <td>{{c.color}}</td>
+        <td>{{c.status}}</td>
+        <td>{{c.plate}}</td>
+        <td>{{c.location}}</td>
+        <td>{{c.last_updated_by}}</td>
+        <td>{{c.last_updated_at}}</td>
+        <td>
+          <form method="post" action="/cars/update_status" style="margin:0">
+            <input type="hidden" name="car_code" value="{{c.car_code}}">
+            <input name="status" value="{{c.status}}" style="width:110px">
+            <input name="location" value="{{c.location}}" style="width:110px">
+            <button type="submit">ثبت</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</body>
+</html>
