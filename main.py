@@ -120,7 +120,8 @@ def require_role(*allowed_roles):
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
   # مطمئن شوید فایلی به اسم login.html یا cars.html داخل پوشه templates دارید
-  return templates.TemplateResponse("login.html", {"request": request})
+  return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
+    
     
 def home(request: Request):
     user = get_current_user(request)
@@ -130,17 +131,17 @@ def home(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse(request=request, name="login.html", context={"error": None})
 
 @app.post("/login")
 def login(request: Request, username: str = Form(...), password: str = Form(...)):
     users_df = read_sheet(USERS_SHEET)
     if users_df.empty or username not in users_df["username"].astype(str).values:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "نام کاربری یا رمز اشتباه است."})
+        return templates.TemplateResponse(request=request, name="login.html", context={"error": "نام کاربری یا رمز اشتباه است."})
 
     row = users_df[users_df["username"].astype(str) == str(username)].iloc[0].to_dict()
     if not pwd_context.verify(password, str(row["password"])):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "نام کاربری یا رمز اشتباه است."})
+        return templates.TemplateResponse(request=request, name="login.html", context={"error": "نام کاربری یا رمز اشتباه است."})
 
     resp = RedirectResponse("/cars", status_code=302)
     set_session(resp, row)
@@ -193,17 +194,21 @@ def cars_page(
 
     # نمایش
     cars = cars_df.fillna("").to_dict(orient="records")
-    return templates.TemplateResponse("cars.html", {
-        "request": request,
-        "user": user,
-        "cars": cars,
-        "q": q or "",
-        "status": status or "",
-        "place": place or "",
-        "status_options": status_options,
-        "place_options": place_options,
-        "can_add": can_add,
-    })
+    return templates.TemplateResponse(
+        name="cars.html",
+        context={
+            "request": request,
+            "user": user,
+            "cars": cars,
+            "q": q or "",
+            "status": status or "",
+            "place": place or "",
+            "status_options": status_options,
+            "place_options": place_options,
+            "can_add": can_add,
+        },
+        request=request,
+    )
 
 
 @app.post("/cars/add")
