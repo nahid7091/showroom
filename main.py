@@ -1,4 +1,6 @@
 import os
+import random
+
 from datetime import datetime
 from typing import Optional
 
@@ -19,7 +21,15 @@ DB_PATH = os.getenv("EXCEL_DB_PATH", "/data/showroom/database.xlsx")
 LOCK_PATH = DB_PATH + ".lock"
 
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
+captcha_serializer = URLSafeSerializer(APP_SECRET, salt="captcha-salt")
 
+def generate_captcha():
+    """تولید دو عدد تصادفی و توکن رمزنگاری‌شده از حاصل جمع"""
+    n1 = random.randint(1, 9)
+    n2 = random.randint(1, 9)
+    token = captcha_serializer.dumps(n1 + n2)
+    return n1, n2, token
+    
 ROLES_CAN_ADD_CAR = {"admin", "showroom_manager"}
 ROLES_CAN_DELETE_CAR = {"admin", "showroom_manager"}
 
@@ -216,42 +226,87 @@ def require_role(*allowed_roles):
 # -----------------------------
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
+    user = get_current_user(request)
+    if user:
+        return RedirectResponse("/cars", status_code=302)
+    n1, n2, token = generate_captcha()
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": None},
+        context={"error": None, "num1": n1, "num2": n2, "captcha_token": token}
     )
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
+    n1, n2, token = generate_captcha()
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": None},
+        context={"error": None, "num1": n1, "num2": n2, "captcha_token": token}
     )
 
 @app.post("/login")
-def login(request: Request, username: str = Form(...), password: str = Form(...)):
-    users_df = read_sheet(USERS_SHEET)
+def login(
+    request: Request,
+    username: str = Form(...),
+    password: str = Form(...),
+    captcha_answer: str = Form(...),
+    captcha_token: str = Form(...)
+):
+    # ۱. بررسی صحت حاصل‌جمع کپچا
+    captcha_valid = False
+    try:
+        expected_sum = captcha_serializer.loads(captcha_token)
+        if int(str(captcha_answer).strip()) == expected_sum:
+            captcha_valid = True
+    except (BadSignature, ValueError, TypeError):
+        captcha_valid = False
 
-    username = str(username).strip()
-    password = str(password)  # عمداً strip نمی‌کنیم مگر خودت بخوای
-
-    if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
+    if not captcha_valid:
+        n1, n2, token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": "نام کاربری یا رمز اشتباه است."},
+            context={
+                "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
+                "num1": n1,
+                "num2": n2,
+                "captcha_token": token
+            }
+        )
+
+    # ۲. بررسی نام کاربری و پسورد
+    users_df = read_sheet(USERS_SHEET)
+    username = str(username).strip()
+    password = str(password)
+
+    if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
+        n1, n2, token = generate_captcha()
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "error": "نام کاربری یا رمز اشتباه است.",
+                "num1": n1,
+                "num2": n2,
+                "captcha_token": token
+            }
         )
 
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
-
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
+
     if saved_password != password:
+        n1, n2, token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": "نام کاربری یا رمز اشتباه است."},
+            context={
+                "error": "نام کاربری یا رمز اشتباه است.",
+                "num1": n1,
+                "num2": n2,
+                "captcha_token": token
+            }
         )
 
     resp = RedirectResponse("/cars", status_code=302)
