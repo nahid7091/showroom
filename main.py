@@ -321,16 +321,14 @@ def logout():
 
 @app.get("/cars", response_class=HTMLResponse)
 def cars_page(
-    expire_reserved_if_needed(system_user_label="SYSTEM (auto)")
-    cars_df = read_sheet(CARS_SHEET)
     request: Request,
     q: Optional[str] = None,
     status: Optional[str] = None,
     place: Optional[str] = None,
     user=Depends(require_user),
 ):
+    expire_reserved_if_needed(system_user_label="SYSTEM (auto)")
     cars_df = read_sheet(CARS_SHEET)
-
     if q:
         q_lower = q.lower()
         mask = (
@@ -391,7 +389,7 @@ def add_car(
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if status not in ALLOWED_STATUSES:
-    raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
+        raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
 
     reserved_until = ""
     if status == "reserved(4 hours)":
