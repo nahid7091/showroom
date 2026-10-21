@@ -25,13 +25,38 @@ ROLES_CAN_DELETE_CAR = {"admin", "showroom_manager"}
 
 USERS_SHEET = "users"
 CARS_SHEET = "cars"
+HISTORY_SHEET = "history"
+
+ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده"]
 
 REQUIRED_USER_COLS = ["user_code", "username", "password", "name", "lastname", "role"]
+
 REQUIRED_CAR_COLS = [
-    "car_code", "VIN", "title", "model_year", "production_year", "color",
-    "owner", "place", "last_updated_at", "last_updated_by", "status"
+    "car_code",
+    "VIN",
+    "title",
+    "specs",              # اضافه شد: مشخصات
+    "model_year",
+    "production_year",
+    "color",
+    "owner",
+    "place",
+    "status",
+    "reserved_until",     # اضافه شد: زمان پایان رزرو
+    "last_updated_at",
+    "last_updated_by",
 ]
 
+REQUIRED_HISTORY_COLS = [
+    "id",
+    "car_code",
+    "changed_at",
+    "changed_by",
+    "from_status",
+    "to_status",
+    "from_place",
+    "to_place",
+]
 # -----------------------------
 # App
 # -----------------------------
@@ -51,9 +76,11 @@ def ensure_db():
     with FileLock(LOCK_PATH):
         users_df = pd.DataFrame(columns=REQUIRED_USER_COLS)
         cars_df = pd.DataFrame(columns=REQUIRED_CAR_COLS)
+        history_df = pd.DataFrame(columns=REQUIRED_HISTORY_COLS)
         with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
             users_df.to_excel(writer, sheet_name=USERS_SHEET, index=False)
             cars_df.to_excel(writer, sheet_name=CARS_SHEET, index=False)
+            history_df.to_excel(writer, sheet_name=HISTORY_SHEET, index=False)
 
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     ensure_db()
@@ -74,9 +101,81 @@ def save_users(users_df: pd.DataFrame):
     cars_df = read_sheet(CARS_SHEET)
     write_sheets(users_df, cars_df)
 
+def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
+    cars_df = read_sheet(CARS_SHEET)
+    if cars_df.empty:
+        return
+
+    if "reserved_until" not in cars_df.columns:
+        return
+
+    now = datetime.now()
+
+    # فقط reserved(4 hours) هایی که reserved_until دارند و گذشته
+    reserved_mask = cars_df["status"].astype(str) == "reserved(4 hours)"
+    ru = pd.to_datetime(cars_df["reserved_until"], errors="coerce")
+
+    expired_idx = cars_df.index[reserved_mask & ru.notna() & (ru < now)].tolist()
+    if not expired_idx:
+        return
+
+    for i in expired_idx:
+        car_code = str(cars_df.at[i, "car_code"])
+        old_status = str(cars_df.at[i, "status"])
+        old_place = "" if pd.isna(cars_df.at[i, "place"]) else str(cars_df.at[i, "place"])
+
+        cars_df.at[i, "status"] = "free"
+        cars_df.at[i, "reserved_until"] = ""
+        cars_df.at[i, "last_updated_by"] = system_user_label
+        cars_df.at[i, "last_updated_at"] = now.strftime("%Y-%m-%d %H:%M:%S")
+
+        append_history(
+            car_code=car_code,
+            changed_by=system_user_label,
+            from_status=old_status,
+            to_status="free",
+            from_place=old_place,
+            to_place=old_place,
+        )
+
+    save_cars(cars_df)
+    
 # -----------------------------
 # Auth helpers (cookie session)
 # -----------------------------
+def append_history(car_code: str, changed_by: str, from_status: str, to_status: str, from_place: str, to_place: str):
+    history_df = read_sheet(HISTORY_SHEET)
+
+    next_id = 1
+    if not history_df.empty and "id" in history_df.columns:
+        try:
+            next_id = int(pd.to_numeric(history_df["id"], errors="coerce").max() or 0) + 1
+        except Exception:
+            next_id = len(history_df) + 1
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    row = {
+        "id": next_id,
+        "car_code": str(car_code),
+        "changed_at": now,
+        "changed_by": changed_by,
+        "from_status": from_status,
+        "to_status": to_status,
+        "from_place": from_place,
+        "to_place": to_place,
+    }
+    history_df = pd.concat([history_df, pd.DataFrame([row])], ignore_index=True)
+
+    # ذخیره سه شیت با هم
+    users_df = read_sheet(USERS_SHEET)
+    cars_df = read_sheet(CARS_SHEET)
+    with FileLock(LOCK_PATH):
+        with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+            users_df.to_excel(writer, sheet_name=USERS_SHEET, index=False)
+            cars_df.to_excel(writer, sheet_name=CARS_SHEET, index=False)
+            history_df.to_excel(writer, sheet_name=HISTORY_SHEET, index=False)
+
+
 def set_session(response: RedirectResponse, user: dict):
     token = serializer.dumps({
         "username": user["username"],
@@ -167,6 +266,8 @@ def logout():
 
 @app.get("/cars", response_class=HTMLResponse)
 def cars_page(
+    expire_reserved_if_needed(system_user_label="SYSTEM (auto)")
+    cars_df = read_sheet(CARS_SHEET)
     request: Request,
     q: Optional[str] = None,
     status: Optional[str] = None,
@@ -219,13 +320,12 @@ def add_car(
     request: Request,
     car_code: str = Form(...),
     title: str = Form(""),
+    specs: str = Form(""),
     color: str = Form(""),
-    status: str = Form("موجود"),
+    status: str = Form("free"),
     model_year: str = Form(""),
     production_year: str = Form(""),
-    agency_end_date: str = Form(""),
     owner: str = Form(""),
-    plate: str = Form(""),
     place: str = Form(""),
     user=Depends(require_role("admin", "showroom_manager"))
 ):
@@ -235,24 +335,51 @@ def add_car(
         raise HTTPException(status_code=400, detail="این کد ماشین قبلاً ثبت شده است.")
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if status not in ALLOWED_STATUSES:
+    raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
+
+    reserved_until = ""
+    if status == "reserved(4 hours)":
+        reserved_until = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+    
     new_row = {
         "car_code": str(car_code),
         "title": title,
+        "specs": specs,
         "color": color,
         "status": status,
+        "reserved_until": reserved_until,
         "model_year": model_year,
         "production_year": production_year,
-        "agency_end_date": agency_end_date,
         "owner": owner,
-        "plate": plate,
+        "place": place,
         "last_updated_by": f'{user["name"]} {user["lastname"]} ({user["user_code"]})',
         "last_updated_at": now,
-        "place": place,
     }
 
     cars_df = pd.concat([cars_df, pd.DataFrame([new_row])], ignore_index=True)
     save_cars(cars_df)
+    append_history(
+        car_code=str(car_code),
+        changed_by=f'{user["name"]} {user["lastname"]} ({user["user_code"]})',
+        from_status="",
+        to_status=status,
+        from_place="",
+        to_place=place,
+    )
     return RedirectResponse("/cars", status_code=302)
+
+@app.get("/cars/history/{car_code}")
+def car_history(car_code: str, user=Depends(require_user)):
+    history_df = read_sheet(HISTORY_SHEET)
+    if history_df.empty:
+        return JSONResponse({"car_code": car_code, "items": []})
+
+    df = history_df[history_df["car_code"].astype(str) == str(car_code)].copy()
+    df = df.sort_values(by="id", ascending=False) if "id" in df.columns else df
+    items = df.fillna("").to_dict(orient="records")
+    return JSONResponse({"car_code": car_code, "items": items})
+
 
 @app.post("/cars/update_status")
 def update_status(
@@ -268,14 +395,40 @@ def update_status(
         raise HTTPException(status_code=404, detail="ماشین پیدا نشد.")
     i = idx[0]
 
+    if status not in ALLOWED_STATUSES:
+        raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
+
+    old_status = "" if pd.isna(cars_df.at[i, "status"]) else str(cars_df.at[i, "status"])
+    old_place  = "" if pd.isna(cars_df.at[i, "place"])  else str(cars_df.at[i, "place"])
+    
     cars_df.at[i, "status"] = status
+    
+    new_place = old_place
+    if place != "":
+        cars_df.at[i, "place"] = place
+        new_place = place
+    
+    # reserved_until logic
+    if status == "reserved(4 hours)":
+        cars_df.at[i, "reserved_until"] = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+    else:
+        cars_df.at[i, "reserved_until"] = ""
+    
+
     if place != "":
         cars_df.at[i, "place"] = place
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cars_df.at[i, "last_updated_by"] = f'{user["name"]} {user["lastname"]} ({user["user_code"]})'
     cars_df.at[i, "last_updated_at"] = now
-
+    append_history(
+        car_code=str(car_code),
+        changed_by=f'{user["name"]} {user["lastname"]} ({user["user_code"]})',
+        from_status=old_status,
+        to_status=status,
+        from_place=old_place,
+        to_place=new_place,
+    )
     save_cars(cars_df)
     return RedirectResponse("/cars", status_code=302)
 
