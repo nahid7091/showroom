@@ -1,89 +1,165 @@
 <!doctype html>
-<html lang="fa">
+<html lang="fa" dir="rtl">
 <head>
   <meta charset="utf-8">
   <title>لیست خودروها</title>
   <style>
-    table { border-collapse: collapse; width: 100%; font-size: 14px; }
-    th, td { border: 1px solid #ddd; padding: 6px; }
-    th { background: #f5f5f5; }
+    body { font-family: Tahoma, sans-serif; margin: 20px; background-color: #fafafa; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; background: white; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background: #f0f0f0; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+    .status-free { background: #d4edda; color: #155724; }
+    .status-reserved { background: #fff3cd; color: #856404; }
+    .status-deposit { background: #cce5ff; color: #004085; }
+    .status-sold { background: #f8d7da; color: #721c24; }
+    .card { background: white; padding: 15px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; }
+    button { cursor: pointer; padding: 5px 10px; }
+    
+    /* استایل پنجره Pop-up مودال تاریخچه */
+    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: white; margin: 8% auto; padding: 20px; width: 70%; border-radius: 8px; max-height: 75vh; overflow-y: auto; }
+    .close { float: left; font-size: 24px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
-  <div>
-    <b>کاربر:</b> {{user.first_name}} {{user.last_name}} | <b>نقش:</b> {{user.role}}
-    | <a href="/logout">خروج</a>
+
+  <div class="card">
+    <b>کاربر:</b> {{user.name}} {{user.lastname}} | <b>نقش:</b> {{user.role}}
+    | <a href="/logout" style="color: red; text-decoration: none;">[خروج]</a>
   </div>
 
-  <h3>وضعیت خودروها</h3>
+  <div class="card">
+    <h3>فیلتر و جستجو</h3>
+    <form method="get" action="/cars">
+      <input name="q" placeholder="جستجو (کد ماشین / مشخصات / مالک)" value="{{q}}" style="width: 250px;">
+      
+      <select name="status">
+        <option value="">همه وضعیت‌ها</option>
+        <option value="free" {% if status=='free' %}selected{% endif %}>free</option>
+        <option value="reserved(4 hours)" {% if status=='reserved(4 hours)' %}selected{% endif %}>reserved(4 hours)</option>
+        <option value="بیعانه" {% if status=='بیعانه' %}selected{% endif %}>بیعانه</option>
+        <option value="فروخته شده" {% if status=='فروخته شده' %}selected{% endif %}>فروخته شده</option>
+      </select>
 
-  <form method="get" action="/cars">
-    <input name="q" placeholder="جستجو (کد/مشخصات/پلاک/مالک)" value="{{q}}">
-    <select name="status">
-      <option value="">همه وضعیت‌ها</option>
-      {% for s in status_options %}
-        <option value="{{s}}" {% if s==status %}selected{% endif %}>{{s}}</option>
-      {% endfor %}
-    </select>
+      <select name="place">
+        <option value="">همه محل‌ها</option>
+        {% for p in place_options %}
+          <option value="{{p}}" {% if p==place %}selected{% endif %}>{{p}}</option>
+        {% endfor %}
+      </select>
 
-    <select name="location">
-      <option value="">همه محل‌ها</option>
-      {% for l in location_options %}
-        <option value="{{l}}" {% if l==location %}selected{% endif %}>{{l}}</option>
-      {% endfor %}
-    </select>
-
-    <button type="submit">فیلتر</button>
-  </form>
+      <button type="submit">اعمال فیلتر</button>
+      <a href="/cars"><button type="button">پاک کردن فیلترها</button></a>
+    </form>
+  </div>
 
   {% if can_add %}
-  <h4>افزودن خودرو (فقط مدیر/مدیر شوروم)</h4>
-  <form method="post" action="/cars/add">
-    <input name="car_code" placeholder="کد ماشین" required>
-    <input name="specs" placeholder="مشخصات">
-    <input name="color" placeholder="رنگ">
-    <input name="status" placeholder="وضعیت" value="موجود">
-    <input name="model_year" placeholder="مدل سال">
-    <input name="production_year" placeholder="سال تولید">
-    <input name="agency_end_date" placeholder="پایان وکالت">
-    <input name="owner_name" placeholder="نام مالک">
-    <input name="plate" placeholder="پلاک">
-    <input name="location" placeholder="محل خودرو">
-    <button type="submit">ثبت</button>
-  </form>
+  <div class="card">
+    <h4>افزودن خودرو جدید (دسترسی مدیریت)</h4>
+    <form method="post" action="/cars/add">
+      <input name="car_code" placeholder="کد ماشین (اجباری)" required>
+      <input name="title" placeholder="مشخصات و مدل" style="width: 200px;">
+      <input name="color" placeholder="رنگ">
+      <input name="model_year" placeholder="مدل سال">
+      <input name="production_year" placeholder="سال تولید">
+      <input name="owner" placeholder="نام مالک">
+      <input name="place" placeholder="محل خودرو">
+      
+      <select name="status">
+        <option value="free">free</option>
+        <option value="reserved(4 hours)">reserved(4 hours)</option>
+        <option value="بیعانه">بیعانه</option>
+        <option value="فروخته شده">فروخته شده</option>
+      </select>
+
+      <button type="submit" style="background: #28a745; color: white; border: none;">ثبت خودرو</button>
+    </form>
+  </div>
   {% endif %}
 
-  <h4>جدول</h4>
+  <h3>جدول خودروها</h3>
   <table>
     <thead>
       <tr>
-        <th>کد</th><th>مشخصات</th><th>رنگ</th><th>وضعیت</th><th>پلاک</th>
-        <th>محل</th><th>آخرین تغییر دهنده</th><th>زمان</th><th>تغییر وضعیت</th>
+        <th>کد</th>
+        <th>مشخصات</th>
+        <th>رنگ</th>
+        <th>وضعیت</th>
+        <th>محل</th>
+        <th>آخرین تغییر دهنده</th>
+        <th>زمان تغییر</th>
+        <th>تغییر وضعیت و محل</th>
+        <th>تاریخچه</th>
       </tr>
     </thead>
     <tbody>
       {% for c in cars %}
       <tr>
-        <td>{{c.car_code}}</td>
-        <td>{{c.specs}}</td>
+        <td><b>{{c.car_code}}</b></td>
+        <td>{{c.title}}</td>
         <td>{{c.color}}</td>
-        <td>{{c.status}}</td>
-        <td>{{c.plate}}</td>
-        <td>{{c.location}}</td>
+        <td>
+          {% if c.status == 'free' %}
+            <span class="badge status-free">free</span>
+          {% elif c.status == 'reserved(4 hours)' %}
+            <span class="badge status-reserved">reserved (۴ ساعته)</span>
+          {% elif c.status == 'بیعانه' %}
+            <span class="badge status-deposit">بیعانه</span>
+          {% elif c.status == 'فروخته شده' %}
+            <span class="badge status-sold">فروخته شده</span>
+          {% else %}
+            {{c.status}}
+          {% endif %}
+        </td>
+        <td>{{c.place}}</td>
         <td>{{c.last_updated_by}}</td>
         <td>{{c.last_updated_at}}</td>
         <td>
-          <form method="post" action="/cars/update_status" style="margin:0">
+          <form method="post" action="/cars/update_status" style="margin:0; display: inline-flex; gap: 4px;">
             <input type="hidden" name="car_code" value="{{c.car_code}}">
-            <input name="status" value="{{c.status}}" style="width:110px">
-            <input name="location" value="{{c.location}}" style="width:110px">
+            <select name="status">
+              <option value="free" {% if c.status=='free' %}selected{% endif %}>free</option>
+              <option value="reserved(4 hours)" {% if c.status=='reserved(4 hours)' %}selected{% endif %}>reserved(4 hours)</option>
+              <option value="بیعانه" {% if c.status=='بیعانه' %}selected{% endif %}>بیعانه</option>
+              <option value="فروخته شده" {% if c.status=='فروخته شده' %}selected{% endif %}>فروخته شده</option>
+            </select>
+            <input name="place" value="{{c.place}}" placeholder="محل" style="width:75px">
             <button type="submit">ثبت</button>
           </form>
+        </td>
+        <td>
+          <button type="button" onclick="showHistory('{{c.car_code}}')" style="background:#17a2b8; color:white; border:none; border-radius:3px; padding:4px 8px;">
+            مشاهده
+          </button>
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
 
-</body>
-</html>
+  <!-- پنجره Pop-up مودال تاریخچه -->
+  <div id="historyModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h4 id="modalTitle">تاریخچه تغییرات</h4>
+      <table style="width: 100%; margin-top: 15px;">
+        <thead>
+          <tr style="background:#e9ecef;">
+            <th>زمان تغییر</th>
+            <th>تغییر دهنده</th>
+            <th>از وضعیت</th>
+            <th>به وضعیت</th>
+            <th>از محل</th>
+            <th>به محل</th>
+          </tr>
+        </thead>
+        <tbody id="historyTableBody">
+          <!-- اطلاعات از طریق API اضافه می‌شود -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function showHistory(
