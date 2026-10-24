@@ -301,7 +301,6 @@ def broadcast_car_update(car_code: str, title: str, from_status: str, to_status:
 # -----------------------------
 # Bale Webhook Route
 # -----------------------------
-@app.post("/bale/webhook")
 async def bale_webhook(request: Request):
     try:
         body = await request.json()
@@ -315,41 +314,44 @@ async def bale_webhook(request: Request):
         if not chat_id:
             return {"status": "ok"}
 
-        # حالت ۱: دریافت از طریق دیپ‌لینک (/start username)
+        lock_path = f"{DB_PATH}.lock"
+
+        # حالت ۱: دیپ‌لینک با نام کاربری (/start admin)
         if text.startswith("/start"):
             parts = text.split()
             if len(parts) > 1:
                 target_username = parts[1].strip()
                 
-                # ثبت bale_chat_id در اکسل
-                with FileLock(DB_LOCK):
-                    users_df = pd.read_excel(DB_PATH, sheet_name="users")
+                with FileLock(lock_path):
+                    # خواندن تمام شیت‌ها برای جلوگیری از پاک شدن شیت‌های دیگر
+                    excel_file = pd.ExcelFile(DB_PATH)
+                    all_sheets = {sheet_name: excel_file.parse(sheet_name) for sheet_name in excel_file.sheet_names}
                     
-                    # اطمینان از وجود ستون bale_chat_id
-                    if "bale_chat_id" not in users_df.columns:
-                        users_df["bale_chat_id"] = None
-                    
-                    # تبدیل موقت به رشته برای مقایسه دقیق نام کاربری
-                    users_df["username"] = users_df["username"].astype(str)
-                    
-                    if target_username in users_df["username"].values:
-                        users_df.loc[users_df["username"] == target_username, "bale_chat_id"] = str(chat_id)
-                        
-                        # ذخیره تمام شیت‌ها در فایل اکسل
-                        with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-                            users_df.to_excel(writer, sheet_name="users", index=False)
+                    users_df = all_sheets.get("users")
+                    if users_df is not None:
+                        if "bale_chat_id" not in users_df.columns:
+                            users_df["bale_chat_id"] = None
                             
-                        # ارسال پیام تایید به کاربر در بله
-                        send_bale_message(
-                            chat_id, 
-                            f"✅ حساب کاربری شما ({target_username}) با موفقیت به سامانه متصل شد.\nاکنون می‌توانید وارد پنل سایت شوید."
-                        )
-                        print(f"SUCCESS: Linked user {target_username} with Bale Chat ID {chat_id}")
-                    else:
-                        send_bale_message(chat_id, f"❌ کاربری با نام '{target_username}' در سامانه یافت نشد.")
+                        users_df["username"] = users_df["username"].astype(str)
+                        
+                        if target_username in users_df["username"].values:
+                            users_df.loc[users_df["username"] == target_username, "bale_chat_id"] = str(chat_id)
+                            all_sheets["users"] = users_df
+                            
+                            # ذخیره مجدد همه شیت‌ها
+                            with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+                                for s_name, s_df in all_sheets.items():
+                                    s_df.to_excel(writer, sheet_name=s_name, index=False)
+                                    
+                            send_bale_message(
+                                chat_id, 
+                                f"✅ حساب کاربری ({target_username}) با موفقیت فعال شد.\nاکنون می‌توانید وارد سامانه شوید."
+                            )
+                            print(f"SUCCESS: Linked user {target_username} with Bale ID {chat_id}")
+                        else:
+                            send_bale_message(chat_id, f"❌ کاربری با نام {target_username} یافت نشد.")
 
             else:
-                # اگر فقط /start خالی زد، از او دکمه ارسال شماره بخواهد
                 keyboard = {
                     "keyboard": [[{"text": "📱 ارسال شماره موبایل جهت فعال‌سازی", "request_contact": True}]],
                     "resize_keyboard": True,
@@ -357,39 +359,42 @@ async def bale_webhook(request: Request):
                 }
                 send_bale_message(
                     chat_id, 
-                    "سلام! لطفاً برای اتصال به سیستم، شماره همراه خود را از طریق دکمه زیر ارسال کنید:", 
+                    "سلام! برای اتصال به سامانه، لطفاً شماره همراه خود را از طریق دکمه زیر ارسال کنید:", 
                     reply_markup=keyboard
                 )
 
-        # حالت ۲: دریافت از طریق اشتراک‌گذاری شماره موبایل (Contact)
+        # حالت ۲: اشتراک‌گذاری شماره موبایل
         elif contact:
-            phone_number = str(contact.get("phone_number", "")).strip()
-            # نرمال‌سازی شماره (حذف +98 یا 98 یا 0 ابتدایی برای تطابق با اکسل)
-            clean_phone = phone_number.replace("+", "").lstrip("0")
-            if clean_phone.startswith("98"):
-                clean_phone = clean_phone[2:]
-            
-            with FileLock(DB_LOCK):
-                users_df = pd.read_excel(DB_PATH, sheet_name="users")
-                if "bale_chat_id" not in users_df.columns:
-                    users_df["bale_chat_id"] = None
+            phone_number = str(contact.get("phone_number", "")).strip().replace("+", "").lstrip("0")
+            if phone_number.startswith("98"):
+                phone_number = phone_number[2:]
+
+            with FileLock(lock_path):
+                excel_file = pd.ExcelFile(DB_PATH)
+                all_sheets = {sheet_name: excel_file.parse(sheet_name) for sheet_name in excel_file.sheet_names}
                 
-                users_df["phone_str"] = users_df["phone"].astype(str).str.replace("+", "").str.lstrip("0")
-                users_df.loc[users_df["phone_str"].str.startswith("98"), "phone_str"] = users_df["phone_str"].str[2:]
-                
-                matched = users_df[users_df["phone_str"] == clean_phone]
-                if not matched.empty:
-                    username = matched.iloc[0]["username"]
-                    users_df.loc[users_df["username"] == username, "bale_chat_id"] = str(chat_id)
-                    users_df.drop(columns=["phone_str"], inplace=True)
+                users_df = all_sheets.get("users")
+                if users_df is not None:
+                    if "bale_chat_id" not in users_df.columns:
+                        users_df["bale_chat_id"] = None
                     
-                    with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-                        users_df.to_excel(writer, sheet_name="users", index=False)
+                    users_df["temp_phone"] = users_df["phone"].astype(str).str.replace("+", "").str.lstrip("0")
+                    users_df.loc[users_df["temp_phone"].str.startswith("98"), "temp_phone"] = users_df["temp_phone"].str[2:]
+                    
+                    matched = users_df[users_df["temp_phone"] == phone_number]
+                    if not matched.empty:
+                        matched_username = matched.iloc[0]["username"]
+                        users_df.loc[users_df["username"] == matched_username, "bale_chat_id"] = str(chat_id)
+                        users_df.drop(columns=["temp_phone"], inplace=True)
+                        all_sheets["users"] = users_df
                         
-                    send_bale_message(chat_id, f"✅ حساب کاربری ({username}) با موفقیت به سامانه متصل شد.")
-                else:
-                    users_df.drop(columns=["phone_str"], inplace=True)
-                    send_bale_message(chat_id, "❌ شماره موبایل ارسالی با هیچ کاربری در سیستم همخوانی ندارد.")
+                        with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+                            for s_name, s_df in all_sheets.items():
+                                s_df.to_excel(writer, sheet_name=s_name, index=False)
+                                
+                        send_bale_message(chat_id, f"✅ حساب کاربری ({matched_username}) با موفقیت متصل شد.")
+                    else:
+                        send_bale_message(chat_id, "❌ شماره موبایل شما با اطلاعات کارشناسان در سیستم همخوانی ندارد.")
 
     except Exception as e:
         print(f"WEBHOOK PROCESSING ERROR: {e}")
