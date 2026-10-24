@@ -608,93 +608,90 @@ async def update_status(
     request: Request,
     car_code: str = Form(...),
     status: str = Form(...),
-    place: Optional[str] = Form(None),
-    user=Depends(get_current_user)
+    place: str = Form(None)
 ):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    user_fullname = f"{user.get('name', '')} {user.get('lastname', '')}".strip() or user.get("username", "ناشناس")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # این متغیرها را قبل از بلاک تعریف می‌کنیم تا بیرون از lock هم در دسترس باشند
+    title = ""
+    from_status = ""
+    from_place = ""
+    final_place = place
+
     with FileLock(LOCK_PATH):
         try:
-            cars_df = pd.read_excel(DB_PATH, sheet_name=CARS_SHEET)
+            cars_df = read_sheet(CARS_SHEET)
             
             # تبدیل car_code به رشته برای تطابق دقیق
             cars_df["car_code"] = cars_df["car_code"].astype(str)
-            car_idx = cars_df[cars_df["car_code"] == str(car_code)].index
+            car_code = str(car_code).strip()
 
-            if car_idx.empty:
-                return RedirectResponse(url="/cars", status_code=303)
+            row_idx = cars_df[cars_df["car_code"] == car_code].index
 
-            idx = car_idx[0]
-            
-            # مقادیر قبلی برای ثبت در تاریخچه
-            from_status = str(cars_df.loc[idx, "status"]) if "status" in cars_df.columns else ""
-            from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
+            if not row_idx.empty:
+                idx = row_idx[0]
+                
+                # خواندن مقادیر فعلی خودرو از اکسل
+                title = str(cars_df.loc[idx, "title"]) if "title" in cars_df.columns else "نامشخص"
+                from_status = str(cars_df.loc[idx, "status"]) if "status" in cars_df.columns else "نامشخص"
+                from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
 
-            # نام تغییر دهنده
-            user_fullname = f"{user.get('name', '')} {user.get('lastname', '')}".strip() or user.get("username", "Unknown")
-            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                if not final_place:
+                    final_place = from_place
 
-            # آپدیت فیلدها با استفاده از .loc (برای جلوگیری از خطای .at)
-            cars_df.loc[idx, "status"] = status
-            cars_df.loc[idx, "last_updated_at"] = now_str
-            cars_df.loc[idx, "last_updated_by"] = user_fullname
+                # آپدیت مشخصات خودرو
+                cars_df.loc[idx, "status"] = status
+                if place:
+                    cars_df.loc[idx, "place"] = place
+                cars_df.loc[idx, "last_updated_at"] = now_str
+                cars_df.loc[idx, "last_updated_by"] = user_fullname
 
-            if place is not None:
-                cars_df.loc[idx, "place"] = place
+                # ذخیره در شیت cars
+                with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                    cars_df.to_excel(writer, sheet_name=CARS_SHEET, index=False)
 
-            # مدیریت رزرو ۴ ساعته
-            if "reserved_until" not in cars_df.columns:
-                cars_df["reserved_until"] = None
-
-            if status == "reserved(4 hours)":
-                expire_time = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
-                cars_df.loc[idx, "reserved_until"] = expire_time
-            else:
-                cars_df.loc[idx, "reserved_until"] = None
-
-            # خواندن شیت لاگ‌ها به صورت امن
-            try:
-                logs_df = pd.read_excel(DB_PATH, sheet_name=HISTORY_SHEET)
-            except Exception:
-                logs_df = pd.DataFrame(columns=[
-                    "id", "car_code", "changed_at", "changed_by",
-                    "from_status", "to_status", "from_place", "to_place"
-                ])
-
-            # سطر جدید برای تاریخچه
-            new_log_id = 1 if logs_df.empty else int(logs_df["id"].max() or 0) + 1
-            new_log = {
-                "id": new_log_id,
-                "car_code": str(car_code),
-                "changed_at": now_str,
-                "changed_by": user_fullname,
-                "from_status": from_status,
-                "to_status": status,
-                "from_place": from_place,
-                "to_place": place or from_place
-            }
-            logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
-
-            # ذخیره هر دو شیت در فایل اکسل بدون حذف سایر شیت‌ها
-            with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-                cars_df.to_excel(writer, sheet_name=CARS_SHEET, index=False)
-                logs_df.to_excel(writer, sheet_name=HISTORY_SHEET, index=False)
+                # ثبت در لاگ (شیت car_logs)
+                logs_df = read_sheet("car_logs")
+                new_log = {
+                    "id": len(logs_df) + 1,
+                    "car_code": car_code,
+                    "changed_at": now_str,
+                    "changed_by": user_fullname,
+                    "from_status": from_status,
+                    "to_status": status,
+                    "from_place": from_place,
+                    "to_place": final_place
+                }
+                logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
+                with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                    logs_df.to_excel(writer, sheet_name="car_logs", index=False)
 
         except Exception as e:
             print(f"Error in update_status: {e}")
             raise e
 
-    # صدا زدن اعلان پیام‌رسان بله
-    broadcast_car_update(
-        car_code=car_code,
-        title=title,
-        from_status=from_status,
-        to_status=status,
-        from_place=from_place,
-        to_place=place or from_place,
-        changed_by=user_fullname,
-        changed_at=now_str
-    )
-    
+    # ارسال اعلان بله (حالا title مقدار دارد و ارور نمی‌دهد)
+    try:
+        broadcast_car_update(
+            car_code=car_code,
+            title=title,
+            from_status=from_status,
+            to_status=status,
+            from_place=from_place,
+            to_place=final_place,
+            changed_by=user_fullname,
+            changed_at=now_str
+        )
+    except Exception as e:
+        print(f"Bale broadcast failed: {e}")
+
     return RedirectResponse(url="/cars", status_code=303)
+
 
 # -----------------------------
 # Admin helper: create users
