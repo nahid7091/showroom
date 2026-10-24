@@ -303,76 +303,24 @@ def broadcast_car_update(car_code: str, title: str, from_status: str, to_status:
 # Bale Webhook Route
 # -----------------------------
 @app.post("/bale/webhook")
-async def bale_webhook(payload: dict = Body(...)):
-    message = payload.get("message", {})
+async def bale_webhook(request: Request):
+    try:
+        body = await request.json()
+        print(f"BALE WEBHOOK RECEIVED: {body}")
+    except Exception as e:
+        print(f"BALE WEBHOOK PARSE ERROR: {e}")
+        return {"status": "ok"}
+    
+    # بقیه کدهای مربوط به پیام و کانتکت...
+    message = body.get("message", {})
     chat_id = message.get("chat", {}).get("id")
     text = message.get("text", "").strip()
     contact = message.get("contact")
-
-    if not chat_id:
-        return {"status": "ok"}
-
-    if text.startswith("/start"):
-        parts = text.split()
-        target_username = parts[1] if len(parts) > 1 else None
-
-        reply_markup = {
-            "keyboard": [[{"text": "📱 ارسال و تایید شماره تماس", "request_contact": True}]],
-            "resize_keyboard": True,
-            "one_time_keyboard": True
-        }
-
-        if target_username:
-            send_bale_message(
-                chat_id,
-                f"سلام! در حال اتصال حساب کاربری ({target_username}) هستید.\n"
-                "لطفاً جهت احراز هویت، روی دکمه زیر بزنید و شماره خود را به اشتراک بگذارید:",
-                reply_markup=reply_markup
-            )
-        else:
-            send_bale_message(
-                chat_id,
-                "سلام! لطفاً حتماً از طریق لینکی که در سایت به شما نمایش داده شده وارد ربات شوید تا حسابتان شناسایی شود.",
-                reply_markup=reply_markup
-            )
-        return {"status": "ok"}
-
-    if contact:
-        raw_phone = contact.get("phone_number", "")
-        cleaned_phone = clean_phone(raw_phone)
-
-        with FileLock(LOCK_PATH):
-            users_df = read_sheet(USERS_SHEET)
-            users_df["phone_clean"] = users_df["phone"].apply(clean_phone)
-            
-            matched_user = users_df[users_df["phone_clean"] == cleaned_phone]
-
-            if matched_user.empty:
-                msg = (
-                    "❌ خطای احراز هویت:\n\n"
-                    f"شماره تماس شما ({raw_phone}) در لیست پرسنل نمایشگاه ثبت نشده است!\n\n"
-                    "⚠️ اگر با حساب دیگری (مانند مدیرعامل) در سایت وارد شده‌اید، باید با همان خط موبایلی که در سامانه برایتان تعریف شده وارد بله شوید."
-                )
-                send_bale_message(chat_id, msg)
-            else:
-                user_row_index = matched_user.index[0]
-                user_full_name = f"{matched_user.iloc[0].get('name', '')} {matched_user.iloc[0].get('lastname', '')}".strip()
-                username_val = matched_user.iloc[0].get("username")
-
-                users_df.loc[user_row_index, "bale_chat_id"] = str(chat_id)
-                users_df.drop(columns=["phone_clean"], inplace=True)
-                save_users(users_df)
-
-                msg = (
-                    f"✅ حساب کاربری شما با موفقیت متصل شد!\n\n"
-                    f"👤 نام: {user_full_name}\n"
-                    f"🔑 نام کاربری: {username_val}\n\n"
-                    "اکنون می‌توانید به سایت برگردید و از امکانات پنل استفاده کنید."
-                )
-                send_bale_message(chat_id, msg)
-
-        return {"status": "ok"}
-
+    
+    print(f"CHAT_ID: {chat_id}, TEXT: {text}, CONTACT: {contact}")
+    
+    # (کد قبلی خودتان برای هندل کردن start و contact در اینجا قرار می‌گیرد)
+    
     return {"status": "ok"}
 
 # -----------------------------
