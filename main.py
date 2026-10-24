@@ -132,7 +132,15 @@ def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
-            return pd.read_excel(DB_PATH, sheet_name="users", dtype={"phone": str, "bale_chat_id": str})
+            # تعیین نوع ستون‌های متنی متناسب با هر شیت تا عدد/اعشار نشوند
+            dtypes = {}
+            if sheet_name == USERS_SHEET:
+                dtypes = {"phone": str, "bale_chat_id": str, "user_code": str}
+            elif sheet_name == CARS_SHEET:
+                dtypes = {"car_code": str, "VIN": str, "production_year": str, "model_year": str}
+
+            return pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=dtypes)
+
         except (ValueError, FileNotFoundError):
             if sheet_name == HISTORY_SHEET:
                 return pd.DataFrame(columns=REQUIRED_HISTORY_COLS)
