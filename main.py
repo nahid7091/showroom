@@ -1,5 +1,6 @@
 import os
 import random
+from fastapi import Body
 
 from datetime import datetime
 from typing import Optional
@@ -20,9 +21,43 @@ APP_SECRET = os.getenv("APP_SECRET", "CHANGE_ME_SUPER_SECRET")
 DB_PATH = os.getenv("EXCEL_DB_PATH", "/data/showroom/database.xlsx")
 LOCK_PATH = DB_PATH + ".lock"
 
+# توکن ربات بله که از بازوی BotFather بله گرفتید
+BALE_BOT_TOKEN = os.getenv("APP_BALE_TOKEN", "").strip()
+BALE_API_URL = f"https://tapi.bale.ai/bot{BALE_BOT_TOKEN}"
+
+
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
 captcha_serializer = URLSafeSerializer(APP_SECRET, salt="captcha-salt")
 
+def send_bale_message(chat_id: int | str, text: str, reply_markup: dict = None) -> bool:
+    """ارسال متن ساده یا همراه با کیبورد در بله"""
+    if not BALE_BOT_TOKEN:
+        print("BALE: Token not configured!")
+        return False
+    payload = {"chat_id": chat_id, "text": text}
+    if reply_markup:
+        payload["reply_markup"] = reply_markup
+    try:
+        resp = requests.post(f"{BALE_API_URL}/sendMessage", json=payload, timeout=8)
+        return resp.status_code == 200
+    except Exception as e:
+        print(f"BALE send error: {e}")
+        return False
+
+def clean_phone(phone: str) -> str:
+    """استانداردسازی شماره موبایل برای جلوگیری از مغایرت"""
+    if not phone:
+        return ""
+    p = str(phone).replace(" ", "").replace("-", "").strip()
+    if p.startswith("+98"):
+        p = "0" + p[3:]
+    elif p.startswith("98"):
+        p = "0" + p[2:]
+    elif not p.startswith("0") and len(p) == 10:
+        p = "0" + p
+    return p
+
+        
 def generate_captcha():
     """تولید دو عدد تصادفی و توکن رمزنگاری‌شده از حاصل جمع"""
     n1 = random.randint(1, 9)
@@ -120,6 +155,131 @@ def save_users(users_df: pd.DataFrame):
     cars_df = read_sheet(CARS_SHEET)
     write_sheets(users_df, cars_df)
 
+@app.post("/bale/webhook")
+async def bale_webhook(update: dict = Body(...)):
+    try:
+        message = update.get("message") or {}
+        chat = message.get("chat") or {}
+        chat_id = chat.get("id")
+        text = (message.get("text") or "").strip()
+        contact = message.get("contact")  # وقتی کاربر دکمه ارسال شماره را می‌زند
+
+        if not chat_id:
+            return {"ok": True}
+
+        # ۱. اگر کاربر /start زد -> بهش دکمه ارسال شماره تماس نشان بده
+        if text.startswith("/start"):
+            keyboard = {
+                "keyboard": [
+                    [
+                        {
+                            "text": "📱 ارسال و تایید شماره موبایل",
+                            "request_contact": True  # کلید جادویی بله برای گرفتن شماره واقعی کاربر
+                        }
+                    ]
+                ],
+                "resize_keyboard": True,
+                "one_time_keyboard": True
+            }
+            send_bale_message(
+                chat_id,
+                "سلام! به سامانه اعلان‌های نمایشگاه خودرو خوش آمدید.\n\n"
+                "برای فعال‌سازی و دریافت لحظه‌ای وضعیت خودروها، لطفاً روی دکمه زیر کلیک کنید تا شماره موبایل شما تایید شود:",
+                reply_markup=keyboard
+            )
+            return {"ok": True}
+
+        # ۲. وقتی کاربر شماره موبایل را فرستاد
+        if contact and "phone_number" in contact:
+            user_phone = clean_phone(contact["phone_number"])
+            
+            with FileLock(LOCK_PATH):
+                users_df = read_sheet(USERS_SHEET)
+                
+                # استانداردسازی ستون phone دیتابیس برای مقایسه
+                if "phone" not in users_df.columns:
+                    users_df["phone"] = ""
+                if "bale_chat_id" not in users_df.columns:
+                    users_df["bale_chat_id"] = ""
+
+                users_df["clean_phone"] = users_df["phone"].astype(str).apply(clean_phone)
+                
+                # پیدا کردن کاربر با تطابق شماره موبایل
+                matched_user = users_df[users_df["clean_phone"] == user_phone]
+
+                if not matched_user.empty:
+                    idx = matched_user.index[0]
+                    u_code = users_df.loc[idx, "user_code"]
+                    u_name = f"{users_df.loc[idx, 'name']} {users_df.loc[idx, 'lastname']}"
+
+                    # ثبت chat_id کاربر در دیتابیس اکسل
+                    users_df.loc[idx, "bale_chat_id"] = str(chat_id)
+                    users_df = users_df.drop(columns=["clean_phone"])
+
+                    with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                        users_df.to_excel(writer, sheet_name=USERS_SHEET, index=False)
+
+                    # بستن کیبورد و ارسال پیام تبریک
+                    remove_keyboard = {"remove_keyboard": True}
+                    send_bale_message(
+                        chat_id,
+                        f"✅ هویت شما تایید شد!\n"
+                        f"همکار گرامی: {u_name}\n"
+                        f"کد پرسنلی: {u_code}\n\n"
+                        f"از این لحظه کلیه تغییر وضعیت‌های خودروها به صورت آنی برای شما ارسال خواهد شد.",
+                        reply_markup=remove_keyboard
+                    )
+                else:
+                    send_bale_message(
+                        chat_id,
+                        f"❌ شماره موبایل شما ({user_phone}) در لیست کارشناسان و پرسنل نمایشگاه تعریف نشده است.\n"
+                        f"لطفاً به مدیریت اطلاع دهید تا شماره شما را ثبت کند."
+                    )
+            return {"ok": True}
+
+    except Exception as e:
+        print(f"Webhook processing error: {e}")
+
+    return {"ok": True}
+
+def broadcast_car_update(car_code: str, title: str, from_status: str, to_status: str, from_place: str, to_place: str, changed_by: str, changed_at: str):
+    """ارسال پیام به پی‌وی تمام کارشناسانی که بله خود را متصل کرده‌اند"""
+    try:
+        users_df = read_sheet(USERS_SHEET)
+        if "bale_chat_id" not in users_df.columns:
+            return
+
+        # گرفتن تمام چت‌آیدی‌های معتبر
+        active_chat_ids = users_df["bale_chat_id"].dropna().astype(str).tolist()
+        active_chat_ids = [cid.strip() for cid in active_chat_ids if cid.strip() and cid.strip() != "nan"]
+
+        if not active_chat_ids:
+            return
+
+        status_emoji = {
+            "free": "🟢 آزاد شد",
+            "reserved(4 hours)": "⏳ رزرو ۴ ساعته",
+            "بیعانه": "🟡 بیعانه دریافت شد",
+            "فروخته شده": "🔴 فروخته شد"
+        }.get(to_status, to_status)
+
+        message = (
+            f"🚗 **تغییر وضعیت خودرو**\n\n"
+            f"▫️ **کد خودرو:** {car_code}\n"
+            f"▫️ **خودرو:** {title}\n"
+            f"▫️ **وضعیت جدید:** {status_emoji}\n"
+            f"▫️ **محل:** {to_place}\n"
+            f"▫️ **وضعیت قبلی:** {from_status} ({from_place})\n"
+            f"👤 **ثبت کننده:** {changed_by}\n"
+            f"🕒 **زمان:** {changed_at}"
+        )
+
+        for cid in set(active_chat_ids):
+            send_bale_message(cid, message)
+
+    except Exception as e:
+        print(f"Error in broadcast_car_update: {e}")
+        
 def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
     cars_df = read_sheet(CARS_SHEET)
     if cars_df.empty:
@@ -444,55 +604,97 @@ def car_history(car_code: str, user=Depends(require_user)):
 
 
 @app.post("/cars/update_status")
-def update_status(
+async def update_status(
     request: Request,
     car_code: str = Form(...),
     status: str = Form(...),
-    place: str = Form(""),
-    user=Depends(require_user)
+    place: Optional[str] = Form(None),
+    user=Depends(get_current_user)
 ):
-    cars_df = read_sheet(CARS_SHEET)
-    idx = cars_df.index[cars_df["car_code"].astype(str) == str(car_code)].tolist()
-    if not idx:
-        raise HTTPException(status_code=404, detail="ماشین پیدا نشد.")
-    i = idx[0]
+    with FileLock(LOCK_PATH):
+        try:
+            cars_df = pd.read_excel(DB_PATH, sheet_name=CARS_SHEET)
+            
+            # تبدیل car_code به رشته برای تطابق دقیق
+            cars_df["car_code"] = cars_df["car_code"].astype(str)
+            car_idx = cars_df[cars_df["car_code"] == str(car_code)].index
 
-    if status not in ALLOWED_STATUSES:
-        raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
+            if car_idx.empty:
+                return RedirectResponse(url="/cars", status_code=303)
 
-    old_status = "" if pd.isna(cars_df.at[i, "status"]) else str(cars_df.at[i, "status"])
-    old_place  = "" if pd.isna(cars_df.at[i, "place"])  else str(cars_df.at[i, "place"])
-    
-    cars_df.at[i, "status"] = status
-    
-    new_place = old_place
-    if place != "":
-        cars_df.at[i, "place"] = place
-        new_place = place
-    
-    # reserved_until logic
-    if status == "reserved(4 hours)":
-        cars_df.at[i, "reserved_until"] = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
-    else:
-        cars_df.at[i, "reserved_until"] = ""
-    
+            idx = car_idx[0]
+            
+            # مقادیر قبلی برای ثبت در تاریخچه
+            from_status = str(cars_df.loc[idx, "status"]) if "status" in cars_df.columns else ""
+            from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
 
-    if place != "":
-        cars_df.at[i, "place"] = place
+            # نام تغییر دهنده
+            user_fullname = f"{user.get('name', '')} {user.get('lastname', '')}".strip() or user.get("username", "Unknown")
+            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    cars_df.at[i, "last_updated_by"] = f'{user["name"]} {user["lastname"]} ({user["user_code"]})'
-    cars_df.at[i, "last_updated_at"] = now
-    append_history(
-        car_code=str(car_code),
-        changed_by=f'{user["name"]} {user["lastname"]} ({user["user_code"]})',
-        from_status=old_status,
+            # آپدیت فیلدها با استفاده از .loc (برای جلوگیری از خطای .at)
+            cars_df.loc[idx, "status"] = status
+            cars_df.loc[idx, "last_updated_at"] = now_str
+            cars_df.loc[idx, "last_updated_by"] = user_fullname
+
+            if place is not None:
+                cars_df.loc[idx, "place"] = place
+
+            # مدیریت رزرو ۴ ساعته
+            if "reserved_until" not in cars_df.columns:
+                cars_df["reserved_until"] = None
+
+            if status == "reserved(4 hours)":
+                expire_time = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+                cars_df.loc[idx, "reserved_until"] = expire_time
+            else:
+                cars_df.loc[idx, "reserved_until"] = None
+
+            # خواندن شیت لاگ‌ها به صورت امن
+            try:
+                logs_df = pd.read_excel(DB_PATH, sheet_name=HISTORY_SHEET)
+            except Exception:
+                logs_df = pd.DataFrame(columns=[
+                    "id", "car_code", "changed_at", "changed_by",
+                    "from_status", "to_status", "from_place", "to_place"
+                ])
+
+            # سطر جدید برای تاریخچه
+            new_log_id = 1 if logs_df.empty else int(logs_df["id"].max() or 0) + 1
+            new_log = {
+                "id": new_log_id,
+                "car_code": str(car_code),
+                "changed_at": now_str,
+                "changed_by": user_fullname,
+                "from_status": from_status,
+                "to_status": status,
+                "from_place": from_place,
+                "to_place": place or from_place
+            }
+            logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
+
+            # ذخیره هر دو شیت در فایل اکسل بدون حذف سایر شیت‌ها
+            with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                cars_df.to_excel(writer, sheet_name=CARS_SHEET, index=False)
+                logs_df.to_excel(writer, sheet_name=HISTORY_SHEET, index=False)
+
+        except Exception as e:
+            print(f"Error in update_status: {e}")
+            raise e
+
+    # صدا زدن اعلان پیام‌رسان بله
+    broadcast_car_update(
+        car_code=car_code,
+        title=title,
+        from_status=from_status,
         to_status=status,
-        from_place=old_place,
-        to_place=new_place,
+        from_place=from_place,
+        to_place=place or from_place,
+        changed_by=user_fullname,
+        changed_at=now_str
     )
-    save_cars(cars_df)
-    return RedirectResponse("/cars", status_code=302)
+    
+    return RedirectResponse(url="/cars", status_code=303)
 
 # -----------------------------
 # Admin helper: create users
