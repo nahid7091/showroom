@@ -28,12 +28,16 @@
       <!-- فیلد مخفی امن شامل جواب رمزنگاری‌شده -->
       <input type="hidden" name="captcha_token" value="{{captcha_token}}">
 
-      <label>نام کاربری</label>
-      <input name="username" required autocomplete="username">
-      <br></br>
-      <label>رمز عبور</label>
-      <input name="password" type="password" required autocomplete="current-password">
-
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; margin-bottom: 5px; font-weight: bold;">نام کاربری</label>
+      <input name="username" required autocomplete="username" style="display: block; width: 100%; padding: 8px; box-sizing: border-box;">
+    </div>
+    
+    <div style="margin-bottom: 15px;">
+      <label style="display: block; margin-bottom: 5px; font-weight: bold;">رمز عبور</label>
+      <input name="password" type="password" required autocomplete="current-password" style="display: block; width: 100%; padding: 8px; box-sizing: border-box;">
+    </div>
+      
       <!-- بخش سوال امنیتی ریاضی -->
       <label>کد امنیتی (ضد ربات)</label>
       <div class="captcha-box" dir="ltr">
