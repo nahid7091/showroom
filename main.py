@@ -389,7 +389,7 @@ async def activate_bale_page(request: Request):
         return RedirectResponse(url="/cars", status_code=303)
 
     bale_link = f"{BALE_BOT_LINK}?start={user['username']}"
-
+    
     return templates.TemplateResponse(
         request=request,
         name="activate_bale.html",
