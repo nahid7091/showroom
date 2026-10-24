@@ -35,7 +35,7 @@ ROLES_CAN_DELETE_CAR = {"admin", "showroom_manager"}
 
 USERS_SHEET = "users"
 CARS_SHEET = "cars"
-HISTORY_SHEET = "history"
+HISTORY_SHEET = "car_logs"
 
 ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده"]
 
@@ -93,9 +93,18 @@ def ensure_db():
             history_df.to_excel(writer, sheet_name=HISTORY_SHEET, index=False)
 
 def read_sheet(sheet_name: str) -> pd.DataFrame:
-    ensure_db()
     with FileLock(LOCK_PATH):
-        return pd.read_excel(DB_PATH, sheet_name=sheet_name, engine="openpyxl")
+        try:
+            return pd.read_excel(DB_PATH, sheet_name=sheet_name)
+        except ValueError:
+            if sheet_name == HISTORY_SHEET:
+                columns = ["id", "car_code", "changed_at", "changed_by", "from_status", "to_status", "from_place", "to_place"]
+                return pd.DataFrame(columns=columns)
+            elif sheet_name == CARS_SHEET:
+                columns = ["car_code", "VIN", "title", "specs", "model_year", "production_year", "color", "owner", "place", "status", "reserved_until", "last_updated_at", "last_updated_by"]
+                return pd.DataFrame(columns=columns)
+            return pd.DataFrame()
+
 
 def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame):
     with FileLock(LOCK_PATH):
