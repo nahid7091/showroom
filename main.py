@@ -25,6 +25,8 @@ LOCK_PATH = DB_PATH + ".lock"
 BALE_BOT_TOKEN = os.getenv("APP_BALE_TOKEN", "").strip()
 BALE_API_URL = f"https://tapi.bale.ai/bot{BALE_BOT_TOKEN}"
 
+BALE_BOT_USERNAME = os.getenv("BALE_BOT_USERNAME", "sammotor_bot")  # بدون @
+BALE_BOT_LINK = f"https://ble.ir/{BALE_BOT_USERNAME}"
 
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
 captcha_serializer = URLSafeSerializer(APP_SECRET, salt="captcha-salt")
@@ -43,7 +45,77 @@ def send_bale_message(chat_id: int | str, text: str, reply_markup: dict = None) 
     except Exception as e:
         print(f"BALE send error: {e}")
         return False
+@app.get("/activate-bale", response_class=HTMLResponse)
+async def activate_bale_page(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
 
+    # اگر قبلاً فعال کرده باشد، به /cars بفرست
+    try:
+        users_df = read_sheet(USERS_SHEET)
+        users_df["username"] = users_df["username"].astype(str)
+        row = users_df[users_df["username"] == str(user["username"])]
+        has_chat = False
+        if not row.empty:
+            cid = str(row.iloc[0].get("bale_chat_id", "")).strip()
+            has_chat = bool(cid and cid.lower() != "nan")
+        if has_chat:
+            return RedirectResponse(url="/cars", status_code=303)
+    except Exception as e:
+        print(f"activate_bale_page check error: {e}")
+
+    # صفحه راهنما به فارسی
+    html = f"""
+    <!doctype html>
+    <html lang="fa" dir="rtl">
+    <head>
+      <meta charset="utf-8">
+      <title>فعالسازی اعلان‌های بله</title>
+      <style>
+        body {{ font-family: Tahoma, sans-serif; background:#fafafa; margin:0; }}
+        .card {{ max-width:680px; margin:40px auto; background:#fff; border:1px solid #eee; border-radius:8px; padding:24px; line-height:1.9; }}
+        .btn {{ display:inline-block; background:#0b72e7; color:#fff; padding:10px 16px; border-radius:6px; text-decoration:none; }}
+        .muted {{ color:#666; font-size:13px; }}
+        ol {{ padding-right:18px; }}
+        code {{ background:#f5f5f5; padding:2px 6px; border-radius:4px; }}
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <h2>فعالسازی اعلان‌های بله الزامی است</h2>
+        <p>برای استفاده از سامانه نمایشگاه، ابتدا اعلان‌های «بله» را فعال کنید تا از تغییر وضعیت خودروها مطلع شوید.</p>
+        <ol>
+          <li>روی دکمه زیر بزنید تا وارد ربات شوید.</li>
+          <li>در بله دکمه <strong>Start</strong> را بزنید.</li>
+          <li>دکمه «📱 ارسال و تایید شماره موبایل» را لمس کنید تا <strong>Share Contact</strong> انجام شود.</li>
+        </ol>
+        <p><a class="btn" href="{BALE_BOT_LINK}" target="_blank">ورود به ربات بله</a></p>
+        <p class="muted">پس از انجام مراحل بالا، به این صفحه برگردید و آن را رفرش کنید.</p>
+        <hr>
+        <p class="muted">اگر دکمه ارسال شماره را نمی‌بینید، یک‌بار دستور <code>/start</code> را بفرستید.</p>
+      </div>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html)
+
+    def user_has_bale(request: Request) -> bool:
+    user = get_current_user(request)
+    if not user:
+        return False
+    try:
+        users_df = read_sheet(USERS_SHEET)
+        users_df["username"] = users_df["username"].astype(str)
+        row = users_df[users_df["username"] == str(user["username"])]
+        if row.empty:
+            return False
+        cid = str(row.iloc[0].get("bale_chat_id", "")).strip()
+        return bool(cid and cid.lower() != "nan")
+    except Exception as e:
+        print(f"user_has_bale error: {e}")
+        return False
+        
 def clean_phone(phone: str) -> str:
     """استانداردسازی شماره موبایل برای جلوگیری از مغایرت"""
     if not phone:
@@ -415,7 +487,7 @@ def login_page(request: Request):
     )
 
 @app.post("/login")
-def login(
+async def login_post(
     request: Request,
     username: str = Form(...),
     password: str = Form(...),
@@ -461,7 +533,6 @@ def login(
                 "captcha_token": token
             }
         )
-
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
 
@@ -478,7 +549,7 @@ def login(
             }
         )
 
-    resp = RedirectResponse("/cars", status_code=302)
+    resp = RedirectResponse("/cars", status_code=303)
     set_session(resp, row)
     return resp
 
@@ -489,13 +560,14 @@ def logout():
     return resp
 
 @app.get("/cars", response_class=HTMLResponse)
-def cars_page(
-    request: Request,
-    q: Optional[str] = None,
-    status: Optional[str] = None,
-    place: Optional[str] = None,
-    user=Depends(require_user),
-):
+async def cars_page(request: Request, q: str = "", status: str = "", place: str = ""):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    if not user_has_bale(request):
+        return RedirectResponse(url="/activate-bale", status_code=303)
+        
     expire_reserved_if_needed(system_user_label="SYSTEM (auto)")
     cars_df = read_sheet(CARS_SHEET)
     if q:
@@ -538,7 +610,7 @@ def cars_page(
     )
 
 @app.post("/cars/add")
-def add_car(
+async def add_car(
     request: Request,
     car_code: str = Form(...),
     title: str = Form(""),
@@ -551,6 +623,12 @@ def add_car(
     place: str = Form(""),
     user=Depends(require_role("admin", "showroom_manager"))
 ):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    if not user_has_bale(request):
+        return RedirectResponse(url="/activate-bale", status_code=303)
+            
     cars_df = read_sheet(CARS_SHEET)
 
     if car_code in cars_df["car_code"].astype(str).values:
@@ -613,6 +691,8 @@ async def update_status(
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
+    if not user_has_bale(request):
+        return RedirectResponse(url="/activate-bale", status_code=303)
 
     user_fullname = f"{user.get('name', '')} {user.get('lastname', '')}".strip() or user.get("username", "ناشناس")
     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
