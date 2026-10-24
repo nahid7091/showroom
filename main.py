@@ -81,7 +81,7 @@ if os.path.isdir("static"):
 # -----------------------------
 def clean_phone(phone: str) -> str:
     """استانداردسازی شماره موبایل"""
-    if not phone:
+    if not phone or pd.isna(phone):
         return ""
     p = str(phone).replace(" ", "").replace("-", "").strip()
     if p.startswith("+98"):
@@ -121,7 +121,7 @@ def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
             return pd.read_excel(DB_PATH, sheet_name=sheet_name)
-        except ValueError:
+        except (ValueError, FileNotFoundError):
             if sheet_name == HISTORY_SHEET:
                 return pd.DataFrame(columns=REQUIRED_HISTORY_COLS)
             elif sheet_name == CARS_SHEET:
@@ -303,132 +303,98 @@ def broadcast_car_update(car_code: str, title: str, from_status: str, to_status:
 # Bale Webhook Route
 # -----------------------------
 @app.post("/bale/webhook")
-async def bale_webhook(update: dict = Body(...)):
-    """وب‌هوک دریافت تعاملات کارشناس با ربات بله"""
-    try:
-        message = update.get("message") or {}
-        chat = message.get("chat") or {}
-        chat_id = chat.get("id")
-        text = (message.get("text") or "").strip()
-        contact = message.get("contact")
+async def bale_webhook(payload: dict = Body(...)):
+    message = payload.get("message", {})
+    chat_id = message.get("chat", {}).get("id")
+    text = message.get("text", "").strip()
+    contact = message.get("contact")
 
-        if not chat_id:
-            return {"ok": True}
+    if not chat_id:
+        return {"status": "ok"}
 
-        if text.startswith("/start"):
-            keyboard = {
-                "keyboard": [
-                    [
-                        {
-                            "text": "📱 ارسال و تایید شماره موبایل",
-                            "request_contact": True
-                        }
-                    ]
-                ],
-                "resize_keyboard": True,
-                "one_time_keyboard": True
-            }
+    if text.startswith("/start"):
+        parts = text.split()
+        target_username = parts[1] if len(parts) > 1 else None
+
+        reply_markup = {
+            "keyboard": [[{"text": "📱 ارسال و تایید شماره تماس", "request_contact": True}]],
+            "resize_keyboard": True,
+            "one_time_keyboard": True
+        }
+
+        if target_username:
             send_bale_message(
                 chat_id,
-                "سلام! به سامانه اعلان‌های نمایشگاه خودرو خوش آمدید.\n\n"
-                "برای فعال‌سازی و دریافت لحظه‌ای وضعیت خودروها، لطفاً روی دکمه زیر کلیک کنید تا شماره موبایل شما تایید شود:",
-                reply_markup=keyboard
+                f"سلام! در حال اتصال حساب کاربری ({target_username}) هستید.\n"
+                "لطفاً جهت احراز هویت، روی دکمه زیر بزنید و شماره خود را به اشتراک بگذارید:",
+                reply_markup=reply_markup
             )
-            return {"ok": True}
+        else:
+            send_bale_message(
+                chat_id,
+                "سلام! لطفاً حتماً از طریق لینکی که در سایت به شما نمایش داده شده وارد ربات شوید تا حسابتان شناسایی شود.",
+                reply_markup=reply_markup
+            )
+        return {"status": "ok"}
 
-        if contact and "phone_number" in contact:
-            user_phone = clean_phone(contact["phone_number"])
-            with FileLock(LOCK_PATH):
-                users_df = read_sheet(USERS_SHEET)
-                if "phone" not in users_df.columns:
-                    users_df["phone"] = ""
-                if "bale_chat_id" not in users_df.columns:
-                    users_df["bale_chat_id"] = ""
+    if contact:
+        raw_phone = contact.get("phone_number", "")
+        cleaned_phone = clean_phone(raw_phone)
 
-                users_df["clean_phone"] = users_df["phone"].astype(str).apply(clean_phone)
-                matched_user = users_df[users_df["clean_phone"] == user_phone]
+        with FileLock(LOCK_PATH):
+            users_df = read_sheet(USERS_SHEET)
+            users_df["phone_clean"] = users_df["phone"].apply(clean_phone)
+            
+            matched_user = users_df[users_df["phone_clean"] == cleaned_phone]
 
-                if not matched_user.empty:
-                    idx = matched_user.index[0]
-                    u_code = users_df.loc[idx, "user_code"]
-                    u_name = f"{users_df.loc[idx, 'name']} {users_df.loc[idx, 'lastname']}"
+            if matched_user.empty:
+                msg = (
+                    "❌ خطای احراز هویت:\n\n"
+                    f"شماره تماس شما ({raw_phone}) در لیست پرسنل نمایشگاه ثبت نشده است!\n\n"
+                    "⚠️ اگر با حساب دیگری (مانند مدیرعامل) در سایت وارد شده‌اید، باید با همان خط موبایلی که در سامانه برایتان تعریف شده وارد بله شوید."
+                )
+                send_bale_message(chat_id, msg)
+            else:
+                user_row_index = matched_user.index[0]
+                user_full_name = f"{matched_user.iloc[0].get('name', '')} {matched_user.iloc[0].get('lastname', '')}".strip()
+                username_val = matched_user.iloc[0].get("username")
 
-                    users_df.loc[idx, "bale_chat_id"] = str(chat_id)
-                    users_df = users_df.drop(columns=["clean_phone"])
+                users_df.loc[user_row_index, "bale_chat_id"] = str(chat_id)
+                users_df.drop(columns=["phone_clean"], inplace=True)
+                save_users(users_df)
 
-                    with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-                        users_df.to_excel(writer, sheet_name=USERS_SHEET, index=False)
+                msg = (
+                    f"✅ حساب کاربری شما با موفقیت متصل شد!\n\n"
+                    f"👤 نام: {user_full_name}\n"
+                    f"🔑 نام کاربری: {username_val}\n\n"
+                    "اکنون می‌توانید به سایت برگردید و از امکانات پنل استفاده کنید."
+                )
+                send_bale_message(chat_id, msg)
 
-                    send_bale_message(
-                        chat_id,
-                        f"✅ هویت شما تایید شد!\n"
-                        f"همکار گرامی: {u_name}\n"
-                        f"کد پرسنلی: {u_code}\n\n"
-                        f"اکنون می‌توانید به سامانه نمایشگاه برگردید.",
-                        reply_markup={"remove_keyboard": True}
-                    )
-                else:
-                    send_bale_message(
-                        chat_id,
-                        f"❌ شماره موبایل شما ({user_phone}) در لیست پرسنل تعریف نشده است.\n"
-                        f"لطفاً با مدیریت هماهنگ کنید."
-                    )
-            return {"ok": True}
-    except Exception as e:
-        print(f"Webhook processing error: {e}")
+        return {"status": "ok"}
 
-    return {"ok": True}
+    return {"status": "ok"}
 
 # -----------------------------
 # UI Pages
 # -----------------------------
+
 @app.get("/activate-bale", response_class=HTMLResponse)
 async def activate_bale_page(request: Request):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
-
+    
     if user_has_bale(request):
         return RedirectResponse(url="/cars", status_code=303)
 
-    html = f"""
-    <!doctype html>
-    <html lang="fa" dir="rtl">
-    <head>
-      <meta charset="utf-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>فعالسازی اعلان‌های بله</title>
-      <style>
-        body {{ font-family: Tahoma, sans-serif; background:#fafafa; margin:0; padding:20px; }}
-        .card {{ max-width:640px; margin:40px auto; background:#fff; border:1px solid #eee; border-radius:10px; padding:25px; line-height:1.9; box-shadow:0 3px 10px rgba(0,0,0,0.06); }}
-        .btn {{ display:inline-block; background:#0b72e7; color:#fff !important; padding:10px 18px; border-radius:6px; text-decoration:none; font-weight:bold; }}
-        .btn-check {{ display:inline-block; background:#28a745; color:#fff !important; padding:10px 18px; border-radius:6px; text-decoration:none; margin-right:8px; }}
-        .muted {{ color:#666; font-size:13px; }}
-        ol {{ padding-right:20px; }}
-        code {{ background:#f5f5f5; padding:2px 6px; border-radius:4px; }}
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <h2 style="color:#d9534f; margin-top:0;">⚠️ فعالسازی اعلان‌های بله الزامی است</h2>
-        <p>همکار گرامی، برای دسترسی به سامانه نمایشگاه ابتدا باید اعلان‌های پیام‌رسان بله را فعال کنید.</p>
-        <ol>
-          <li>روی دکمه آبی زیر بزنید تا ربات بله باز شود.</li>
-          <li>در بله دکمه <strong>Start</strong> را بزنید.</li>
-          <li>سپس دکمه <strong>«📱 ارسال و تایید شماره موبایل»</strong> را بزنید.</li>
-          <li>به این صفحه برگردید و روی دکمه سبز بزنید.</li>
-        </ol>
-        <p style="margin-top:25px;">
-          <a class="btn" href="{BALE_BOT_LINK}" target="_blank">🚀 ورود به ربات بله</a>
-          <a class="btn-check" href="/cars">✅ انجام دادم، ورود به سیستم</a>
-        </p>
-        <hr style="border:none; border-top:1px solid #eee; margin:20px 0;">
-        <p class="muted">اگر دکمه ارسال شماره را در بات ندیدید، یک‌بار دستور <code>/start</code> را تایپ و ارسال کنید.</p>
-      </div>
-    </body>
-    </html>
-    """
-    return HTMLResponse(content=html)
+    bale_link = f"{BALE_BOT_LINK}?start={user['username']}"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="activate_bale.html",
+        context={"request": request, "user": user, "bale_link": bale_link}
+    )
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -439,7 +405,7 @@ async def read_root(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": None, "num1": n1, "num2": n2, "captcha_token": captcha_token}
+        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": captcha_token}
     )
 
 @app.get("/login", response_class=HTMLResponse)
@@ -448,7 +414,7 @@ def login_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": None, "num1": n1, "num2": n2, "captcha_token": captcha_token}
+        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": captcha_token}
     )
 
 @app.post("/login")
@@ -468,15 +434,16 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, new_captcha_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
             context={
+                "request": request,
                 "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": new_captcha_token
             }
         )
 
@@ -485,30 +452,32 @@ async def login_post(
     password = str(password)
 
     if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, new_captcha_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
             context={
+                "request": request,
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": new_captcha_token
             }
         )
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
 
     if saved_password != password:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, new_captcha_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
             context={
+                "request": request,
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": new_captcha_token
             }
         )
 
@@ -538,7 +507,6 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         mask = (
             cars_df.get("car_code", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
             cars_df.get("title", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df.get("plate", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
             cars_df.get("owner", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False)
         )
         cars_df = cars_df[mask]
@@ -557,6 +525,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     cars = cars_df.fillna("").to_dict(orient="records")
     
     return templates.TemplateResponse(
+        request=request,
         name="cars.html",
         context={
             "request": request,
@@ -568,8 +537,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
             "status_options": status_options,
             "place_options": place_options,
             "can_add": can_add,
-        },
-        request=request,
+        }
     )
 
 @app.post("/cars/add")
@@ -686,7 +654,7 @@ async def update_status(
                 with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
                     cars_df.to_excel(writer, sheet_name=CARS_SHEET, index=False)
 
-                logs_df = read_sheet("car_logs")
+                logs_df = read_sheet(HISTORY_SHEET)
                 new_log = {
                     "id": len(logs_df) + 1,
                     "car_code": car_code,
@@ -699,7 +667,7 @@ async def update_status(
                 }
                 logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
                 with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-                    logs_df.to_excel(writer, sheet_name="car_logs", index=False)
+                    logs_df.to_excel(writer, sheet_name=HISTORY_SHEET, index=False)
 
         except Exception as e:
             print(f"Error in update_status: {e}")
