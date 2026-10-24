@@ -324,33 +324,33 @@ async def bale_webhook(request: Request):
                 target_username = parts[1].strip()
                 
                 with FileLock(lock_path):
-                    # خواندن تمام شیت‌ها برای جلوگیری از پاک شدن شیت‌های دیگر
-                    excel_file = pd.ExcelFile(DB_PATH)
-                    all_sheets = {sheet_name: excel_file.parse(sheet_name) for sheet_name in excel_file.sheet_names}
-                    
+                    # خواندن تمام شیت‌ها به شکل یک دیکشنری تمیز
+                    all_sheets = pd.read_excel(DB_PATH, sheet_name=None)
                     users_df = all_sheets.get("users")
+                    
                     if users_df is not None:
-                        if "bale_chat_id" not in users_df.columns:
-                            users_df["bale_chat_id"] = None
-                            
+                        # اطمینان از تایپ متنی ستون‌ها برای جلوگیری از ارور float64
                         users_df["username"] = users_df["username"].astype(str)
+                        if "bale_chat_id" not in users_df.columns:
+                            users_df["bale_chat_id"] = ""
+                        users_df["bale_chat_id"] = users_df["bale_chat_id"].astype("object")
                         
                         if target_username in users_df["username"].values:
                             users_df.loc[users_df["username"] == target_username, "bale_chat_id"] = str(chat_id)
                             all_sheets["users"] = users_df
                             
-                            # ذخیره مجدد همه شیت‌ها
+                            # ذخیره کل فایل اکسل همراه با حفظ تمام شیت‌ها
                             with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
                                 for s_name, s_df in all_sheets.items():
                                     s_df.to_excel(writer, sheet_name=s_name, index=False)
                                     
                             send_bale_message(
                                 chat_id, 
-                                f"✅ حساب کاربری ({target_username}) با موفقیت فعال شد.\nاکنون می‌توانید وارد سامانه شوید."
+                                f"✅ حساب کاربری شما ({target_username}) با موفقیت به سامانه متصل شد.\nاکنون می‌توانید وارد پنل سایت شوید."
                             )
                             print(f"SUCCESS: Linked user {target_username} with Bale ID {chat_id}")
                         else:
-                            send_bale_message(chat_id, f"❌ کاربری با نام {target_username} یافت نشد.")
+                            send_bale_message(chat_id, f"❌ کاربری با نام '{target_username}' در سامانه یافت نشد.")
 
             else:
                 keyboard = {
@@ -364,20 +364,21 @@ async def bale_webhook(request: Request):
                     reply_markup=keyboard
                 )
 
-        # حالت ۲: اشتراک‌گذاری شماره موبایل
+        # حالت ۲: ارسال شماره موبایل
         elif contact:
             phone_number = str(contact.get("phone_number", "")).strip().replace("+", "").lstrip("0")
             if phone_number.startswith("98"):
                 phone_number = phone_number[2:]
 
             with FileLock(lock_path):
-                excel_file = pd.ExcelFile(DB_PATH)
-                all_sheets = {sheet_name: excel_file.parse(sheet_name) for sheet_name in excel_file.sheet_names}
-                
+                all_sheets = pd.read_excel(DB_PATH, sheet_name=None)
                 users_df = all_sheets.get("users")
+                
                 if users_df is not None:
+                    users_df["username"] = users_df["username"].astype(str)
                     if "bale_chat_id" not in users_df.columns:
-                        users_df["bale_chat_id"] = None
+                        users_df["bale_chat_id"] = ""
+                    users_df["bale_chat_id"] = users_df["bale_chat_id"].astype("object")
                     
                     users_df["temp_phone"] = users_df["phone"].astype(str).str.replace("+", "").str.lstrip("0")
                     users_df.loc[users_df["temp_phone"].str.startswith("98"), "temp_phone"] = users_df["temp_phone"].str[2:]
@@ -395,7 +396,7 @@ async def bale_webhook(request: Request):
                                 
                         send_bale_message(chat_id, f"✅ حساب کاربری ({matched_username}) با موفقیت متصل شد.")
                     else:
-                        send_bale_message(chat_id, "❌ شماره موبایل شما با اطلاعات کارشناسان در سیستم همخوانی ندارد.")
+                        send_bale_message(chat_id, "❌ شماره موبایل ارسالی با کارشناسان سامانه همخوانی ندارد.")
 
     except Exception as e:
         print(f"WEBHOOK PROCESSING ERROR: {e}")
