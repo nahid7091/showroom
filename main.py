@@ -132,7 +132,7 @@ def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
-            return pd.read_excel(DB_PATH, sheet_name=sheet_name)
+            return pd.read_excel(DB_PATH, sheet_name="users", dtype={"phone": str, "bale_chat_id": str})
         except (ValueError, FileNotFoundError):
             if sheet_name == HISTORY_SHEET:
                 return pd.DataFrame(columns=REQUIRED_HISTORY_COLS)
