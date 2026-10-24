@@ -99,20 +99,19 @@ def generate_captcha():
     token = captcha_serializer.dumps(n1 + n2)
     return n1, n2, token
 
-def send_bale_message(chat_id: int | str, text: str, reply_markup: dict = None) -> bool:
-    """ارسال پیام به کاربر در بله"""
-    if not BALE_BOT_TOKEN:
-        print("BALE: Token not configured!")
-        return False
-    payload = {"chat_id": chat_id, "text": text}
+def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
+    url = f"https://tapi.bale.ai/bot{BALE_BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text
+    }
     if reply_markup:
         payload["reply_markup"] = reply_markup
     try:
-        resp = requests.post(f"{BALE_API_URL}/sendMessage", json=payload, timeout=8)
-        return resp.status_code == 200
-    except Exception as e:
-        print(f"BALE send error: {e}")
-        return False
+        requests.post(url, json=payload, timeout=5)
+    except Exception as ex:
+        print(f"Error sending Bale message: {ex}")
+
 
 # -----------------------------
 # Excel Helpers
@@ -307,22 +306,96 @@ async def bale_webhook(request: Request):
     try:
         body = await request.json()
         print(f"BALE WEBHOOK RECEIVED: {body}")
-    except Exception as e:
-        print(f"BALE WEBHOOK PARSE ERROR: {e}")
-        return {"status": "ok"}
-    
-    # بقیه کدهای مربوط به پیام و کانتکت...
-    message = body.get("message", {})
-    chat_id = message.get("chat", {}).get("id")
-    text = message.get("text", "").strip()
-    contact = message.get("contact")
-    
-    print(f"CHAT_ID: {chat_id}, TEXT: {text}, CONTACT: {contact}")
-    
-    # (کد قبلی خودتان برای هندل کردن start و contact در اینجا قرار می‌گیرد)
-    
-    return {"status": "ok"}
+        
+        message = body.get("message", {})
+        chat_id = message.get("chat", {}).get("id")
+        text = message.get("text", "").strip()
+        contact = message.get("contact")
+        
+        if not chat_id:
+            return {"status": "ok"}
 
+        # حالت ۱: دریافت از طریق دیپ‌لینک (/start username)
+        if text.startswith("/start"):
+            parts = text.split()
+            if len(parts) > 1:
+                target_username = parts[1].strip()
+                
+                # ثبت bale_chat_id در اکسل
+                with FileLock(DB_LOCK):
+                    users_df = pd.read_excel(DB_PATH, sheet_name="users")
+                    
+                    # اطمینان از وجود ستون bale_chat_id
+                    if "bale_chat_id" not in users_df.columns:
+                        users_df["bale_chat_id"] = None
+                    
+                    # تبدیل موقت به رشته برای مقایسه دقیق نام کاربری
+                    users_df["username"] = users_df["username"].astype(str)
+                    
+                    if target_username in users_df["username"].values:
+                        users_df.loc[users_df["username"] == target_username, "bale_chat_id"] = str(chat_id)
+                        
+                        # ذخیره تمام شیت‌ها در فایل اکسل
+                        with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                            users_df.to_excel(writer, sheet_name="users", index=False)
+                            
+                        # ارسال پیام تایید به کاربر در بله
+                        send_bale_message(
+                            chat_id, 
+                            f"✅ حساب کاربری شما ({target_username}) با موفقیت به سامانه متصل شد.\nاکنون می‌توانید وارد پنل سایت شوید."
+                        )
+                        print(f"SUCCESS: Linked user {target_username} with Bale Chat ID {chat_id}")
+                    else:
+                        send_bale_message(chat_id, f"❌ کاربری با نام '{target_username}' در سامانه یافت نشد.")
+
+            else:
+                # اگر فقط /start خالی زد، از او دکمه ارسال شماره بخواهد
+                keyboard = {
+                    "keyboard": [[{"text": "📱 ارسال شماره موبایل جهت فعال‌سازی", "request_contact": True}]],
+                    "resize_keyboard": True,
+                    "one_time_keyboard": True
+                }
+                send_bale_message(
+                    chat_id, 
+                    "سلام! لطفاً برای اتصال به سیستم، شماره همراه خود را از طریق دکمه زیر ارسال کنید:", 
+                    reply_markup=keyboard
+                )
+
+        # حالت ۲: دریافت از طریق اشتراک‌گذاری شماره موبایل (Contact)
+        elif contact:
+            phone_number = str(contact.get("phone_number", "")).strip()
+            # نرمال‌سازی شماره (حذف +98 یا 98 یا 0 ابتدایی برای تطابق با اکسل)
+            clean_phone = phone_number.replace("+", "").lstrip("0")
+            if clean_phone.startswith("98"):
+                clean_phone = clean_phone[2:]
+            
+            with FileLock(DB_LOCK):
+                users_df = pd.read_excel(DB_PATH, sheet_name="users")
+                if "bale_chat_id" not in users_df.columns:
+                    users_df["bale_chat_id"] = None
+                
+                users_df["phone_str"] = users_df["phone"].astype(str).str.replace("+", "").str.lstrip("0")
+                users_df.loc[users_df["phone_str"].str.startswith("98"), "phone_str"] = users_df["phone_str"].str[2:]
+                
+                matched = users_df[users_df["phone_str"] == clean_phone]
+                if not matched.empty:
+                    username = matched.iloc[0]["username"]
+                    users_df.loc[users_df["username"] == username, "bale_chat_id"] = str(chat_id)
+                    users_df.drop(columns=["phone_str"], inplace=True)
+                    
+                    with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                        users_df.to_excel(writer, sheet_name="users", index=False)
+                        
+                    send_bale_message(chat_id, f"✅ حساب کاربری ({username}) با موفقیت به سامانه متصل شد.")
+                else:
+                    users_df.drop(columns=["phone_str"], inplace=True)
+                    send_bale_message(chat_id, "❌ شماره موبایل ارسالی با هیچ کاربری در سیستم همخوانی ندارد.")
+
+    except Exception as e:
+        print(f"WEBHOOK PROCESSING ERROR: {e}")
+
+    return {"status": "ok"}
+    
 # -----------------------------
 # UI Pages
 # -----------------------------
