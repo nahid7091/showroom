@@ -301,6 +301,7 @@ def broadcast_car_update(car_code: str, title: str, from_status: str, to_status:
 # -----------------------------
 # Bale Webhook Route
 # -----------------------------
+@app.post("/bale/webhook")
 async def bale_webhook(request: Request):
     try:
         body = await request.json()
