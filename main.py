@@ -636,4 +636,129 @@ def car_history(car_code: str, user=Depends(require_user)):
         return JSONResponse({"car_code": car_code, "items": []})
 
     df = history_df[history_df["car_code"].astype(str) == str(car_code)].copy()
-    df = df.sort_values(by="id", ascending=False) 
+    df = df.sort_values(by="id", ascending=False) if "id" in df.columns else df
+    items = df.fillna("").to_dict(orient="records")
+    return JSONResponse({"car_code": car_code, "items": items})
+
+@app.post("/cars/update_status")
+async def update_status(
+    request: Request,
+    car_code: str = Form(...),
+    status: str = Form(...),
+    place: str = Form(None)
+):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    if not user_has_bale(request):
+        return RedirectResponse(url="/activate-bale", status_code=303)
+
+    user_fullname = f"{user.get('name', '')} {user.get('lastname', '')}".strip() or user.get("username", "ناشناس")
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    title = ""
+    from_status = ""
+    from_place = ""
+    final_place = place
+
+    with FileLock(LOCK_PATH):
+        try:
+            cars_df = read_sheet(CARS_SHEET)
+            cars_df["car_code"] = cars_df["car_code"].astype(str)
+            car_code = str(car_code).strip()
+            row_idx = cars_df[cars_df["car_code"] == car_code].index
+
+            if not row_idx.empty:
+                idx = row_idx[0]
+                title = str(cars_df.loc[idx, "title"]) if "title" in cars_df.columns else "نامشخص"
+                from_status = str(cars_df.loc[idx, "status"]) if "status" in cars_df.columns else "نامشخص"
+                from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
+
+                if not final_place:
+                    final_place = from_place
+
+                cars_df.loc[idx, "status"] = status
+                if place:
+                    cars_df.loc[idx, "place"] = place
+                cars_df.loc[idx, "last_updated_at"] = now_str
+                cars_df.loc[idx, "last_updated_by"] = user_fullname
+
+                with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                    cars_df.to_excel(writer, sheet_name=CARS_SHEET, index=False)
+
+                logs_df = read_sheet("car_logs")
+                new_log = {
+                    "id": len(logs_df) + 1,
+                    "car_code": car_code,
+                    "changed_at": now_str,
+                    "changed_by": user_fullname,
+                    "from_status": from_status,
+                    "to_status": status,
+                    "from_place": from_place,
+                    "to_place": final_place
+                }
+                logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
+                with pd.ExcelWriter(DB_PATH, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+                    logs_df.to_excel(writer, sheet_name="car_logs", index=False)
+
+        except Exception as e:
+            print(f"Error in update_status: {e}")
+            raise e
+
+    try:
+        broadcast_car_update(
+            car_code=car_code,
+            title=title,
+            from_status=from_status,
+            to_status=status,
+            from_place=from_place,
+            to_place=final_place,
+            changed_by=user_fullname,
+            changed_at=now_str
+        )
+    except Exception as e:
+        print(f"Bale broadcast failed: {e}")
+
+    return RedirectResponse(url="/cars", status_code=303)
+
+# -----------------------------
+# Admin helper: create users
+# -----------------------------
+@app.post("/admin/create_user")
+def create_user(
+    request: Request,
+    user_code: str = Form(...),
+    username: str = Form(...),
+    password: str = Form(...),
+    name: str = Form(...),
+    lastname: str = Form(...),
+    role: str = Form(...),
+    phone: str = Form(""),
+    admin=Depends(require_role("admin"))
+):
+    users_df = read_sheet(USERS_SHEET)
+    username = str(username).strip()
+
+    if username in users_df["username"].astype(str).str.strip().values:
+        raise HTTPException(status_code=400, detail="این username قبلاً ثبت شده است.")
+    if user_code in users_df["user_code"].astype(str).values:
+        raise HTTPException(status_code=400, detail="این کد کاربر قبلاً ثبت شده است.")
+
+    row = {
+        "user_code": str(user_code),
+        "username": username,
+        "password": str(password),
+        "name": name,
+        "lastname": lastname,
+        "role": role,
+        "phone": clean_phone(phone),
+        "bale_chat_id": ""
+    }
+    users_df = pd.concat([users_df, pd.DataFrame([row])], ignore_index=True)
+    save_users(users_df)
+    return JSONResponse({"ok": True})
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.environ.get("PORT", "80"))
+    uvicorn.run(app, host="0.0.0.0", port=port)
