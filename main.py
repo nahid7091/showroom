@@ -593,14 +593,25 @@ async def read_root(request: Request):
     )
 
 @app.get("/login", response_class=HTMLResponse)
-def login_page(request: Request):
-    n1, n2, captcha_token = generate_captcha()
+async def login_get(request: Request):
+    # تولید دو عدد تصادفی
+    n1 = random.randint(1, 9)
+    n2 = random.randint(1, 9)
+    
+    # ساخت توکن امن کپچا
+    captcha_token = signer.dumps({"ans": n1 + n2})
+
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": captcha_token}
+        context={
+            "error": None,
+            "num1": n1,
+            "num2": n2,
+            "captcha_token": captcha_token
+        }
     )
-
+    
 @app.post("/login")
 async def login_post(
     request: Request,
