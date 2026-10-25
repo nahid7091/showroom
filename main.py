@@ -342,7 +342,7 @@ def get_current_user(request: Request) -> Optional[dict]:
         return None
     try:
         username = captcha_serializer.loads(token, max_age=86400 * 7) # اعتبار ۷ روزه
-        df_users = read_sheet("users")
+        df_users = read_sheet(USERS_SHEET)
         df_users["username"] = df_users["username"].astype(str).str.strip()
         matched = df_users[df_users["username"] == str(username).strip()]
         if not matched.empty:
@@ -889,7 +889,7 @@ async def add_car_submit(
     now_shamsi = jdatetime.datetime.now(IRAN_TZ).strftime("%Y/%m/%d %H:%M")
 
     with FileLock(LOCK_FILE):
-        df_cars = read_sheet("cars")
+        df_cars = read_sheet(CARS_SHEET)
         
         # تولید کد جدید خودرو
         if not df_cars.empty and "car_code" in df_cars.columns:
@@ -922,10 +922,10 @@ async def add_car_submit(
         }
 
         df_cars = pd.concat([df_cars, pd.DataFrame([new_car])], ignore_index=True)
-        write_sheet("cars", df_cars)
+        write_sheet(CARS_SHEET, df_cars)
 
         # ثبت لاگ اولیه
-        df_logs = read_sheet("car_logs")
+        df_logs = read_sheet(HISTORY_SHEET)
         log_entry = {
             "car_code": new_code,
             "action": "افزودن خودرو جدید",
@@ -934,7 +934,7 @@ async def add_car_submit(
             "details": f"ثبت اولیه خودرو با وضعیت {status} و پلاک/محل {place}"
         }
         df_logs = pd.concat([df_logs, pd.DataFrame([log_entry])], ignore_index=True)
-        write_sheet("car_logs", df_logs)
+        write_sheet(HISTORY_SHEET, df_logs)
 
     return RedirectResponse(url="/cars", status_code=303)
 
