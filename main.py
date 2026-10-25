@@ -632,10 +632,8 @@ async def login_post(
 ):
     captcha_valid = False
     try:
-        expected_ans = captcha_token
-        
         # مقایسه پاسخ کاربر با مقدار واقعی
-        if captcha_answer== expected_ans:
+        if captcha_serializer.dumps(captcha_answer) == captcha_token:
             captcha_valid = True
         else:
             captcha_valid = False
@@ -643,6 +641,7 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
+        
         return templates.TemplateResponse(
             request=request,
             name="login.html",
