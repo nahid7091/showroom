@@ -792,77 +792,7 @@ async def add_car_page(request: Request):
 
 # -----------------------------
 # ذخیره خودرو جدید
-# -----------------------------
-@app.post("/cars/add")
-async def add_car(
-    request: Request,
-    car_code: str = Form(...),
-    VIN: str = Form(""),
-    title: str = Form(""),
-    model_year: str = Form(""),
-    production_year: str = Form(""),
-    color: str = Form(""),
-    owner: str = Form(""),
-    place: str = Form(""),
-    status: str = Form("free"),
-    options: str = Form(""),
-    No_Guarantee: str = Form(""),
-    Due: str = Form(""),
-    technical_issue: str = Form(""),
-    physical_issue: str = Form(""),
-    user=Depends(require_role("admin", "showroom_manager"))
-):
-    if not user_has_bale(request):
-        return RedirectResponse(url="/activate-bale", status_code=303)
-            
-    cars_df = read_sheet(CARS_SHEET)
-    car_code = str(car_code).strip()
-
-    if not cars_df.empty and car_code in cars_df["car_code"].astype(str).str.strip().values:
-        raise HTTPException(status_code=400, detail="این کد ماشین قبلاً ثبت شده است.")
-
-    if status not in ALLOWED_STATUSES:
-        raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
-
-    now_jalali = get_current_jalali_now()
-    reserved_until = ""
-    if status == "reserved(4 hours)":
-        reserved_until = get_jalali_reserve_expiry(4)
-    
-    user_fullname = f'{user.get("name", "")} {user.get("lastname", "")} ({user.get("user_code", "")})'.strip()
-
-    new_row = {
-        "car_code": car_code,
-        "VIN": VIN.strip(),
-        "title": title.strip(),
-        "model_year": model_year.strip(),
-        "production_year": production_year.strip(),
-        "color": color.strip(),
-        "owner": owner.strip(),
-        "place": place.strip(),
-        "status": status,
-        "reserved_until": reserved_until,
-        "last_updated_at": now_jalali,
-        "last_updated_by": user_fullname,
-        "options": options.strip(),
-        "No_Guarantee": No_Guarantee.strip(),
-        "Due": Due.strip(),
-        "technical_issue": technical_issue.strip(),
-        "physical_issue": physical_issue.strip(),
-    }
-
-    cars_df = pd.concat([cars_df, pd.DataFrame([new_row])], ignore_index=True)
-    save_cars(cars_df)
-
-    append_history(
-        car_code=car_code,
-        changed_by=user_fullname,
-        from_status="ثبت اولیه",
-        to_status=status,
-        from_place="-",
-        to_place=place.strip(),
-    )
-    return RedirectResponse("/cars", status_code=303)
+# ----------------------------
 
 @app.post("/cars/add")
 async def add_car_submit(
