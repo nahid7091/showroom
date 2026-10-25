@@ -34,8 +34,8 @@ BALE_BOT_LINK = f"https://ble.ir/{BALE_BOT_USERNAME}"
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
 captcha_serializer = URLSafeSerializer(APP_SECRET, salt="captcha-salt")
 
-ROLES_CAN_ADD_CAR = {"admin", "showroom_manager"}
-ROLES_CAN_DELETE_CAR = {"admin", "showroom_manager"}
+ROLES_CAN_ADD_CAR = {"admin", "manager"}
+ROLES_CAN_DELETE_CAR = {"admin", "manager"}
 
 USERS_SHEET = "users"
 CARS_SHEET = "cars"
@@ -758,7 +758,7 @@ async def add_car_page(request: Request):
         return RedirectResponse(url="/login", status_code=303)
     if not user_has_bale(request):
         return RedirectResponse(url="/activate-bale", status_code=303)
-    if user.get("role") not in ["admin", "showroom_manager"]:
+    if user.get("role") not in ["admin", "manager"]:
         raise HTTPException(status_code=403, detail="شما دسترسی لازم برای افزودن خودرو را ندارید.")
     return templates.TemplateResponse(
         request=request,
@@ -786,7 +786,7 @@ async def add_car(
     Due: str = Form(""),
     technical_issue: str = Form(""),
     physical_issue: str = Form(""),
-    user=Depends(require_role("admin", "showroom_manager"))
+    user=Depends(require_role("admin", "manager"))
 ):
     if not user_has_bale(request):
         return RedirectResponse(url="/activate-bale", status_code=303)
