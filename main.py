@@ -594,17 +594,13 @@ async def read_root(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
-    # تولید دو عدد تصادفی
-    n1 = random.randint(1, 9)
-    n2 = random.randint(1, 9)
+   n1, n2, captcha_token = generate_captcha()
     
-    # ساخت توکن امن کپچا
-    captcha_token = captcha_serializer.dumps({"ans": n1 + n2})
-
     return templates.TemplateResponse(
         request=request,
         name="login.html",
         context={
+            "request": request,
             "error": None,
             "num1": n1,
             "num2": n2,
@@ -622,9 +618,13 @@ async def login_post(
 ):
     captcha_valid = False
     try:
-        expected_ans = captcha_serializer.loads(captcha_token)
+        expected_ans = captcha_token
+        
+        # مقایسه پاسخ کاربر با مقدار واقعی
         if int(str(captcha_answer).strip()) == int(str(expected_ans).strip()):
             captcha_valid = True
+        else:
+            captcha_valid = False
     except (BadSignature, ValueError, TypeError):
         captcha_valid = False
 
