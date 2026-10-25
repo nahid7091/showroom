@@ -41,7 +41,50 @@ USERS_SHEET = "users"
 CARS_SHEET = "cars"
 HISTORY_SHEET = "car_logs"
 
-ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده"]
+ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده","غیر قابل فروش"]
+ALLOWED_PLACES = ["شوروم تهران","انزلی","ساری"]
+
+COLUMN_TITLES_FA = {
+    # شیت خودروها
+    "car_code": "کد خودرو",
+    "VIN": "شماره شاسی,
+    "title": "مشخصات خودرو",
+    "model_year": "سال مدل",
+    "production_year": "سال ساخت",
+    "color": "رنگ",
+    "owner": "مالک",
+    "place": "محل خودرو",
+    "status": "وضعیت",
+    "reserved_until": "مهلت رزرو",
+    "last_updated_at": "آخرین به‌روزرسانی",
+    "last_updated_by": "ثبت‌کننده آخرین تغییر",
+    "options": "متعلقات و آپشن ها",
+    "No_Guarantee": "خارج از گارانتی",
+    "Due": "موعد وکالت تعویض پلاک",
+    "technical_issue": "مشکل فنی",
+    "physical_issue": "مشکل ظاهری",
+
+    # شیت تاریخچه لاگ‌ها (Modal History)
+    "id": "شناسه",
+    "car_code_log": "کد خودرو",
+    "changed_at": "تاریخ و ساعت تغییر",
+    "changed_by": "تغییردهنده",
+    "from_status": "از وضعیت",
+    "to_status": "به وضعیت",
+    "from_place": "از محل",
+    "to_place": "به محل",
+
+    # شیت کاربران (در صورت نیاز)
+    "user_code": "کد کاربر",
+    "username": "نام کاربری",
+    "password",
+    "bale_chat_id",
+    "user_has_bale",
+    "name": "نام",
+    "lastname": "نام خانوادگی",
+    "role": "نقش",
+    "phone": "شماره موبایل",
+}
 
 REQUIRED_USER_COLS = [
     "user_code",
@@ -59,7 +102,6 @@ REQUIRED_CAR_COLS = [
     "car_code",
     "VIN",
     "title",
-    "specs",
     "model_year",
     "production_year",
     "color",
@@ -69,6 +111,11 @@ REQUIRED_CAR_COLS = [
     "reserved_until",
     "last_updated_at",
     "last_updated_by",
+    "options",
+    "No_Guarantee",
+    "Due",
+    "technical_issue",
+    "physical_issue",
 ]
 
 REQUIRED_HISTORY_COLS = [
