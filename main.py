@@ -594,19 +594,18 @@ async def read_root(request: Request):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
-   n1, n2, captcha_token = generate_captcha()
-    
-return templates.TemplateResponse(
-    request=request,
-    name="login.html",
-    context={
-        "request": request,
-        "error": None,
-        "num1": n1,
-        "num2": n2,
-        "captcha_token": captcha_token
-    }
-)
+    n1, n2, captcha_token = generate_captcha()
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={
+            "request": request,
+            "error": None,
+            "num1": n1,
+            "num2": n2,
+            "captcha_token": captcha_token
+        }
+    )
     
 @app.post("/login")
 async def login_post(
