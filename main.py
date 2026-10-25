@@ -773,42 +773,35 @@ async def add_car_page(request: Request):
 async def add_car(
     request: Request,
     car_code: str = Form(...),
-    VIN: str = Form(""),
-    title: str = Form(""),
+    VIN: str = Form(...),
+    title: str = Form(...),
     model_year: str = Form(""),
     production_year: str = Form(""),
     color: str = Form(""),
     owner: str = Form(""),
-    place: str = Form(""),
+    place: str = Form("نمایشگاه"),
     status: str = Form("free"),
     options: str = Form(""),
-    No_Guarantee: str = Form(""),
+    No_Guarantee: str = Form("خیر"),
     Due: str = Form(""),
     technical_issue: str = Form(""),
     physical_issue: str = Form(""),
-    user=Depends(require_role("admin", "manager"))
+    user: dict = Depends(get_current_user)
 ):
-    if not user_has_bale(request):
-        return RedirectResponse(url="/activate-bale", status_code=303)
-            
-    cars_df = read_sheet(CARS_SHEET)
-    car_code = str(car_code).strip()
+    # بررسی دسترسی: فقط ادمین و مدیر نمایشگاه
+    if user.get("role") not in ["admin", "showroom_manager"]:
+        return JSONResponse(status_code=403, content={"success": False, "message": "دسترسی غیرمجاز است."})
 
-    if not cars_df.empty and car_code in cars_df["car_code"].astype(str).str.strip().values:
-        raise HTTPException(status_code=400, detail="این کد ماشین قبلاً ثبت شده است.")
-
-    if status not in ALLOWED_STATUSES:
-        raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
-
-    now_jalali = get_current_jalali_now()
+    now_jalali = jdatetime.datetime.now(IRAN_TZ).strftime("%Y/%m/%d %H:%M")
+    
+    # محاسبه زمان انقضا در صورت رزرو ۴ ساعته
     reserved_until = ""
     if status == "reserved(4 hours)":
-        reserved_until = get_jalali_reserve_expiry(4)
-    
-    user_fullname = f'{user.get("name", "")} {user.get("lastname", "")} ({user.get("user_code", "")})'.strip()
+        expire_time = jdatetime.datetime.now(IRAN_TZ) + jdatetime.timedelta(hours=4)
+        reserved_until = expire_time.strftime("%Y/%m/%d %H:%M")
 
-    new_row = {
-        "car_code": car_code,
+    new_car = {
+        "car_code": car_code.strip(),
         "VIN": VIN.strip(),
         "title": title.strip(),
         "model_year": model_year.strip(),
@@ -816,29 +809,49 @@ async def add_car(
         "color": color.strip(),
         "owner": owner.strip(),
         "place": place.strip(),
-        "status": status,
+        "status": status.strip(),
         "reserved_until": reserved_until,
         "last_updated_at": now_jalali,
-        "last_updated_by": user_fullname,
+        "last_updated_by": user.get("username", "system"),
         "options": options.strip(),
         "No_Guarantee": No_Guarantee.strip(),
         "Due": Due.strip(),
         "technical_issue": technical_issue.strip(),
-        "physical_issue": physical_issue.strip(),
+        "physical_issue": physical_issue.strip()
     }
 
-    cars_df = pd.concat([cars_df, pd.DataFrame([new_row])], ignore_index=True)
-    save_cars(cars_df)
+    # قفل فایل اکسل و ثبت رکورد جدید
+    with FileLock(LOCK_FILE, timeout=10):
+        cars_df = read_sheet("cars")
+        
+        # بررسی عدم تکراری بودن کد خودرو یا VIN
+        if not cars_df.empty:
+            if "car_code" in cars_df.columns and str(car_code) in cars_df["car_code"].astype(str).values:
+                return JSONResponse(status_code=400, content={"success": False, "message": "کد خودرو تکراری است."})
 
-    append_history(
-        car_code=car_code,
-        changed_by=user_fullname,
-        from_status="ثبت اولیه",
-        to_status=status,
-        from_place="-",
-        to_place=place.strip(),
-    )
-    return RedirectResponse("/cars", status_code=303)
+        # افزودن به دیتافریم
+        new_row_df = pd.DataFrame([new_car])
+        cars_df = pd.concat([cars_df, new_row_df], ignore_index=True)
+        write_sheet("cars", cars_df)
+
+        # ثبت لاگ در car_logs
+        log_entry = {
+            "car_code": car_code,
+            "action": "ایجاد خودرو",
+            "changed_by": user.get("username"),
+            "timestamp": now_jalali,
+            "details": f"ثبت اولیه خودرو با وضعیت {status}"
+        }
+        logs_df = read_sheet("car_logs")
+        logs_df = pd.concat([logs_df, pd.DataFrame([log_entry])], ignore_index=True)
+        write_sheet("car_logs", logs_df)
+
+    return JSONResponse(content={
+        "success": True, 
+        "message": "خودرو با موفقیت اضافه شد.",
+        "car": new_car
+    })
+
 
 @app.get("/cars/history/{car_code}")
 def car_history(car_code: str, user=Depends(require_user)):
