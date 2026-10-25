@@ -132,14 +132,24 @@ def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
-            # تعیین نوع ستون‌های متنی متناسب با هر شیت تا عدد/اعشار نشوند
+            # تعیین نوع ستون‌های حساس به صورت رشته
             dtypes = {}
             if sheet_name == USERS_SHEET:
-                dtypes = {"phone": str, "bale_chat_id": str, "user_code": str}
+                dtypes = {"phone": str, "mobile": str, "bale_chat_id": str, "user_code": str}
             elif sheet_name == CARS_SHEET:
                 dtypes = {"car_code": str, "VIN": str, "production_year": str, "model_year": str}
 
-            return pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=dtypes)
+            # 1. خواندن شیت در متغیر df
+            df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=dtypes)
+
+            # 2. اعمال تابع نرمال‌سازی روی ستون شماره (چه phone باشد چه mobile)
+            if "phone" in df.columns:
+                df["phone"] = df["phone"].apply(clean_phone)
+            elif "mobile" in df.columns:
+                df["mobile"] = df["mobile"].apply(clean_phone)
+
+            # 3. بازگرداندن دیتابیس تمیز و مرتب‌شده
+            return df
 
         except (ValueError, FileNotFoundError):
             if sheet_name == HISTORY_SHEET:
@@ -149,6 +159,7 @@ def read_sheet(sheet_name: str) -> pd.DataFrame:
             elif sheet_name == USERS_SHEET:
                 return pd.DataFrame(columns=REQUIRED_USER_COLS)
             return pd.DataFrame()
+
 
 def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame):
     with FileLock(LOCK_PATH):
