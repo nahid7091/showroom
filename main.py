@@ -341,7 +341,7 @@ def get_current_user(request: Request) -> Optional[dict]:
     if not token:
         return None
     try:
-        username = signer.loads(token, max_age=86400 * 7) # اعتبار ۷ روزه
+        username = captcha_serializer.loads(token, max_age=86400 * 7) # اعتبار ۷ روزه
         df_users = read_sheet("users")
         df_users["username"] = df_users["username"].astype(str).str.strip()
         matched = df_users[df_users["username"] == str(username).strip()]
@@ -599,7 +599,7 @@ async def login_get(request: Request):
     n2 = random.randint(1, 9)
     
     # ساخت توکن امن کپچا
-    captcha_token = signer.dumps({"ans": n1 + n2})
+    captcha_token = captcha_serializer.dumps({"ans": n1 + n2})
 
     return templates.TemplateResponse(
         request=request,
