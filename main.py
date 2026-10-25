@@ -635,23 +635,37 @@ async def login_post(
 ):
     captcha_valid = False
     try:
+        # ۱. استخراج پاسخ واقعی از دل توکن با loads
         expected_ans = captcha_serializer.loads(captcha_token)
         if int(str(captcha_answer).strip()) == int(expected_ans):
             captcha_valid = True
-        else:
-            captcha_valid = False
     except (BadSignature, ValueError, TypeError):
         captcha_valid = False
 
+    # ۲. اگر کپچا اشتباه بود، خطا را در همان صفحه لاگین به کاربر نشان بده
     if not captcha_valid:
-        return RedirectResponse("/login", status_code=303)
+        n1, n2, new_token = generate_captcha()
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "request": request,
+                "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
+                "num1": n1,
+                "num2": n2,
+                "captcha_token": new_token
+            },
+            status_code=400
+        )
 
+    # ۳. خواندن کاربران از اکسل
     users_df = read_sheet(USERS_SHEET)
     username = str(username).strip()
     password = str(password)
 
+    # ۴. بررسی وجود نام کاربری
     if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
-        n1, n2, new_captcha_token = generate_captcha()
+        n1, n2, new_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -660,14 +674,17 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_captcha_token
-            }
+                "captcha_token": new_token
+            },
+            status_code=400
         )
+
+    # ۵. استخراج ردیف کاربر و تطابق رمز عبور
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
 
     if saved_password != password:
-        n1, n2, new_captcha_token = generate_captcha()
+        n1, n2, new_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -676,13 +693,21 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_captcha_token
-            }
+                "captcha_token": new_token
+            },
+            status_code=400
         )
 
-    resp = RedirectResponse("/cars", status_code=303)
+    # ۶. بررسی فعال بودن بله برای مقصد ریدایرکت
+    raw_bale = str(row.get("bale_chat_id", "")).strip().lower()
+    has_bale = raw_bale not in ["", "nan", "none", "-", "0"]
+    
+    target_url = "/cars" if has_bale else "/activate-bale"
+    
+    resp = RedirectResponse(target_url, status_code=303)
     set_session(resp, row)
     return resp
+
 
 @app.get("/logout")
 def logout():
