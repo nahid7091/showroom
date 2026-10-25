@@ -13,6 +13,11 @@ from fastapi.templating import Jinja2Templates
 from filelock import FileLock
 from itsdangerous import URLSafeSerializer, BadSignature
 
+import jdatetime
+from zoneinfo import ZoneInfo # در پایتون 3.9 به بالا به صورت استاندارد وجود دارد
+
+IRAN_TZ = ZoneInfo("Asia/Tehran")
+    
 # -----------------------------
 # Config
 # -----------------------------
@@ -91,6 +96,16 @@ if os.path.isdir("static"):
 # -----------------------------
 # Helper Functions
 # -----------------------------
+def get_current_jalali_now() -> str:
+    """دریافت تاریخ و ساعت جاری ایران به صورت شمسی و رشته‌ای"""
+    now = jdatetime.datetime.now(IRAN_TZ)
+    # خروجی به فرمت: 1403/08/04 15:30:25
+    return now.strftime("%Y/%m/%d %H:%M:%S")
+
+def get_jalali_reserve_expiry(hours=4) -> str:
+     expiry = jdatetime.datetime.now(IRAN_TZ) + jdatetime.timedelta(hours=hours)
+     return expiry.strftime("%Y/%m/%d %H:%M:%S")
+
 def clean_phone(phone) -> str:
     """استانداردسازی شماره موبایل و حذف قطعی .0 اکسل"""
     if phone is None or pd.isna(phone):
@@ -205,11 +220,21 @@ def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
     if cars_df.empty or "reserved_until" not in cars_df.columns:
         return
 
-    now = datetime.now()
-    reserved_mask = cars_df["status"].astype(str) == "reserved(4 hours)"
-    ru = pd.to_datetime(cars_df["reserved_until"], errors="coerce")
+    # دریافت زمان فعلی ایران به صورت شمسی: مثلاً 1403/08/04 16:30:00
+    now_jalali = get_current_jalali_now()
 
-    expired_idx = cars_df.index[reserved_mask & ru.notna() & (ru < now)].tolist()
+    # تبدیل ستون‌ها به متن برای مقایسه دقیق متنی
+    status_series = cars_df["status"].fillna("").astype(str).str.strip()
+    reserved_until_series = cars_df["reserved_until"].fillna("").astype(str).str.strip()
+
+    # شرط خودروهایی که رزرو ۴ ساعته هستند و زمان انقضای آنها رسیده یا گذشته است
+    expired_mask = (
+        (status_series == "reserved(4 hours)")
+        & (reserved_until_series != "")
+        & (reserved_until_series <= now_jalali)
+    )
+
+    expired_idx = cars_df.index[expired_mask].tolist()
     if not expired_idx:
         return
 
@@ -218,10 +243,11 @@ def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
         old_status = str(cars_df.at[i, "status"])
         old_place = "" if pd.isna(cars_df.at[i, "place"]) else str(cars_df.at[i, "place"])
 
+        # بازگرداندن وضعیت به free و ثبت ساعت و تاریخ شمسی فعلی
         cars_df.at[i, "status"] = "free"
         cars_df.at[i, "reserved_until"] = ""
         cars_df.at[i, "last_updated_by"] = system_user_label
-        cars_df.at[i, "last_updated_at"] = now.strftime("%Y-%m-%d %H:%M:%S")
+        cars_df.at[i, "last_updated_at"] = now_jalali
 
         append_history(
             car_code=car_code,
@@ -740,14 +766,27 @@ async def update_status(
                 cars_df.loc[idx, "status"] = status
                 if place:
                     cars_df.loc[idx, "place"] = place
-                cars_df.loc[idx, "last_updated_at"] = now_str
-                cars_df.loc[idx, "last_updated_by"] = user_fullname
 
+                current_jalali_time = get_current_jalali_now()
+
+                # به‌روزرسانی زمان آخرین تغییر
+                cars_df.loc[idx, "last_updated_at"] = current_jalali_time
+                cars_df.loc[idx, "last_updated_by"] = current_user.get("username", "سیستم")
+
+                # cars_df.loc[idx, "last_updated_at"] = now_str
+                # cars_df.loc[idx, "last_updated_by"] = user_fullname
+
+                # if status == "reserved(4 hours)":
+                #     cars_df.loc[idx, "reserved_until"] = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+                # else:
+                #     cars_df.loc[idx, "reserved_until"] = ""
+                
                 if status == "reserved(4 hours)":
-                    cars_df.loc[idx, "reserved_until"] = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+                    cars_df.loc[idx, "reserved_until"] = get_jalali_reserve_expiry(4)
                 else:
                     cars_df.loc[idx, "reserved_until"] = ""
 
+                
                 all_sheets[CARS_SHEET] = cars_df
 
                 logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS))
@@ -757,12 +796,12 @@ async def update_status(
                         new_id = int(pd.to_numeric(logs_df["id"], errors="coerce").max() or 0) + 1
                     except Exception:
                         new_id = len(logs_df) + 1
-
+                
                 new_log = {
                     "id": new_id,
                     "car_code": car_code,
-                    "changed_at": now_str,
-                    "changed_by": user_fullname,
+                    "changed_at": current_jalali_time  # تاریخ و ساعت شمسی دقیق,
+                    "changed_by": current_user.get("username", "سیستم"),
                     "from_status": from_status,
                     "to_status": status,
                     "from_place": from_place,
