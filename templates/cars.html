@@ -1,165 +1,193 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="utf-8">
-  <title>لیست خودروها</title>
+  <meta charset="utf-8" />
+  <title>فهرست خودروها</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link href="/static/styles.css" rel="stylesheet" />
   <style>
-    body { font-family: Tahoma, sans-serif; margin: 20px; background-color: #fafafa; }
-    table { border-collapse: collapse; width: 100%; font-size: 13px; background: white; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    body { font-family: Vazirmatn, sans-serif; background:#fafafa; color:#222; }
+    .container { max-width: 1200px; margin: 20px auto; padding: 0 12px; }
+    table { width: 100%; border-collapse: collapse; background:#fff; }
+    th, td { border: 1px solid #ddd; padding: 8px; vertical-align: top; }
     th { background: #f0f0f0; }
-    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-    .status-free { background: #d4edda; color: #155724; }
-    .status-reserved { background: #fff3cd; color: #856404; }
-    .status-deposit { background: #cce5ff; color: #004085; }
-    .status-sold { background: #f8d7da; color: #721c24; }
-    .card { background: white; padding: 15px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 15px; }
-    button { cursor: pointer; padding: 5px 10px; }
-    
-    /* استایل پنجره Pop-up مودال تاریخچه */
-    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
-    .modal-content { background-color: white; margin: 8% auto; padding: 20px; width: 70%; border-radius: 8px; max-height: 75vh; overflow-y: auto; }
-    .close { float: left; font-size: 24px; font-weight: bold; cursor: pointer; }
+    .toolbar { display:flex; gap:8px; align-items:center; margin-bottom:10px; }
+    .btn { padding:6px 10px; border:1px solid #ccc; background:#fff; cursor:pointer; border-radius:6px; }
+    .btn-primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+    .btn-danger { background:#dc2626; border-color:#dc2626; color:#fff; }
+    .btn-icon { padding:4px 8px; }
+    .accordion-toggle { cursor:pointer; user-select:none; }
+    .details-row { display:none; background:#fcfcfc; }
+    .details-grid { display:grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap:8px; }
+    .badge { display:inline-block; padding:2px 6px; border-radius:999px; font-size:12px; background:#eee; }
+    .status-free { background:#d1fae5; }
+    .status-reserved { background:#fde68a; }
+    .status-deposit { background:#fef3c7; }
+    .status-sold { background:#fecaca; }
+    .status-disabled { background:#e5e7eb; }
+    .filters input, .filters select { padding:6px; border:1px solid #ccc; border-radius:6px; }
+    .modal { position:fixed; inset:0; display:none; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; }
+    .modal-card { background:#fff; max-width:800px; width:90%; border-radius:10px; overflow:hidden; }
+    .modal-header { padding:10px 14px; background:#f5f5f5; display:flex; justify-content:space-between; align-items:center; }
+    .modal-body { padding:10px 14px; max-height:60vh; overflow:auto; }
+    .close { cursor:pointer; font-size:18px; }
+    .nowrap { white-space: nowrap; }
   </style>
 </head>
 <body>
+<div class="container">
+  <h2>فهرست خودروها</h2>
 
-  <div class="card">
-    <b>کاربر:</b> {{user.name}} {{user.lastname}} | <b>نقش:</b> {{user.role}}
-    | <a href="/logout" style="color: red; text-decoration: none;">[خروج]</a>
-  </div>
+  <form class="toolbar filters" method="get" action="/cars">
+    <input type="text" name="q" value="{{ q }}" placeholder="جستجو (کد، عنوان، مالک)" />
+    <select name="status">
+      <option value="">- همه وضعیت‌ها -</option>
+      {% for st in status_options %}
+        <option value="{{ st }}" {% if st == status %}selected{% endif %}>{{ st }}</option>
+      {% endfor %}
+    </select>
+    <select name="place">
+      <option value="">- همه محل‌ها -</option>
+      {% for pl in place_options %}
+        <option value="{{ pl }}" {% if pl == place %}selected{% endif %}>{{ pl }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-primary" type="submit">اعمال فیلتر</button>
+    {% if can_add %}
+      <a class="btn" href="/static/add_car.html">افزودن خودرو</a>
+    {% endif %}
+    <a class="btn" href="/logout">خروج</a>
+  </form>
 
-  <div class="card">
-    <h3>فیلتر و جستجو</h3>
-    <form method="get" action="/cars">
-      <input name="q" placeholder="جستجو (کد ماشین / مشخصات / مالک)" value="{{q}}" style="width: 250px;">
-      
-      <select name="status">
-        <option value="">همه وضعیت‌ها</option>
-        <option value="free" {% if status=='free' %}selected{% endif %}>free</option>
-        <option value="reserved(4 hours)" {% if status=='reserved(4 hours)' %}selected{% endif %}>reserved(4 hours)</option>
-        <option value="بیعانه" {% if status=='بیعانه' %}selected{% endif %}>بیعانه</option>
-        <option value="فروخته شده" {% if status=='فروخته شده' %}selected{% endif %}>فروخته شده</option>
-      </select>
-
-      <select name="place">
-        <option value="">همه محل‌ها</option>
-        {% for p in place_options %}
-          <option value="{{p}}" {% if p==place %}selected{% endif %}>{{p}}</option>
-        {% endfor %}
-      </select>
-
-      <button type="submit">اعمال فیلتر</button>
-      <a href="/cars"><button type="button">پاک کردن فیلترها</button></a>
-    </form>
-  </div>
-
-  {% if can_add %}
-  <div class="card">
-    <h4>افزودن خودرو جدید (دسترسی مدیریت)</h4>
-    <form method="post" action="/cars/add">
-      <input name="car_code" placeholder="کد ماشین (اجباری)" required>
-      <input name="title" placeholder="مشخصات و مدل" style="width: 200px;">
-      <input name="color" placeholder="رنگ">
-      <input name="model_year" placeholder="مدل سال">
-      <input name="production_year" placeholder="سال تولید">
-      <input name="owner" placeholder="نام مالک">
-      <input name="place" placeholder="محل خودرو">
-      
-      <select name="status">
-        <option value="free">free</option>
-        <option value="reserved(4 hours)">reserved(4 hours)</option>
-        <option value="بیعانه">بیعانه</option>
-        <option value="فروخته شده">فروخته شده</option>
-      </select>
-
-      <button type="submit" style="background: #28a745; color: white; border: none;">ثبت خودرو</button>
-    </form>
-  </div>
-  {% endif %}
-
-  <h3>جدول خودروها</h3>
   <table>
     <thead>
       <tr>
-        <th>کد</th>
-        <th>مشخصات</th>
-        <th>رنگ</th>
-        <th>وضعیت</th>
-        <th>محل</th>
-        <th>آخرین تغییر دهنده</th>
-        <th>زمان تغییر</th>
-        <th>تغییر وضعیت و محل</th>
-        <th>تاریخچه</th>
+        <th></th> <!-- فلش آکاردئون -->
+        <th>{{ col_names.car_code }}</th>
+        <th>{{ col_names.title }}</th>
+        <th>{{ col_names.color }}</th>
+        <th>{{ col_names.place }}</th>
+        <th>{{ col_names.status }}</th>
+        <th class="nowrap">{{ col_names.last_updated_at }}</th>
+        <th>{{ col_names.last_updated_by }}</th>
+        <th>مشاهده</th>
       </tr>
     </thead>
     <tbody>
-      {% for c in cars %}
-      <tr>
-        <td><b>{{c.car_code}}</b></td>
-        <td>{{c.title}}</td>
-        <td>{{c.color}}</td>
-        <td>
-          {% if c.status == 'free' %}
-            <span class="badge status-free">free</span>
-          {% elif c.status == 'reserved(4 hours)' %}
-            <span class="badge status-reserved">reserved (۴ ساعته)</span>
-          {% elif c.status == 'بیعانه' %}
-            <span class="badge status-deposit">بیعانه</span>
-          {% elif c.status == 'فروخته شده' %}
-            <span class="badge status-sold">فروخته شده</span>
-          {% else %}
-            {{c.status}}
-          {% endif %}
-        </td>
-        <td>{{c.place}}</td>
-        <td>{{c.last_updated_by}}</td>
-        <td>{{c.last_updated_at}}</td>
-        <td>
-          <form method="post" action="/cars/update_status" style="margin:0; display: inline-flex; gap: 4px;">
-            <input type="hidden" name="car_code" value="{{c.car_code}}">
-            <select name="status">
-              <option value="free" {% if c.status=='free' %}selected{% endif %}>free</option>
-              <option value="reserved(4 hours)" {% if c.status=='reserved(4 hours)' %}selected{% endif %}>reserved(4 hours)</option>
-              <option value="بیعانه" {% if c.status=='بیعانه' %}selected{% endif %}>بیعانه</option>
-              <option value="فروخته شده" {% if c.status=='فروخته شده' %}selected{% endif %}>فروخته شده</option>
-            </select>
-            <input name="place" value="{{c.place}}" placeholder="محل" style="width:75px">
-            <button type="submit">ثبت</button>
-          </form>
-        </td>
-        <td>
-          <button type="button" onclick="showHistory('{{c.car_code}}')" style="background:#17a2b8; color:white; border:none; border-radius:3px; padding:4px 8px;">
-            مشاهده
-          </button>
-        </td>
-      </tr>
+      {% for car in cars %}
+        {% set status_class = "status-free" if car.status == "free" else ("status-reserved" if car.status == "reserved(4 hours)" else ("status-deposit" if car.status == "بیعانه" else ("status-sold" if car.status == "فروخته شده" else "status-disabled"))) %}
+        <tr>
+          <td class="accordion-toggle" data-code="{{ car.car_code }}" title="نمایش جزئیات">▶</td>
+          <td>{{ car.car_code }}</td>
+          <td>{{ car.title }}</td>
+          <td>{{ car.color }}</td>
+          <td>{{ car.place }}</td>
+          <td><span class="badge {{ status_class }}">{{ car.status }}</span></td>
+          <td class="nowrap">{{ car.last_updated_at }}</td>
+          <td>{{ car.last_updated_by }}</td>
+          <td><button class="btn btn-icon" onclick="openHistory('{{ car.car_code }}')">تاریخچه</button></td>
+        </tr>
+        <tr class="details-row" id="details-{{ car.car_code }}">
+          <td colspan="9">
+            <div class="details-grid">
+              <div><strong>{{ col_names.options }}:</strong> {{ car.options or "" }}</div>
+              <div><strong>{{ col_names.No_Guarantee }}:</strong> {{ car.No_Guarantee or "" }}</div>
+              <div><strong>{{ col_names.Due }}:</strong> {{ car.Due or "" }}</div>
+              <div><strong>{{ col_names.technical_issue }}:</strong> {{ car.technical_issue or "" }}</div>
+              <div><strong>{{ col_names.physical_issue }}:</strong> {{ car.physical_issue or "" }}</div>
+              {% if car.reserved_until %}
+              <div><strong>{{ col_names.reserved_until }}:</strong> {{ car.reserved_until }}</div>
+              {% endif %}
+              <div><strong>{{ col_names.model_year }}:</strong> {{ car.model_year or "" }}</div>
+              <div><strong>{{ col_names.production_year }}:</strong> {{ car.production_year or "" }}</div>
+              <div><strong>{{ col_names.owner }}:</strong> {{ car.owner or "" }}</div>
+              <div><strong>{{ col_names.VIN }}:</strong> {{ car.VIN or "" }}</div>
+            </div>
+          </td>
+        </tr>
       {% endfor %}
     </tbody>
   </table>
+</div>
 
-  <!-- پنجره Pop-up مودال تاریخچه -->
-  <div id="historyModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <h4 id="modalTitle">تاریخچه تغییرات</h4>
-      <table style="width: 100%; margin-top: 15px;">
+<!-- Modal تاریخچه -->
+<div class="modal" id="historyModal">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div>تاریخچه تغییرات خودرو <span id="modalCarCode"></span></div>
+      <div class="close" onclick="closeModal()">✖</div>
+    </div>
+    <div class="modal-body">
+      <table id="historyTable">
         <thead>
-          <tr style="background:#e9ecef;">
-            <th>زمان تغییر</th>
-            <th>تغییر دهنده</th>
-            <th>از وضعیت</th>
-            <th>به وضعیت</th>
-            <th>از محل</th>
-            <th>به محل</th>
+          <tr>
+            <th>{{ col_names.changed_at }}</th>
+            <th>{{ col_names.changed_by }}</th>
+            <th>{{ col_names.from_status }}</th>
+            <th>{{ col_names.to_status }}</th>
+            <th>{{ col_names.from_place }}</th>
+            <th>{{ col_names.to_place }}</th>
           </tr>
         </thead>
-        <tbody id="historyTableBody">
-          <!-- اطلاعات از طریق API اضافه می‌شود -->
-        </tbody>
+        <tbody></tbody>
       </table>
     </div>
   </div>
+</div>
 
-  <script>
-    function showHistory(
+<script>
+  // آکاردئون جزئیات
+  document.querySelectorAll('.accordion-toggle').forEach(el => {
+    el.addEventListener('click', () => {
+      const code = el.getAttribute('data-code');
+      const row = document.getElementById('details-' + code);
+      const open = row.style.display === 'table-row';
+      row.style.display = open ? 'none' : 'table-row';
+      el.textContent = open ? '▶' : '▼';
+    });
+  });
+
+  // مودال تاریخچه
+  function openHistory(carCode) {
+    document.getElementById('modalCarCode').textContent = carCode;
+    const tbody = document.querySelector('#historyTable tbody');
+    tbody.innerHTML = '<tr><td colspan="6">در حال بارگذاری...</td></tr>';
+
+    fetch(`/cars/history/${encodeURIComponent(carCode)}`)
+      .then(r => r.json())
+      .then(data => {
+        const items = data.items || [];
+        if (!items.length) {
+          tbody.innerHTML = '<tr><td colspan="6">موردی ثبت نشده است.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = '';
+        items.forEach(it => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${it.changed_at || ""}</td>
+            <td>${it.changed_by || ""}</td>
+            <td>${it.from_status || ""}</td>
+            <td>${it.to_status || ""}</td>
+            <td>${it.from_place || ""}</td>
+            <td>${it.to_place || ""}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(() => {
+        tbody.innerHTML = '<tr><td colspan="6">خطا در دریافت اطلاعات.</td></tr>';
+      });
+
+    document.getElementById('historyModal').style.display = 'flex';
+  }
+  function closeModal() {
+    document.getElementById('historyModal').style.display = 'none';
+  }
+  // بستن با کلیک بیرون
+  document.getElementById('historyModal').addEventListener('click', (e) => {
+    if (e.target.id === 'historyModal') closeModal();
+  });
+</script>
+</body>
+</html>
