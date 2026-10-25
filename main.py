@@ -17,7 +17,7 @@ import jdatetime
 from zoneinfo import ZoneInfo
 
 IRAN_TZ = ZoneInfo("Asia/Tehran")
-    
+
 # -----------------------------
 # Config
 # -----------------------------
@@ -64,7 +64,7 @@ COLUMN_TITLES_FA = {
     "technical_issue": "مشکل فنی",
     "physical_issue": "مشکل ظاهری",
 
-    # شیت تاریخچه لاگ‌ها (Modal History)
+    # شیت تاریخچه لاگ‌ها
     "id": "شناسه",
     "car_code": "کد خودرو",
     "changed_at": "تاریخ و ساعت تغییر",
@@ -149,18 +149,16 @@ def get_current_jalali_now() -> str:
     return now.strftime("%Y/%m/%d %H:%M:%S")
 
 def to_jalali_display(dt_val) -> str:
-    """تبدیل هر نوع تاریخی (چه رشته میلادی قدیمی، چه آبجکت تاریخ) به رشته شمسی زیبا"""
+    """تبدیل هر نوع تاریخی به رشته شمسی زیبا"""
     if dt_val is None or pd.isna(dt_val):
         return ""
     val_str = str(dt_val).strip()
     if not val_str or val_str.lower() in ["nan", "none", "nat"]:
         return ""
     
-    # اگر از قبل شمسی است (با 14 شروع شده)
     if val_str.startswith("14"):
         return val_str.replace("-", "/")
 
-    # اگر میلادی ثبت شده
     try:
         dt = pd.to_datetime(val_str)
         j_dt = jdatetime.datetime.fromgregorian(datetime=dt)
@@ -173,7 +171,7 @@ def get_jalali_reserve_expiry(hours=4) -> str:
     return expiry.strftime("%Y/%m/%d %H:%M:%S")
 
 def clean_phone(phone) -> str:
-    """استانداردسازی شماره موبایل و حذف قطعی .0 اکسل"""
+    """استانداردسازی شماره موبایل و حذف اعشار و کدهای متفرقه"""
     if phone is None or pd.isna(phone):
         return ""
     p = str(phone).strip()
@@ -189,7 +187,6 @@ def clean_phone(phone) -> str:
 def generate_captcha():
     n1 = random.randint(1, 9)
     n2 = random.randint(1, 9)
-    # مستقیماً خود عدد (یا رشته‌ی عدد) را محافظت کنید، نه دیکشنری
     captcha_token = captcha_serializer.dumps(n1 + n2) 
     return n1, n2, captcha_token
 
@@ -337,19 +334,23 @@ def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
 def get_current_user(request: Request) -> Optional[dict]:
-    token = request.cookies.get("session_token")
+    token = request.cookies.get("session")
     if not token:
         return None
     try:
-        username = captcha_serializer.loads(token, max_age=86400 * 7) # اعتبار ۷ روزه
+        data = serializer.loads(token, max_age=86400 * 7)
+        username = data.get("username") if isinstance(data, dict) else data
+        
         df_users = read_sheet(USERS_SHEET)
+        if df_users.empty or "username" not in df_users.columns:
+            return None
+            
         df_users["username"] = df_users["username"].astype(str).str.strip()
         matched = df_users[df_users["username"] == str(username).strip()]
         if not matched.empty:
             user = matched.iloc[0].to_dict()
-            # نرمال‌سازی فیلدها برای جلوگیری از باگ
             user["role"] = str(user.get("role", "")).strip().lower()
-            user["user_has_bale"] = str(user.get("user_has_bale", "")).strip() in ["1", "true", "True"]
+            user["user_has_bale"] = str(user.get("user_has_bale", "")).strip().lower() in ["1", "true", "yes"]
             return user
     except Exception:
         return None
@@ -501,7 +502,7 @@ async def bale_webhook(request: Request):
                     users_df["bale_chat_id"] = users_df["bale_chat_id"].astype("object")
                     
                     if "user_has_bale" not in users_df.columns:
-                        users_df["user_has_bale"] = False
+                        users_df["user_has_bale"] = "false"
                     users_df["user_has_bale"] = users_df["user_has_bale"].astype("object")
                     
                     users_df["norm_phone"] = users_df["phone"].apply(clean_phone)
@@ -513,7 +514,7 @@ async def bale_webhook(request: Request):
                             
                             if expected_phone and expected_phone == user_phone:
                                 users_df.loc[users_df["username"] == target_user, "bale_chat_id"] = str(chat_id)
-                                users_df.loc[users_df["username"] == target_user, "user_has_bale"] = True
+                                users_df.loc[users_df["username"] == target_user, "user_has_bale"] = "true"
                                 users_df.drop(columns=["norm_phone"], inplace=True)
                                 all_sheets[USERS_SHEET] = users_df
                                 
@@ -542,7 +543,7 @@ async def bale_webhook(request: Request):
                         if not match_users.empty:
                             matched_username = match_users.iloc[0]["username"]
                             users_df.loc[users_df["username"] == matched_username, "bale_chat_id"] = str(chat_id)
-                            users_df.loc[users_df["username"] == matched_username, "user_has_bale"] = True
+                            users_df.loc[users_df["username"] == matched_username, "user_has_bale"] = "true"
                             users_df.drop(columns=["norm_phone"], inplace=True)
                             all_sheets[USERS_SHEET] = users_df
                             
@@ -582,36 +583,21 @@ async def activate_bale_page(request: Request):
 
 @app.get("/")
 async def read_root(request: Request):
-    """
-    مسیر ریشه: فقط هدایت‌کننده است و نیازی به رندر مستقیم فرم لاگین ندارد.
-    """
     user = get_current_user(request)
     if user:
-        # اگر لاگین کرده بود، وضعیت بله را بررسی و به مقصد درست هدایت می‌کنیم
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
-        else:
-            return RedirectResponse("/cars", status_code=303)
-    
-    # اگر لاگین نبود، می‌رود به صفحه لاگین
-    else:
-        return RedirectResponse("/login", status_code=303)
-
+        return RedirectResponse("/cars", status_code=303)
+    return RedirectResponse("/login", status_code=303)
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
-    """
-    مسیر نمایش فرم لاگین:
-    اگر قبلاً لاگین کرده باشد، اجازه نمی‌دهد دوباره فرم لاگین را ببیند.
-    """
     user = get_current_user(request)
     if user:
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
-        else:
-            return RedirectResponse("/cars", status_code=303)
+        return RedirectResponse("/cars", status_code=303)
 
-    # کاربر مهمان است؛ کپچا ساخته شده و فرم لاگین رندر می‌شود
     n1, n2, captcha_token = generate_captcha()
     return templates.TemplateResponse(
         request=request,
@@ -635,14 +621,12 @@ async def login_post(
 ):
     captcha_valid = False
     try:
-        # ۱. استخراج پاسخ واقعی از دل توکن با loads
         expected_ans = captcha_serializer.loads(captcha_token)
         if int(str(captcha_answer).strip()) == int(expected_ans):
             captcha_valid = True
     except (BadSignature, ValueError, TypeError):
         captcha_valid = False
 
-    # ۲. اگر کپچا اشتباه بود، خطا را در همان صفحه لاگین به کاربر نشان بده
     if not captcha_valid:
         n1, n2, new_token = generate_captcha()
         return templates.TemplateResponse(
@@ -658,12 +642,10 @@ async def login_post(
             status_code=400
         )
 
-    # ۳. خواندن کاربران از اکسل
     users_df = read_sheet(USERS_SHEET)
     username = str(username).strip()
     password = str(password)
 
-    # ۴. بررسی وجود نام کاربری
     if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
         n1, n2, new_token = generate_captcha()
         return templates.TemplateResponse(
@@ -679,7 +661,6 @@ async def login_post(
             status_code=400
         )
 
-    # ۵. استخراج ردیف کاربر و تطابق رمز عبور
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
 
@@ -698,7 +679,6 @@ async def login_post(
             status_code=400
         )
 
-    # ۶. بررسی فعال بودن بله برای مقصد ریدایرکت
     raw_bale = str(row.get("bale_chat_id", "")).strip().lower()
     has_bale = raw_bale not in ["", "nan", "none", "-", "0"]
     
@@ -707,7 +687,6 @@ async def login_post(
     resp = RedirectResponse(target_url, status_code=303)
     set_session(resp, row)
     return resp
-
 
 @app.get("/logout")
 def logout():
@@ -741,13 +720,11 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     if place:
         cars_df = cars_df[cars_df["place"].astype(str) == str(place)]
 
-    all_cars_df = read_sheet(CARS_SHEET)
     status_options = ALLOWED_STATUSES
     place_options = ALLOWED_PLACES
 
     can_add = user["role"] in ROLES_CAN_ADD_CAR
 
-    # تبدیل تاریخ‌ها به شمسی برای نمایش
     if "last_updated_at" in cars_df.columns:
         cars_df["last_updated_at"] = cars_df["last_updated_at"].apply(to_jalali_display)
     if "reserved_until" in cars_df.columns:
@@ -778,96 +755,90 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 async def add_car_page(request: Request):
     user = get_current_user(request)
     if not user:
-        return RedirectResponse(url="/login", status_code=302)
-    if not user.get("user_has_bale"):
-        return RedirectResponse(url="/activate-bale", status_code=302)
+        return RedirectResponse(url="/login", status_code=303)
+    if not user_has_bale(request):
+        return RedirectResponse(url="/activate-bale", status_code=303)
     if user.get("role") not in ["admin", "showroom_manager"]:
         raise HTTPException(status_code=403, detail="شما دسترسی لازم برای افزودن خودرو را ندارید.")
-    
     return templates.TemplateResponse(
         request=request,
         name="add_car.html",
-        context={"user": user}
+        context={"request": request, "user": user}
     )
 
 # -----------------------------
 # ذخیره خودرو جدید
-# ----------------------------
-
+# -----------------------------
 @app.post("/cars/add")
-async def add_car_submit(
+async def add_car(
     request: Request,
-    title: str = Form(...),
-    VIN: str = Form(...),
-    model_year: Optional[str] = Form(""),
-    production_year: Optional[str] = Form(""),
-    color: Optional[str] = Form(""),
-    specs: Optional[str] = Form(""),
-    place: Optional[str] = Form(""),
-    owner: Optional[str] = Form(""),
-    status: Optional[str] = Form("free"),
-    options: Optional[str] = Form(""),
-    No_Guarantee: Optional[str] = Form("خیر"),
-    Due: Optional[str] = Form(""),
-    technical_issue: Optional[str] = Form("ندارد"),
-    physical_issue: Optional[str] = Form("ندارد")
+    car_code: str = Form(...),
+    VIN: str = Form(""),
+    title: str = Form(""),
+    model_year: str = Form(""),
+    production_year: str = Form(""),
+    color: str = Form(""),
+    owner: str = Form(""),
+    place: str = Form(""),
+    status: str = Form("free"),
+    options: str = Form(""),
+    No_Guarantee: str = Form(""),
+    Due: str = Form(""),
+    technical_issue: str = Form(""),
+    physical_issue: str = Form(""),
+    user=Depends(require_role("admin", "showroom_manager"))
 ):
-    user = get_current_user(request)
-    if not user or user.get("role") not in ["admin", "showroom_manager"]:
-        raise HTTPException(status_code=403, detail="دسترسی غیرمجاز")
+    if not user_has_bale(request):
+        return RedirectResponse(url="/activate-bale", status_code=303)
+            
+    cars_df = read_sheet(CARS_SHEET)
+    car_code = str(car_code).strip()
 
-    now_shamsi = jdatetime.datetime.now(IRAN_TZ).strftime("%Y/%m/%d %H:%M")
+    if not cars_df.empty and car_code in cars_df["car_code"].astype(str).str.strip().values:
+        raise HTTPException(status_code=400, detail="این کد ماشین قبلاً ثبت شده است.")
 
-    with FileLock(LOCK_FILE):
-        df_cars = read_sheet(CARS_SHEET)
-        
-        # تولید کد جدید خودرو
-        if not df_cars.empty and "car_code" in df_cars.columns:
-            try:
-                new_code = int(df_cars["car_code"].max()) + 1
-            except:
-                new_code = len(df_cars) + 1
-        else:
-            new_code = 1001
+    if status not in ALLOWED_STATUSES:
+        raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
 
-        new_car = {
-            "car_code": new_code,
-            "VIN": VIN.strip(),
-            "title": title.strip(),
-            "specs": specs.strip() if specs else "",
-            "model_year": model_year.strip() if model_year else "",
-            "production_year": production_year.strip() if production_year else "",
-            "color": color.strip() if color else "",
-            "owner": owner.strip() if owner else "",
-            "place": place.strip() if place else "",
-            "status": status if status in ALLOWED_STATUSES else "free",
-            "reserved_until": "",
-            "last_updated_at": now_shamsi,
-            "last_updated_by": user.get("username", "system"),
-            "options": options.strip() if options else "",
-            "No_Guarantee": No_Guarantee,
-            "Due": Due.strip() if Due else "",
-            "technical_issue": technical_issue.strip() if technical_issue else "ندارد",
-            "physical_issue": physical_issue.strip() if physical_issue else "ندارد",
-        }
+    now_jalali = get_current_jalali_now()
+    reserved_until = ""
+    if status == "reserved(4 hours)":
+        reserved_until = get_jalali_reserve_expiry(4)
+    
+    user_fullname = f'{user.get("name", "")} {user.get("lastname", "")} ({user.get("user_code", "")})'.strip()
 
-        df_cars = pd.concat([df_cars, pd.DataFrame([new_car])], ignore_index=True)
-        write_sheet(CARS_SHEET, df_cars)
+    new_row = {
+        "car_code": car_code,
+        "VIN": VIN.strip(),
+        "title": title.strip(),
+        "model_year": model_year.strip(),
+        "production_year": production_year.strip(),
+        "color": color.strip(),
+        "owner": owner.strip(),
+        "place": place.strip(),
+        "status": status,
+        "reserved_until": reserved_until,
+        "last_updated_at": now_jalali,
+        "last_updated_by": user_fullname,
+        "options": options.strip(),
+        "No_Guarantee": No_Guarantee.strip(),
+        "Due": Due.strip(),
+        "technical_issue": technical_issue.strip(),
+        "physical_issue": physical_issue.strip(),
+    }
 
-        # ثبت لاگ اولیه
-        df_logs = read_sheet(HISTORY_SHEET)
-        log_entry = {
-            "car_code": new_code,
-            "action": "افزودن خودرو جدید",
-            "user": user.get("username"),
-            "timestamp": now_shamsi,
-            "details": f"ثبت اولیه خودرو با وضعیت {status} و پلاک/محل {place}"
-        }
-        df_logs = pd.concat([df_logs, pd.DataFrame([log_entry])], ignore_index=True)
-        write_sheet(HISTORY_SHEET, df_logs)
+    cars_df = pd.concat([cars_df, pd.DataFrame([new_row])], ignore_index=True)
+    save_cars(cars_df)
 
-    return RedirectResponse(url="/cars", status_code=303)
-
+    append_history(
+        car_code=car_code,
+        changed_by=user_fullname,
+        from_status="ثبت اولیه",
+        to_status=status,
+        from_place="-",
+        to_place=place.strip(),
+    )
+    return RedirectResponse("/cars", status_code=303)
 
 @app.get("/cars/history/{car_code}")
 def car_history(car_code: str, user=Depends(require_user)):
@@ -1011,7 +982,7 @@ def create_user(
         "role": role,
         "phone": clean_phone(phone),
         "bale_chat_id": "",
-        "user_has_bale": False
+        "user_has_bale": "false"
     }
     users_df = pd.concat([users_df, pd.DataFrame([row])], ignore_index=True)
     save_users(users_df)
