@@ -187,10 +187,10 @@ def clean_phone(phone) -> str:
     return p
 
 def generate_captcha():
-    """تولید دو عدد تصادفی و توکن رمزنگاری‌شده از حاصل جمع"""
     n1 = random.randint(1, 9)
     n2 = random.randint(1, 9)
-    captcha_token = captcha_serializer.dumps(n1 + n2)
+    # مستقیماً خود عدد (یا رشته‌ی عدد) را محافظت کنید، نه دیکشنری
+    captcha_token = captcha_serializer.dumps(n1 + n2) 
     return n1, n2, captcha_token
 
 def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
@@ -622,13 +622,7 @@ async def login_post(
 ):
     captcha_valid = False
     try:
-        data = captcha_serializer.loads(captcha_token)
-        if isinstance(data, dict):
-            expected_ans = data.get("ans")
-        else:
-            expected_ans = data
-            
-        # اصلاح شد: استفاده از expected_ans به جای expected_sum
+        expected_ans = captcha_serializer.loads(captcha_token)
         if int(str(captcha_answer).strip()) == int(str(expected_ans).strip()):
             captcha_valid = True
     except (BadSignature, ValueError, TypeError):
