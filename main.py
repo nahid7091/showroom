@@ -101,6 +101,27 @@ def get_current_jalali_now() -> str:
     now = jdatetime.datetime.now(IRAN_TZ)
     return now.strftime("%Y/%m/%d %H:%M:%S")
 
+def to_jalali_display(dt_val) -> str:
+    """تبدیل هر نوع تاریخی (چه رشته میلادی قدیمی، چه آبجکت تاریخ) به رشته شمسی زیبا"""
+    if dt_val is None or pd.isna(dt_val):
+        return ""
+    val_str = str(dt_val).strip()
+    if not val_str or val_str.lower() in ["nan", "none", "nat"]:
+        return ""
+    
+    # اگر از قبل شمسی است (با 14 شروع شده)
+    if val_str.startswith("14"):
+        return val_str.replace("-", "/")
+
+    # اگر میلادی ثبت شده (مثلا 2023 یا 2024 یا 2026)
+    try:
+        dt = pd.to_datetime(val_str)
+        # تبدیل به شمسی با jdatetime
+        j_dt = jdatetime.datetime.fromgregorian(datetime=dt)
+        return j_dt.strftime("%Y/%m/%d %H:%M:%S")
+    except Exception:
+        return val_str
+
 def get_jalali_reserve_expiry(hours=4) -> str:
     expiry = jdatetime.datetime.now(IRAN_TZ) + jdatetime.timedelta(hours=hours)
     return expiry.strftime("%Y/%m/%d %H:%M:%S")
@@ -628,8 +649,13 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     place_options = sorted(set(all_cars_df["place"].dropna().astype(str).tolist())) if "place" in all_cars_df.columns else []
 
     can_add = user["role"] in ROLES_CAN_ADD_CAR
-    cars = cars_df.fillna("").to_dict(orient="records")
-    
+    # تبدیل تاریخ‌های ستون خودروها به شمسی (حتی رکوردهای قدیمی)
+    if "last_updated_at" in cars_df.columns:
+        cars_df["last_updated_at"] = cars_df["last_updated_at"].apply(to_jalali_display)
+    if "reserved_until" in cars_df.columns:
+        cars_df["reserved_until"] = cars_df["reserved_until"].apply(to_jalali_display)
+
+    cars = cars_df.fillna("").to_dict(orient="records")    
     return templates.TemplateResponse(
         request=request,
         name="cars.html",
@@ -711,6 +737,8 @@ def car_history(car_code: str, user=Depends(require_user)):
 
     df = history_df[history_df["car_code"].astype(str) == str(car_code)].copy()
     df = df.sort_values(by="id", ascending=False) if "id" in df.columns else df
+    if "changed_at" in df.columns:
+        df["changed_at"] = df["changed_at"].apply(to_jalali_display)
     items = df.fillna("").to_dict(orient="records")
     return JSONResponse({"car_code": car_code, "items": items})
 
@@ -737,7 +765,7 @@ async def update_status(
 
     with FileLock(LOCK_PATH):
         try:
-            all_sheets = pd.read_excel(DB_PATH, sheet_name=None)
+            all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
             cars_df["car_code"] = cars_df["car_code"].astype(str)
             car_code = str(car_code).strip()
