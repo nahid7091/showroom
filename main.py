@@ -580,20 +580,35 @@ async def activate_bale_page(request: Request):
         context={"request": request, "user": user, "bale_link": bale_link}
     )
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def read_root(request: Request):
+    """
+    مسیر ریشه: فقط هدایت‌کننده است و نیازی به رندر مستقیم فرم لاگین ندارد.
+    """
     user = get_current_user(request)
     if user:
-        return RedirectResponse("/cars", status_code=302)
-    n1, n2, captcha_token = generate_captcha()
-    return templates.TemplateResponse(
-        request=request,
-        name="login.html",
-        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": captcha_token}
-    )
+        # اگر لاگین کرده بود، وضعیت بله را بررسی و به مقصد درست هدایت می‌کنیم
+        if not user_has_bale(request):
+            return RedirectResponse("/activate-bale", status_code=303)
+        return RedirectResponse("/cars", status_code=303)
+    
+    # اگر لاگین نبود، می‌رود به صفحه لاگین
+    return RedirectResponse("/login", status_code=303)
+
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
+    """
+    مسیر نمایش فرم لاگین:
+    اگر قبلاً لاگین کرده باشد، اجازه نمی‌دهد دوباره فرم لاگین را ببیند.
+    """
+    user = get_current_user(request)
+    if user:
+        if not user_has_bale(request):
+            return RedirectResponse("/activate-bale", status_code=303)
+        return RedirectResponse("/cars", status_code=303)
+
+    # کاربر مهمان است؛ کپچا ساخته شده و فرم لاگین رندر می‌شود
     n1, n2, captcha_token = generate_captcha()
     return templates.TemplateResponse(
         request=request,
@@ -620,7 +635,7 @@ async def login_post(
         expected_ans = captcha_token
         
         # مقایسه پاسخ کاربر با مقدار واقعی
-        if int(str(captcha_answer).strip()) == int(str(expected_ans).strip()):
+        if captcha_answer== expected_ans:
             captcha_valid = True
         else:
             captcha_valid = False
@@ -628,7 +643,6 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
-        n1, n2, new_captcha_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
