@@ -631,7 +631,7 @@ async def login_post(
     username: str = Form(...),
     password: str = Form(...),
     captcha_answer: str = Form(...),
-    captcha_token: str = Form(...)
+    captcha_token: str = Form(...),
 ):
     captcha_valid = False
     try:
@@ -644,18 +644,7 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
-        
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context={
-                "request": request,
-                "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
-                "num1": n1,
-                "num2": n2,
-                "captcha_token": new_captcha_token
-            }
-        )
+        return RedirectResponse("/login", status_code=303)
 
     users_df = read_sheet(USERS_SHEET)
     username = str(username).strip()
