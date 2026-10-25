@@ -128,32 +128,25 @@ def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
 # -----------------------------
 # Excel Helpers
 # -----------------------------
+PERSIAN_ARABIC_DIGITS = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+
+def normalize_digits_value(val):
+    """تبدیل کاراکترهای عددی فارسی و عربی به انگلیسی در مقادیر خوانده‌شده"""
+    if isinstance(val, str):
+        return val.translate(PERSIAN_ARABIC_DIGITS)
+    return val
+
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
-            dtypes = {}
-            if sheet_name == USERS_SHEET:
-                dtypes = {"phone": str, "mobile": str, "bale_chat_id": str, "user_code": str}
-            elif sheet_name == CARS_SHEET:
-                dtypes = {"car_code": str, "VIN": str, "production_year": str, "model_year": str}
-
-            df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=dtypes)
-
-            if "phone" in df.columns:
-                df["phone"] = df["phone"].apply(clean_phone)
-            elif "mobile" in df.columns:
-                df["mobile"] = df["mobile"].apply(clean_phone)
-
-            return df
-
-        except (ValueError, FileNotFoundError):
-            if sheet_name == HISTORY_SHEET:
-                return pd.DataFrame(columns=REQUIRED_HISTORY_COLS)
-            elif sheet_name == CARS_SHEET:
-                return pd.DataFrame(columns=REQUIRED_CAR_COLS)
-            elif sheet_name == USERS_SHEET:
-                return pd.DataFrame(columns=REQUIRED_USER_COLS)
+            # خواندن تمام ستون‌ها به عنوان رشته تا ساختار ارقام و صفر اول شماره‌ها حفظ شود
+            df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=str)
+        except Exception:
             return pd.DataFrame()
+
+    # تبدیل ارقام فارسی/عربی به انگلیسی در تمام سلول‌ها
+    df = df.map(normalize_digits_value)
+    return df
 
 def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame):
     with FileLock(LOCK_PATH):
