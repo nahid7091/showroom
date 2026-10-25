@@ -635,8 +635,8 @@ async def login_post(
 ):
     captcha_valid = False
     try:
-        # مقایسه پاسخ کاربر با مقدار واقعی
-        if captcha_serializer.dumps(captcha_answer) == captcha_token:
+        expected_ans = captcha_serializer.loads(captcha_token)
+        if int(str(captcha_answer).strip()) == int(expected_ans):
             captcha_valid = True
         else:
             captcha_valid = False
