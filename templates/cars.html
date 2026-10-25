@@ -2,87 +2,411 @@
 <html lang="fa" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>مدیریت موجودی خودروها</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدیریت موجودی نمایشگاه خودرو</title>
     <style>
-        body { font-family: Tahoma, sans-serif; background: #f4f6f9; margin: 0; padding: 20px; }
-        .container { max-width: 1200px; margin: auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .btn-add { background: #28a745; color: white; border: none; padding: 10px 18px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; }
-        .btn-add:hover { background: #218838; }
+        :root {
+            --primary: #1e3a8a;
+            --primary-hover: #172554;
+            --success: #15803d;
+            --danger: #b91c1c;
+            --warning: #b45309;
+            --border: #e2e8f0;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+        }
 
-        /* استایل جدول */
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-        th, td { border: 1px solid #dee2e6; padding: 10px; text-align: center; }
-        th { background: #e9ecef; color: #495057; }
-        tr:nth-child(even) { background-color: #f8f9fa; }
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: #1e293b;
+        }
 
-        /* استایل پنجره پاپ‌آپ (Modal) */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
-        .modal-content { background-color: #fff; margin: 40px auto; padding: 25px; border-radius: 8px; width: 85%; max-width: 800px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; padding-bottom: 10px; margin-bottom: 15px; }
-        .close-btn { font-size: 24px; cursor: pointer; color: #888; }
-        .close-btn:hover { color: #000; }
+        .container {
+            max-width: 1400px;
+            margin: auto;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
 
-        /* فرم شبکه‌ای دو ستونه */
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .form-group { display: flex; flex-direction: column; text-align: right; }
-        .form-group label { margin-bottom: 5px; font-size: 12px; font-weight: bold; color: #333; }
-        .form-group input, .form-group select, .form-group textarea { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 13px; }
-        .full-width { grid-column: span 2; }
-        .btn-submit { background: #007bff; color: white; border: none; padding: 12px; border-radius: 5px; cursor: pointer; font-size: 15px; font-weight: bold; width: 100%; margin-top: 15px; }
-        .btn-submit:hover { background: #0056b3; }
+        /* هدر و نمایش اطلاعات کاربر لاگین شده */
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 18px;
+            margin-bottom: 20px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-badge {
+            background-color: #e0e7ff;
+            color: #3730a3;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .role-tag {
+            background-color: #f1f5f9;
+            color: #475569;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            border: 1px solid #cbd5e1;
+        }
+
+        .btn-logout {
+            background-color: #fee2e2;
+            color: var(--danger);
+            border: 1px solid #fca5a5;
+            padding: 7px 15px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn-logout:hover {
+            background-color: #fecaca;
+        }
+
+        /* نوار ابزار: جستجو، فیلترها و دکمه افزودن */
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .filter-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .filter-form input, .filter-form select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .filter-form button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .filter-form a {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 13px;
+            padding: 8px;
+        }
+
+        .btn-add-car {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 9px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-add-car:hover {
+            background-color: #166534;
+        }
+
+        /* استایل جدول خودروها */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 10px 8px;
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: #475569;
+            font-weight: bold;
+        }
+
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+
+        /* بج‌های وضعیت خودرو */
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .status-free { background-color: #dcfce7; color: #166534; }
+        .status-reserved { background-color: #fef3c7; color: #92400e; }
+        .status-deposit { background-color: #e0f2fe; color: #075985; }
+        .status-sold { background-color: #fee2e2; color: #991b1b; }
+        .status-unsellable { background-color: #f1f5f9; color: #475569; }
+
+        /* پاپ‌آپ / مودال ثبت خودرو */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(2px);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            margin: 30px auto;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 860px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            animation: modalFade 0.25s ease-out;
+        }
+
+        @keyframes modalFade {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .close-btn {
+            font-size: 26px;
+            font-weight: bold;
+            color: #94a3b8;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .close-btn:hover {
+            color: #0f172a;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            text-align: right;
+        }
+
+        .form-group label {
+            margin-bottom: 6px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #475569;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 9px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13px;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            border-color: var(--primary);
+            outline: none;
+        }
+
+        .full-span {
+            grid-column: 1 / -1;
+        }
+
+        .btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-submit:hover {
+            background-color: var(--primary-hover);
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="top-bar">
-        <h2>موجودی و وضعیت خودروها</h2>
-        
-        <!-- دکمه فقط برای مدیران نمایش داده می‌شود -->
+    <!-- هدر: وضعیت هویت کاربر لاگین شده و دکمه خروج -->
+    <div class="header-bar">
+        <div class="user-info">
+            <span class="user-badge">
+                👤 {{ user.name }} {{ user.lastname }} ({{ user.username }})
+            </span>
+            <span class="role-tag">نقش: {{ user.role }}</span>
+        </div>
+        <div>
+            <a href="/logout" class="btn-logout">خروج از حساب</a>
+        </div>
+    </div>
+
+    <!-- کنترل‌ها: فیلتر، جستجو و دکمه باز کردن فرم ثبت ماشین -->
+    <div class="controls-bar">
+        <form class="filter-form" method="GET" action="/cars">
+            <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
+            <select name="status">
+                <option value="">-- همه وضعیت‌ها --</option>
+                <option value="free" {% if status == 'free' %}selected{% endif %}>free</option>
+                <option value="reserved(4 hours)" {% if status == 'reserved(4 hours)' %}selected{% endif %}>reserved(4 hours)</option>
+                <option value="بیعانه" {% if status == 'بیعانه' %}selected{% endif %}>بیعانه</option>
+                <option value="غیر قابل فروش" {% if status == 'غیر قابل فروش' %}selected{% endif %}>غیر قابل فروش</option>
+                <option value="فروخته شده" {% if status == 'فروخته شده' %}selected{% endif %}>فروخته شده</option>
+            </select>
+            <input type="text" name="place" placeholder="محل استقرار" value="{{ place or '' }}">
+            <button type="submit">اعمال فیلتر</button>
+            {% if q or status or place %}
+                <a href="/cars">پاک کردن فیلترها</a>
+            {% endif %}
+        </form>
+
+        <!-- دکمه ثبت خودرو فقط برای admin و showroom_manager -->
         {% if user.role in ['admin', 'showroom_manager'] %}
-        <button class="btn-add" onclick="openCarModal()">+ اضافه کردن خودرو</button>
+        <button class="btn-add-car" onclick="openCarModal()">
+            ➕ ثبت خودرو جدید
+        </button>
         {% endif %}
     </div>
 
-    <!-- جدول موجودی خودروها -->
-    <table id="carsTable">
-        <thead>
-            <tr>
-                <th>کد خودرو</th>
-                <th>عنوان</th>
-                <th>VIN</th>
-                <th>سال مدل</th>
-                <th>رنگ</th>
-                <th>محل استقرار</th>
-                <th>وضعیت</th>
-                <th>مالک</th>
-                <th>آخرین ویرایشگر</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for car in cars %}
-            <tr>
-                <td>{{ car.car_code }}</td>
-                <td>{{ car.title }}</td>
-                <td>{{ car.VIN }}</td>
-                <td>{{ car.model_year }}</td>
-                <td>{{ car.color }}</td>
-                <td>{{ car.place }}</td>
-                <td>{{ car.status }}</td>
-                <td>{{ car.owner }}</td>
-                <td>{{ car.last_updated_by }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- جدول نمایش اطلاعات خودروها -->
+    <div class="table-responsive">
+        <table id="carsTable">
+            <thead>
+                <tr>
+                    <th>کد خودرو</th>
+                    <th>عنوان خودرو</th>
+                    <th>VIN</th>
+                    <th>مدل</th>
+                    <th>رنگ</th>
+                    <th>مالک</th>
+                    <th>محل استقرار</th>
+                    <th>وضعیت</th>
+                    <th>مهلت رزرو</th>
+                    <th>آخرین به‌روزرسانی</th>
+                    <th>توسط</th>
+                    <th>گارانتی</th>
+                    <th>ایراد بدنه/رنگ</th>
+                    <th>ایراد فنی</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for car in cars %}
+                <tr>
+                    <td><strong>{{ car.car_code }}</strong></td>
+                    <td>{{ car.title }}</td>
+                    <td style="font-family: monospace;">{{ car.VIN }}</td>
+                    <td>{{ car.model_year or '-' }}</td>
+                    <td>{{ car.color or '-' }}</td>
+                    <td>{{ car.owner or '-' }}</td>
+                    <td>{{ car.place }}</td>
+                    <td>
+                        {% if car.status == 'free' %}
+                            <span class="status-badge status-free">آزاد (free)</span>
+                        {% elif car.status == 'reserved(4 hours)' %}
+                            <span class="status-badge status-reserved">رزرو ۴ ساعته</span>
+                        {% elif car.status == 'بیعانه' %}
+                            <span class="status-badge status-deposit">بیعانه</span>
+                        {% elif car.status == 'فروخته شده' %}
+                            <span class="status-badge status-sold">فروخته شده</span>
+                        {% else %}
+                            <span class="status-badge status-unsellable">غیر قابل فروش</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ car.reserved_until or '-' }}</td>
+                    <td>{{ car.last_updated_at or '-' }}</td>
+                    <td>{{ car.last_updated_by or '-' }}</td>
+                    <td>{{ car.No_Guarantee or 'خیر' }}</td>
+                    <td>{{ car.physical_issue or '-' }}</td>
+                    <td>{{ car.technical_issue or '-' }}</td>
+                </tr>
+                {% else %}
+                <tr id="noDataRow">
+                    <td colspan="14" style="padding: 20px; color: #64748b;">هیچ خودرویی یافت نشد.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 
-<!-- پنجره مودال ثبت اطلاعات خودرو -->
+<!-- پنجره مودال ثبت اطلاعات خودرو (ثبت بدون رفرش) -->
 <div id="addCarModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 style="margin: 0;">ثبت اطلاعات خودرو جدید</h3>
+            <h3 style="margin: 0;">ثبت و افزودن خودرو جدید</h3>
             <span class="close-btn" onclick="closeCarModal()">&times;</span>
         </div>
 
@@ -90,38 +414,40 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label>کد خودرو *</label>
-                    <input type="text" name="car_code" required placeholder="مثال: C-101">
+                    <input type="text" name="car_code" required placeholder="مثال: 1045">
                 </div>
                 <div class="form-group">
                     <label>شماره شاسی (VIN) *</label>
-                    <input type="text" name="VIN" required placeholder="۱۷ رقمی">
+                    <input type="text" name="VIN" required placeholder="۱۷ کاراکتر">
                 </div>
                 <div class="form-group">
                     <label>عنوان / نام خودرو *</label>
-                    <input type="text" name="title" required placeholder="مثال: پژو ۲۰۷i دنده‌ای">
+                    <input type="text" name="title" required placeholder="مثال: دیگنیتی پرایم">
                 </div>
+
                 <div class="form-group">
-                    <label>سال مدل</label>
+                    <label>سال مدل (شمسی)</label>
                     <input type="text" name="model_year" placeholder="مثال: ۱۴۰۲">
                 </div>
                 <div class="form-group">
-                    <label>سال ساخت میلادی</label>
+                    <label>سال ساخت (میلادی)</label>
                     <input type="text" name="production_year" placeholder="مثال: 2023">
                 </div>
                 <div class="form-group">
-                    <label>رنگ</label>
-                    <input type="text" name="color" placeholder="مثال: سفید">
+                    <label>رنگ بدنه</label>
+                    <input type="text" name="color" placeholder="مثال: مشکی متالیک">
                 </div>
+
                 <div class="form-group">
                     <label>نام مالک</label>
-                    <input type="text" name="owner" placeholder="نام و نام خانوادگی">
+                    <input type="text" name="owner" placeholder="نام مالک خودرو">
                 </div>
                 <div class="form-group">
                     <label>محل استقرار</label>
-                    <input type="text" name="place" value="نمایشگاه">
+                    <input type="text" name="place" value="نمایشگاه" required>
                 </div>
                 <div class="form-group">
-                    <label>وضعیت اولیه</label>
+                    <label>وضعیت اولیه *</label>
                     <select name="status">
                         <option value="free">free</option>
                         <option value="reserved(4 hours)">reserved(4 hours)</option>
@@ -130,28 +456,34 @@
                         <option value="فروخته شده">فروخته شده</option>
                     </select>
                 </div>
+
                 <div class="form-group">
                     <label>فاقد گارانتی</label>
                     <select name="No_Guarantee">
-                        <option value="خیر">خیر</option>
-                        <option value="بله">بله</option>
+                        <option value="خیر">خیر (گارانتی دارد)</option>
+                        <option value="بله">بله (فاقد گارانتی)</option>
                     </select>
                 </div>
-                <div class="form-group full-width">
-                    <label>آپشن‌ها و توضیحات</label>
-                    <input type="text" name="options" placeholder="سانروف، کروز کنترل، ...">
+                <div class="form-group">
+                    <label>موعد تحویل (Due)</label>
+                    <input type="text" name="Due" placeholder="فوری / تاریخ">
                 </div>
-                <div class="form-group full-width">
-                    <label>ایرادات فنی</label>
-                    <input type="text" name="technical_issue" placeholder="در صورت وجود ذکر شود">
+                <div class="form-group">
+                    <label>آپشن‌ها</label>
+                    <input type="text" name="options" placeholder="فول، دوربین ۳۶۰، رادار...">
                 </div>
-                <div class="form-group full-width">
-                    <label>ایرادات بدنه / رنگ‌شدگی</label>
-                    <input type="text" name="physical_issue" placeholder="مثال: گلگیر جلو راست رنگ">
+
+                <div class="form-group full-span">
+                    <label>ایرادات بدنه و رنگ‌شدگی</label>
+                    <input type="text" name="physical_issue" placeholder="مثال: بدون رنگ، لیسه‌گیری لبه گلگیر">
+                </div>
+                <div class="form-group full-span">
+                    <label>ایرادات و توضیحات فنی</label>
+                    <input type="text" name="technical_issue" placeholder="مثال: سلامت کامل موتور و گیربکس">
                 </div>
             </div>
 
-            <button type="submit" class="btn-submit" id="submitBtn">ثبت و ذخیره خودرو</button>
+            <button type="submit" class="btn-submit" id="submitBtn">ثبت نهایی و درج در سیستم</button>
         </form>
     </div>
 </div>
@@ -167,20 +499,31 @@
         modal.style.display = "none";
     }
 
-    // بستن مدال با کلیک در فضای بیرون فرم
+    // بستن مدال با کلیک در پس‌زمینه
     window.onclick = function(event) {
         if (event.target === modal) {
             closeCarModal();
         }
     };
 
-    // ارسال فرم از طریق AJAX و افزودن به سطر اول جدول
+    // برچسب استایل وضعیت
+    function getStatusBadge(status) {
+        switch(status) {
+            case 'free': return '<span class="status-badge status-free">آزاد (free)</span>';
+            case 'reserved(4 hours)': return '<span class="status-badge status-reserved">رزرو ۴ ساعته</span>';
+            case 'بیعانه': return '<span class="status-badge status-deposit">بیعانه</span>';
+            case 'فروخته شده': return '<span class="status-badge status-sold">فروخته شده</span>';
+            default: return '<span class="status-badge status-unsellable">غیر قابل فروش</span>';
+        }
+    }
+
+    // ثبت فرم بدون رفرش و درج در ردیف اول جدول
     document.getElementById("addCarForm").addEventListener("submit", async function(e) {
         e.preventDefault();
 
         const submitBtn = document.getElementById("submitBtn");
         submitBtn.disabled = true;
-        submitBtn.innerText = "در حال ذخیره...";
+        submitBtn.innerText = "در حال ذخیره اطلاعات در اکسل...";
 
         const formData = new FormData(this);
 
@@ -193,43 +536,51 @@
             const result = await response.json();
 
             if (response.ok && result.success) {
-                alert("خودرو با موفقیت اضافه شد.");
-
-                // دریافت شیء خودروی اضافه شده
                 const car = result.car;
 
-                // ایجاد یک سطر جدید در بالای جدول
-                const tableBody = document.querySelector("#carsTable tbody");
+                // اگر پیام "هیچ خودرویی یافت نشد" وجود دارد، آن را حذف کنیم
+                const noDataRow = document.getElementById("noDataRow");
+                if (noDataRow) {
+                    noDataRow.remove();
+                }
+
+                // ساخت سطر جدید
+                const tbody = document.querySelector("#carsTable tbody");
                 const newRow = document.createElement("tr");
-                newRow.style.backgroundColor = "#e8f5e9"; // رنگ ملایم برای نمایش ردیف جدید
+                newRow.style.backgroundColor = "#ecfdf5"; // هایلایت سبز روشن موقت برای رکورد جدید
 
                 newRow.innerHTML = `
-                    <td>${car.car_code}</td>
+                    <td><strong>${car.car_code}</strong></td>
                     <td>${car.title}</td>
-                    <td>${car.VIN}</td>
+                    <td style="font-family: monospace;">${car.VIN}</td>
                     <td>${car.model_year || '-'}</td>
                     <td>${car.color || '-'}</td>
-                    <td>${car.place}</td>
-                    <td>${car.status}</td>
                     <td>${car.owner || '-'}</td>
-                    <td>${car.last_updated_by}</td>
+                    <td>${car.place}</td>
+                    <td>${getStatusBadge(car.status)}</td>
+                    <td>${car.reserved_until || '-'}</td>
+                    <td>${car.last_updated_at || '-'}</td>
+                    <td>${car.last_updated_by || '-'}</td>
+                    <td>${car.No_Guarantee || 'خیر'}</td>
+                    <td>${car.physical_issue || '-'}</td>
+                    <td>${car.technical_issue || '-'}</td>
                 `;
 
-                // افزودن سطر جدید به ابتدای جدول
-                tableBody.insertBefore(newRow, tableBody.firstChild);
+                // اضافه شدن به بالای جدول
+                tbody.insertBefore(newRow, tbody.firstChild);
 
-                // بازنشانی فرم و بستن پنجره پاپ‌آپ
+                // بازنشانی فرم و بستن پنجره
                 document.getElementById("addCarForm").reset();
                 closeCarModal();
             } else {
-                alert("خطا: " + (result.message || "مشکلی در ذخیره اطلاعات پیش آمد."));
+                alert("خطا: " + (result.message || "امکان ذخیره اطلاعات وجود ندارد."));
             }
         } catch (error) {
             console.error(error);
             alert("خطا در برقراری ارتباط با سرور.");
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerText = "ثبت و ذخیره خودرو";
+            submitBtn.innerText = "ثبت نهایی و درج در سیستم";
         }
     });
 </script>
