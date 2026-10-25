@@ -337,13 +337,23 @@ def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
 def get_current_user(request: Request) -> Optional[dict]:
-    session_data = request.cookies.get("session")
-    if not session_data:
+    token = request.cookies.get("session_token")
+    if not token:
         return None
     try:
-        return serializer.loads(session_data)
-    except BadSignature:
+        username = signer.loads(token, max_age=86400 * 7) # اعتبار ۷ روزه
+        df_users = read_sheet("users")
+        df_users["username"] = df_users["username"].astype(str).str.strip()
+        matched = df_users[df_users["username"] == str(username).strip()]
+        if not matched.empty:
+            user = matched.iloc[0].to_dict()
+            # نرمال‌سازی فیلدها برای جلوگیری از باگ
+            user["role"] = str(user.get("role", "")).strip().lower()
+            user["user_has_bale"] = str(user.get("user_has_bale", "")).strip() in ["1", "true", "True"]
+            return user
+    except Exception:
         return None
+    return None
 
 def require_user(request: Request) -> dict:
     user = get_current_user(request)
@@ -725,20 +735,19 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 # روت فرم افزودن خودرو
 # -----------------------------
 @app.get("/cars/add", response_class=HTMLResponse)
-async def add_car_page(request: Request, user=Depends(require_role("admin", "showroom_manager"))):
-    if not user_has_bale(request):
-        return RedirectResponse(url="/activate-bale", status_code=303)
-        
+async def add_car_page(request: Request):
+    user = get_current_user(request)
+    if not user:
+        return RedirectResponse(url="/login", status_code=302)
+    if not user.get("user_has_bale"):
+        return RedirectResponse(url="/activate-bale", status_code=302)
+    if user.get("role") not in ["admin", "showroom_manager"]:
+        raise HTTPException(status_code=403, detail="شما دسترسی لازم برای افزودن خودرو را ندارید.")
+    
     return templates.TemplateResponse(
         request=request,
         name="add_car.html",
-        context={
-            "request": request,
-            "user": user,
-            "status_options": ALLOWED_STATUSES,
-            "place_options": ALLOWED_PLACES,
-            "col_names": COLUMN_TITLES_FA,
-        }
+        context={"user": user}
     )
 
 # -----------------------------
@@ -814,6 +823,81 @@ async def add_car(
         to_place=place.strip(),
     )
     return RedirectResponse("/cars", status_code=303)
+
+@app.post("/cars/add")
+async def add_car_submit(
+    request: Request,
+    title: str = Form(...),
+    VIN: str = Form(...),
+    model_year: Optional[str] = Form(""),
+    production_year: Optional[str] = Form(""),
+    color: Optional[str] = Form(""),
+    specs: Optional[str] = Form(""),
+    place: Optional[str] = Form(""),
+    owner: Optional[str] = Form(""),
+    status: Optional[str] = Form("free"),
+    options: Optional[str] = Form(""),
+    No_Guarantee: Optional[str] = Form("خیر"),
+    Due: Optional[str] = Form(""),
+    technical_issue: Optional[str] = Form("ندارد"),
+    physical_issue: Optional[str] = Form("ندارد")
+):
+    user = get_current_user(request)
+    if not user or user.get("role") not in ["admin", "showroom_manager"]:
+        raise HTTPException(status_code=403, detail="دسترسی غیرمجاز")
+
+    now_shamsi = jdatetime.datetime.now(IRAN_TZ).strftime("%Y/%m/%d %H:%M")
+
+    with FileLock(LOCK_FILE):
+        df_cars = read_sheet("cars")
+        
+        # تولید کد جدید خودرو
+        if not df_cars.empty and "car_code" in df_cars.columns:
+            try:
+                new_code = int(df_cars["car_code"].max()) + 1
+            except:
+                new_code = len(df_cars) + 1
+        else:
+            new_code = 1001
+
+        new_car = {
+            "car_code": new_code,
+            "VIN": VIN.strip(),
+            "title": title.strip(),
+            "specs": specs.strip() if specs else "",
+            "model_year": model_year.strip() if model_year else "",
+            "production_year": production_year.strip() if production_year else "",
+            "color": color.strip() if color else "",
+            "owner": owner.strip() if owner else "",
+            "place": place.strip() if place else "",
+            "status": status if status in ALLOWED_STATUSES else "free",
+            "reserved_until": "",
+            "last_updated_at": now_shamsi,
+            "last_updated_by": user.get("username", "system"),
+            "options": options.strip() if options else "",
+            "No_Guarantee": No_Guarantee,
+            "Due": Due.strip() if Due else "",
+            "technical_issue": technical_issue.strip() if technical_issue else "ندارد",
+            "physical_issue": physical_issue.strip() if physical_issue else "ندارد",
+        }
+
+        df_cars = pd.concat([df_cars, pd.DataFrame([new_car])], ignore_index=True)
+        write_sheet("cars", df_cars)
+
+        # ثبت لاگ اولیه
+        df_logs = read_sheet("car_logs")
+        log_entry = {
+            "car_code": new_code,
+            "action": "افزودن خودرو جدید",
+            "user": user.get("username"),
+            "timestamp": now_shamsi,
+            "details": f"ثبت اولیه خودرو با وضعیت {status} و پلاک/محل {place}"
+        }
+        df_logs = pd.concat([df_logs, pd.DataFrame([log_entry])], ignore_index=True)
+        write_sheet("car_logs", df_logs)
+
+    return RedirectResponse(url="/cars", status_code=303)
+
 
 @app.get("/cars/history/{car_code}")
 def car_history(car_code: str, user=Depends(require_user)):
