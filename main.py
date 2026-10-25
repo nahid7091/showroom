@@ -632,8 +632,10 @@ async def login_post(
 ):
     captcha_valid = False
     try:
+        answered = captcha_serializer.dumps(captcha_answer)
+        
         # مقایسه پاسخ کاربر با مقدار واقعی
-        if captcha_serializer.dumps(captcha_answer) == captcha_token:
+        if answered == expected_ans:
             captcha_valid = True
         else:
             captcha_valid = False
@@ -641,18 +643,7 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
-        
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context={
-                "request": request,
-                "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
-                "num1": n1,
-                "num2": n2,
-                "captcha_token": new_captcha_token
-            }
-        )
+        return RedirectResponse("/login", status_code=303)
 
     users_df = read_sheet(USERS_SHEET)
     username = str(username).strip()
