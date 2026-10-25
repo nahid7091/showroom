@@ -590,10 +590,12 @@ async def read_root(request: Request):
         # اگر لاگین کرده بود، وضعیت بله را بررسی و به مقصد درست هدایت می‌کنیم
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
-        return RedirectResponse("/cars", status_code=303)
+        else:
+            return RedirectResponse("/cars", status_code=303)
     
     # اگر لاگین نبود، می‌رود به صفحه لاگین
-    return RedirectResponse("/login", status_code=303)
+    else:
+        return RedirectResponse("/login", status_code=303)
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -606,7 +608,8 @@ async def login_get(request: Request):
     if user:
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
-        return RedirectResponse("/cars", status_code=303)
+        else:
+            return RedirectResponse("/cars", status_code=303)
 
     # کاربر مهمان است؛ کپچا ساخته شده و فرم لاگین رندر می‌شود
     n1, n2, captcha_token = generate_captcha()
@@ -632,10 +635,8 @@ async def login_post(
 ):
     captcha_valid = False
     try:
-        answered = captcha_serializer.dumps(captcha_answer)
-        
         # مقایسه پاسخ کاربر با مقدار واقعی
-        if answered == expected_ans:
+        if captcha_serializer.dumps(captcha_answer) == captcha_token:
             captcha_valid = True
         else:
             captcha_valid = False
@@ -643,7 +644,18 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
-        return RedirectResponse("/login", status_code=303)
+        
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "request": request,
+                "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
+                "num1": n1,
+                "num2": n2,
+                "captcha_token": new_captcha_token
+            }
+        )
 
     users_df = read_sheet(USERS_SHEET)
     username = str(username).strip()
