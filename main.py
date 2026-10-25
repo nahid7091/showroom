@@ -47,7 +47,7 @@ ALLOWED_PLACES = ["شوروم تهران","انزلی","ساری"]
 COLUMN_TITLES_FA = {
     # شیت خودروها
     "car_code": "کد خودرو",
-    "VIN": "شماره شاسی,
+    "VIN": "شماره شاسی",
     "title": "مشخصات خودرو",
     "model_year": "سال مدل",
     "production_year": "سال ساخت",
@@ -710,6 +710,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
             "request": request,
             "user": user,
             "cars": cars,
+            "col_names": COLUMN_TITLES_FA,
             "q": q or "",
             "status": status or "",
             "place": place or "",
