@@ -77,9 +77,9 @@ COLUMN_TITLES_FA = {
     # شیت کاربران (در صورت نیاز)
     "user_code": "کد کاربر",
     "username": "نام کاربری",
-    "password",
-    "bale_chat_id",
-    "user_has_bale",
+    "password":"پسورد",
+    "bale_chat_id":"بله",
+    "user_has_bale":"احراز شده",
     "name": "نام",
     "lastname": "نام خانوادگی",
     "role": "نقش",
