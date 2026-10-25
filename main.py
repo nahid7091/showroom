@@ -14,7 +14,7 @@ from filelock import FileLock
 from itsdangerous import URLSafeSerializer, BadSignature
 
 import jdatetime
-from zoneinfo import ZoneInfo # در پایتون 3.9 به بالا به صورت استاندارد وجود دارد
+from zoneinfo import ZoneInfo
 
 IRAN_TZ = ZoneInfo("Asia/Tehran")
     
@@ -99,12 +99,11 @@ if os.path.isdir("static"):
 def get_current_jalali_now() -> str:
     """دریافت تاریخ و ساعت جاری ایران به صورت شمسی و رشته‌ای"""
     now = jdatetime.datetime.now(IRAN_TZ)
-    # خروجی به فرمت: 1403/08/04 15:30:25
     return now.strftime("%Y/%m/%d %H:%M:%S")
 
 def get_jalali_reserve_expiry(hours=4) -> str:
-     expiry = jdatetime.datetime.now(IRAN_TZ) + jdatetime.timedelta(hours=hours)
-     return expiry.strftime("%Y/%m/%d %H:%M:%S")
+    expiry = jdatetime.datetime.now(IRAN_TZ) + jdatetime.timedelta(hours=hours)
+    return expiry.strftime("%Y/%m/%d %H:%M:%S")
 
 def clean_phone(phone) -> str:
     """استانداردسازی شماره موبایل و حذف قطعی .0 اکسل"""
@@ -124,8 +123,8 @@ def generate_captcha():
     """تولید دو عدد تصادفی و توکن رمزنگاری‌شده از حاصل جمع"""
     n1 = random.randint(1, 9)
     n2 = random.randint(1, 9)
-    c_data = captcha_serializer.dumps(n1 + n2)
-    return n1, n2, c_data
+    token = captcha_serializer.dumps(n1 + n2)
+    return n1, n2, token
 
 def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
     url = f"{BALE_API_URL}/sendMessage"
@@ -154,12 +153,10 @@ def normalize_digits_value(val):
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
-            # خواندن تمام ستون‌ها به عنوان رشته تا ساختار ارقام و صفر اول شماره‌ها حفظ شود
             df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=str)
         except Exception:
             return pd.DataFrame()
 
-    # تبدیل ارقام فارسی/عربی به انگلیسی در تمام سلول‌ها
     df = df.map(normalize_digits_value)
     return df
 
@@ -192,11 +189,11 @@ def append_history(car_code: str, changed_by: str, from_status: str, to_status: 
         except Exception:
             next_id = len(history_df) + 1
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    now_jalali = get_current_jalali_now()
     row = {
         "id": next_id,
         "car_code": str(car_code),
-        "changed_at": now,
+        "changed_at": now_jalali,
         "changed_by": changed_by,
         "from_status": from_status,
         "to_status": to_status,
@@ -220,14 +217,11 @@ def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
     if cars_df.empty or "reserved_until" not in cars_df.columns:
         return
 
-    # دریافت زمان فعلی ایران به صورت شمسی: مثلاً 1403/08/04 16:30:00
     now_jalali = get_current_jalali_now()
 
-    # تبدیل ستون‌ها به متن برای مقایسه دقیق متنی
     status_series = cars_df["status"].fillna("").astype(str).str.strip()
     reserved_until_series = cars_df["reserved_until"].fillna("").astype(str).str.strip()
 
-    # شرط خودروهایی که رزرو ۴ ساعته هستند و زمان انقضای آنها رسیده یا گذشته است
     expired_mask = (
         (status_series == "reserved(4 hours)")
         & (reserved_until_series != "")
@@ -243,7 +237,6 @@ def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
         old_status = str(cars_df.at[i, "status"])
         old_place = "" if pd.isna(cars_df.at[i, "place"]) else str(cars_df.at[i, "place"])
 
-        # بازگرداندن وضعیت به free و ثبت ساعت و تاریخ شمسی فعلی
         cars_df.at[i, "status"] = "free"
         cars_df.at[i, "reserved_until"] = ""
         cars_df.at[i, "last_updated_by"] = system_user_label
@@ -371,7 +364,7 @@ async def bale_webhook(request: Request):
         
         message = body.get("message", {})
         chat_id = message.get("chat", {}).get("id")
-        text = message.get("text", "").strip()
+        text = (message.get("text") or "").strip()
         contact = message.get("contact")
         
         if not chat_id:
@@ -455,16 +448,13 @@ async def bale_webhook(request: Request):
                                     chat_id,
                                     f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد. اکنون می‌توانید بدون محدودیت از سایت استفاده کنید."
                                 )
-                                print(f"VERIFIED & LINKED: User={target_user}, BaleID={chat_id}, Phone={user_phone}")
                             else:
                                 users_df.drop(columns=["norm_phone"], inplace=True)
                                 send_bale_message(
                                     chat_id,
                                     f"⛔️ عدم تطابق شماره همراه!\n\n"
-                                    f"شماره اکانت بله شما ({user_phone}) با شماره تلفن ثبت‌شده برای کاربر «{target_user}» یکسان نیست.\n"
-                                    f"دسترسی به سامانه امکان‌پذیر نمی‌باشد."
+                                    f"شماره اکانت بله شما ({user_phone}) با شماره تلفن ثبت‌شده برای کاربر «{target_user}» یکسان نیست."
                                 )
-                                print(f"MISMATCH REJECTED: User={target_user}, SentPhone={user_phone}, Expected={expected_phone}")
                         else:
                             users_df.drop(columns=["norm_phone"], inplace=True)
                             send_bale_message(chat_id, "❌ کاربری برای تکمیل این درخواست یافت نشد.")
@@ -517,20 +507,20 @@ async def read_root(request: Request):
     user = get_current_user(request)
     if user:
         return RedirectResponse("/cars", status_code=302)
-    n1, n2, c_data = generate_captcha()
+    n1, n2, token = generate_captcha()
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": c_data}
+        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": token}
     )
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    n1, n2, c_data = generate_captcha()
+    n1, n2, token = generate_captcha()
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": c_data}
+        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": token}
     )
 
 @app.post("/login")
@@ -550,7 +540,7 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
-        n1, n2, c_data = generate_captcha()
+        n1, n2, token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -559,7 +549,7 @@ async def login_post(
                 "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": c_data
+                "captcha_token": token
             }
         )
 
@@ -568,7 +558,7 @@ async def login_post(
     password = str(password)
 
     if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
-        n1, n2, c_data = generate_captcha()
+        n1, n2, token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -577,14 +567,14 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": c_data
+                "captcha_token": token
             }
         )
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
 
     if saved_password != password:
-        n1, n2, c_data = generate_captcha()
+        n1, n2, token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -593,7 +583,7 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": c_data
+                "captcha_token": token
             }
         )
 
@@ -678,13 +668,13 @@ async def add_car(
     if car_code in cars_df["car_code"].astype(str).values:
         raise HTTPException(status_code=400, detail="این کد ماشین قبلاً ثبت شده است.")
 
-    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     if status not in ALLOWED_STATUSES:
         raise HTTPException(status_code=400, detail="وضعیت نامعتبر است.")
 
+    now_jalali = get_current_jalali_now()
     reserved_until = ""
     if status == "reserved(4 hours)":
-        reserved_until = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+        reserved_until = get_jalali_reserve_expiry(4)
     
     new_row = {
         "car_code": str(car_code),
@@ -698,7 +688,7 @@ async def add_car(
         "owner": owner,
         "place": place,
         "last_updated_by": f'{user["name"]} {user["lastname"]} ({user["user_code"]})',
-        "last_updated_at": now,
+        "last_updated_at": now_jalali,
     }
 
     cars_df = pd.concat([cars_df, pd.DataFrame([new_row])], ignore_index=True)
@@ -738,14 +728,13 @@ async def update_status(
         return RedirectResponse(url="/activate-bale", status_code=303)
 
     user_fullname = f"{user.get('name', '')} {user.get('lastname', '')}".strip() or user.get("username", "ناشناس")
-    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
+    
     title = ""
     from_status = ""
     from_place = ""
     final_place = place
+    current_jalali_time = get_current_jalali_now()
 
-    # رفع مشکل Deadlock: خواندن تمام شیت‌ها با یک قفل واحد
     with FileLock(LOCK_PATH):
         try:
             all_sheets = pd.read_excel(DB_PATH, sheet_name=None)
@@ -767,25 +756,13 @@ async def update_status(
                 if place:
                     cars_df.loc[idx, "place"] = place
 
-                current_jalali_time = get_current_jalali_now()
-
-                # به‌روزرسانی زمان آخرین تغییر
                 cars_df.loc[idx, "last_updated_at"] = current_jalali_time
-                cars_df.loc[idx, "last_updated_by"] = current_user.get("username", "سیستم")
+                cars_df.loc[idx, "last_updated_by"] = user_fullname
 
-                # cars_df.loc[idx, "last_updated_at"] = now_str
-                # cars_df.loc[idx, "last_updated_by"] = user_fullname
-
-                # if status == "reserved(4 hours)":
-                #     cars_df.loc[idx, "reserved_until"] = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
-                # else:
-                #     cars_df.loc[idx, "reserved_until"] = ""
-                
                 if status == "reserved(4 hours)":
                     cars_df.loc[idx, "reserved_until"] = get_jalali_reserve_expiry(4)
                 else:
                     cars_df.loc[idx, "reserved_until"] = ""
-
                 
                 all_sheets[CARS_SHEET] = cars_df
 
@@ -800,8 +777,8 @@ async def update_status(
                 new_log = {
                     "id": new_id,
                     "car_code": car_code,
-                    "changed_at": current_jalali_time  # تاریخ و ساعت شمسی دقیق,
-                    "changed_by": current_user.get("username", "سیستم"),
+                    "changed_at": current_jalali_time,
+                    "changed_by": user_fullname,
                     "from_status": from_status,
                     "to_status": status,
                     "from_place": from_place,
@@ -827,7 +804,7 @@ async def update_status(
             from_place=from_place,
             to_place=final_place,
             changed_by=user_fullname,
-            changed_at=now_str
+            changed_at=current_jalali_time
         )
     except Exception as e:
         print(f"Bale broadcast failed: {e}")
@@ -876,4 +853,3 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", "80"))
     uvicorn.run(app, host="0.0.0.0", port=port)
-    
