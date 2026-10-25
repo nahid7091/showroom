@@ -622,14 +622,20 @@ async def login_post(
 ):
     captcha_valid = False
     try:
-        expected_sum = captcha_serializer.loads(captcha_token)
-        if int(str(captcha_answer).strip()) == expected_sum:
+        data = captcha_serializer.loads(captcha_token)
+        if isinstance(data, dict):
+            expected_ans = data.get("ans")
+        else:
+            expected_ans = data
+            
+        # اصلاح شد: استفاده از expected_ans به جای expected_sum
+        if int(str(captcha_answer).strip()) == int(str(expected_ans).strip()):
             captcha_valid = True
     except (BadSignature, ValueError, TypeError):
         captcha_valid = False
 
     if not captcha_valid:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, new_captcha_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -638,7 +644,7 @@ async def login_post(
                 "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": new_captcha_token
             }
         )
 
@@ -647,7 +653,7 @@ async def login_post(
     password = str(password)
 
     if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, new_captcha_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -656,14 +662,14 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": new_captcha_token
             }
         )
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
 
     if saved_password != password:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, new_captcha_token = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -672,7 +678,7 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": new_captcha_token
             }
         )
 
