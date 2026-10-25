@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>ثبت خودرو جدید</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: Tahoma, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; direction: rtl; }
+    .card { max-width: 750px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: #1e293b; text-align: center; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .form-group { display: flex; flex-direction: column; }
+    .form-group.full { grid-column: span 2; }
+    label { font-size: 13px; font-weight: bold; margin-bottom: 5px; color: #475569; }
+    input, select, textarea { padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; outline: none; }
+    input:focus, select:focus, textarea:focus { border-color: #2563eb; }
+    .btn-submit { background: #2563eb; color: #fff; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; width: 100%; margin-top: 20px; }
+    .btn-submit:hover { background: #1d4ed8; }
+    .btn-back { display: block; text-align: center; margin-top: 10px; text-decoration: none; color: #64748b; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>ثبت خودرو جدید در انبار</h2>
+    <form action="/cars/add" method="post">
+      <div class="grid">
+        <div class="form-group">
+          <label>{{ col_names.car_code }} *</label>
+          <input type="text" name="car_code" required placeholder="مثال: 105">
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.title }}</label>
+          <input type="text" name="title" placeholder="مثال: سانتافه 2017">
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.VIN }}</label>
+          <input type="text" name="VIN" placeholder="شماره شاسی">
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.color }}</label>
+          <input type="text" name="color" placeholder="مثال: سفید">
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.model_year }}</label>
+          <input type="text" name="model_year" placeholder="مثال: 2017">
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.production_year }}</label>
+          <input type="text" name="production_year" placeholder="مثال: 1396">
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.owner }}</label>
+          <input type="text" name="owner" placeholder="نام مالک خودرو">
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.place }}</label>
+          <select name="place">
+            {% for pl in place_options %}
+              <option value="{{ pl }}">{{ pl }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.status }}</label>
+          <select name="status">
+            {% for st in status_options %}
+              <option value="{{ st }}">{{ st }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>{{ col_names.Due }}</label>
+          <input type="text" name="Due" placeholder="مثال: 1403/05/20">
+        </div>
+        <div class="form-group full">
+          <label>{{ col_names.options }}</label>
+          <textarea name="options" rows="2" placeholder="سقف پانوراما، رادار، گرمکن صندلی..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label>{{ col_names.No_Guarantee }}</label>
+          <input type="text" name="No_Guarantee" placeholder="وضعیت یا توضیحات گارانتی">
+        </div>
+        <div class="form-group full">
+          <label>{{ col_names.technical_issue }}</label>
+          <textarea name="technical_issue" rows="2" placeholder="توضیحات ایرادات فنی..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label>{{ col_names.physical_issue }}</label>
+          <textarea name="physical_issue" rows="2" placeholder="توضیحات رنگ‌شدگی یا خط و خش..."></textarea>
+        </div>
+      </div>
+      <button type="submit" class="btn-submit">ثبت اطلاعات خودرو</button>
+      <a href="/cars" class="btn-back">بازگشت به فهرست خودروها</a>
+    </form>
+  </div>
+</body>
+</html>
