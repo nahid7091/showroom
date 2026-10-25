@@ -23,7 +23,7 @@ LOCK_PATH = DB_PATH + ".lock"
 # تنظیمات پیام‌رسان بله
 BALE_BOT_TOKEN = os.getenv("APP_BALE_TOKEN", "").strip()
 BALE_API_URL = f"https://tapi.bale.ai/bot{BALE_BOT_TOKEN}"
-BALE_BOT_USERNAME = os.getenv("BALE_BOT_USERNAME", "sammotor_bot")  # بدون @
+BALE_BOT_USERNAME = os.getenv("BALE_BOT_USERNAME", "sammotor_bot")
 BALE_BOT_LINK = f"https://ble.ir/{BALE_BOT_USERNAME}"
 
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
@@ -77,8 +77,6 @@ REQUIRED_HISTORY_COLS = [
     "to_place",
 ]
 
-# حافظه موقت برای ذخیره یوزرنیم درخواست‌دهنده اتصال تا زمان فشردن دکمه شماره موبایل
-# ساختار: { "chat_id": "username" }
 PENDING_VERIFICATIONS = {}
 
 # -----------------------------
@@ -93,16 +91,17 @@ if os.path.isdir("static"):
 # -----------------------------
 # Helper Functions
 # -----------------------------
-def clean_phone(phone: str) -> str:
-    """استانداردسازی شماره موبایل به فرمت 09xxxxxxxxx"""
-    if not phone or pd.isna(phone):
+def clean_phone(phone) -> str:
+    """استانداردسازی شماره موبایل و حذف قطعی .0 اکسل"""
+    if phone is None or pd.isna(phone):
         return ""
-    p = str(phone).replace(" ", "").replace("-", "").strip()
-    if p.startswith("+98"):
-        p = "0" + p[3:]
-    elif p.startswith("98"):
+    p = str(phone).strip()
+    if "." in p:
+        p = p.split(".")[0]
+    p = "".join(filter(str.isdigit, p))
+    if p.startswith("98") and len(p) == 12:
         p = "0" + p[2:]
-    elif not p.startswith("0") and len(p) == 10:
+    elif p.startswith("9") and len(p) == 10:
         p = "0" + p
     return p
 
@@ -110,8 +109,8 @@ def generate_captcha():
     """تولید دو عدد تصادفی و توکن رمزنگاری‌شده از حاصل جمع"""
     n1 = random.randint(1, 9)
     n2 = random.randint(1, 9)
-    token = captcha_serializer.dumps(n1 + n2)
-    return n1, n2, token
+    c_data = captcha_serializer.dumps(n1 + n2)
+    return n1, n2, c_data
 
 def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
     url = f"{BALE_API_URL}/sendMessage"
@@ -132,23 +131,19 @@ def send_bale_message(chat_id: int, text: str, reply_markup: dict = None):
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
-            # تعیین نوع ستون‌های حساس به صورت رشته
             dtypes = {}
             if sheet_name == USERS_SHEET:
                 dtypes = {"phone": str, "mobile": str, "bale_chat_id": str, "user_code": str}
             elif sheet_name == CARS_SHEET:
                 dtypes = {"car_code": str, "VIN": str, "production_year": str, "model_year": str}
 
-            # 1. خواندن شیت در متغیر df
             df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=dtypes)
 
-            # 2. اعمال تابع نرمال‌سازی روی ستون شماره (چه phone باشد چه mobile)
             if "phone" in df.columns:
                 df["phone"] = df["phone"].apply(clean_phone)
             elif "mobile" in df.columns:
                 df["mobile"] = df["mobile"].apply(clean_phone)
 
-            # 3. بازگرداندن دیتابیس تمیز و مرتب‌شده
             return df
 
         except (ValueError, FileNotFoundError):
@@ -159,7 +154,6 @@ def read_sheet(sheet_name: str) -> pd.DataFrame:
             elif sheet_name == USERS_SHEET:
                 return pd.DataFrame(columns=REQUIRED_USER_COLS)
             return pd.DataFrame()
-
 
 def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame):
     with FileLock(LOCK_PATH):
@@ -251,24 +245,24 @@ def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
 # Auth & Session Helpers
 # -----------------------------
 def set_session(response: RedirectResponse, user: dict):
-    token = serializer.dumps({
+    session_data = serializer.dumps({
         "username": user["username"],
         "role": user["role"],
         "user_code": user["user_code"],
         "name": user["name"],
         "lastname": user["lastname"],
     })
-    response.set_cookie("session", token, httponly=True, samesite="lax")
+    response.set_cookie("session", session_data, httponly=True, samesite="lax")
 
 def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
 def get_current_user(request: Request) -> Optional[dict]:
-    token = request.cookies.get("session")
-    if not token:
+    session_data = request.cookies.get("session")
+    if not session_data:
         return None
     try:
-        return serializer.loads(token)
+        return serializer.loads(session_data)
     except BadSignature:
         return None
 
@@ -286,7 +280,6 @@ def require_role(*allowed_roles):
     return dep
 
 def user_has_bale(request: Request) -> bool:
-    """بررسی اینکه آیا این کاربر اتصال فعال و تأییدشده با پیام‌رسان بله دارد یا خیر"""
     user = get_current_user(request)
     if not user:
         return False
@@ -313,7 +306,6 @@ def user_has_bale(request: Request) -> bool:
         return False
 
 def broadcast_car_update(car_code: str, title: str, from_status: str, to_status: str, from_place: str, to_place: str, changed_by: str, changed_at: str):
-    """ارسال پیام لحظه‌ای به تمام کاربران فعال در بله"""
     try:
         users_df = read_sheet(USERS_SHEET)
         if "bale_chat_id" not in users_df.columns:
@@ -366,7 +358,6 @@ async def bale_webhook(request: Request):
         if not chat_id:
             return {"status": "ok"}
 
-        # ۱. کاربر دستور /start ارسال کرده است
         if text.startswith("/start"):
             parts = text.split()
             if len(parts) > 1:
@@ -404,7 +395,6 @@ async def bale_webhook(request: Request):
                     reply_markup=keyboard
                 )
 
-        # ۲. کاربر دکمه اشتراک‌گذاری شماره موبایل را ارسال کرده است
         elif contact:
             user_phone = clean_phone(str(contact.get("phone_number", "")))
             target_user = PENDING_VERIFICATIONS.get(str(chat_id))
@@ -424,16 +414,13 @@ async def bale_webhook(request: Request):
                         users_df["user_has_bale"] = False
                     users_df["user_has_bale"] = users_df["user_has_bale"].astype("object")
                     
-                    # نرمال‌سازی شماره‌های ثبت‌شده در اکسل
                     users_df["norm_phone"] = users_df["phone"].apply(clean_phone)
 
-                    # حالت اول: اگر کاربر از طریق دیپ‌لینک آمده و target_user در سشن بله ذخیره است
                     if target_user:
                         match_row = users_df[users_df["username"] == target_user]
                         if not match_row.empty:
                             expected_phone = match_row.iloc[0]["norm_phone"]
                             
-                            # تطبیق قطعی شماره
                             if expected_phone and expected_phone == user_phone:
                                 users_df.loc[users_df["username"] == target_user, "bale_chat_id"] = str(chat_id)
                                 users_df.loc[users_df["username"] == target_user, "user_has_bale"] = True
@@ -463,7 +450,6 @@ async def bale_webhook(request: Request):
                             users_df.drop(columns=["norm_phone"], inplace=True)
                             send_bale_message(chat_id, "❌ کاربری برای تکمیل این درخواست یافت نشد.")
 
-                    # حالت دوم: کاربر فقط شماره ارسال کرده بدون دیپ‌لینک
                     else:
                         match_users = users_df[users_df["norm_phone"] == user_phone]
                         if not match_users.empty:
@@ -496,7 +482,6 @@ async def activate_bale_page(request: Request):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     
-    # اگر کاربر قبلاً بله را با تطابق شماره فعال کرده باشد، نیازی به این صفحه ندارد
     if user_has_bale(request):
         return RedirectResponse(url="/cars", status_code=303)
 
@@ -513,20 +498,20 @@ async def read_root(request: Request):
     user = get_current_user(request)
     if user:
         return RedirectResponse("/cars", status_code=302)
-    n1, n2, token = generate_captcha()
+    n1, n2, c_data = generate_captcha()
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": token}
+        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": c_data}
     )
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    n1, n2, token = generate_captcha()
+    n1, n2, c_data = generate_captcha()
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": token}
+        context={"request": request, "error": None, "num1": n1, "num2": n2, "captcha_token": c_data}
     )
 
 @app.post("/login")
@@ -546,7 +531,7 @@ async def login_post(
         captcha_valid = False
 
     if not captcha_valid:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, c_data = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -555,7 +540,7 @@ async def login_post(
                 "error": "پاسخ سوال جمع ریاضی اشتباه است. لطفاً دوباره تلاش کنید.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": c_data
             }
         )
 
@@ -564,7 +549,7 @@ async def login_post(
     password = str(password)
 
     if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, c_data = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -573,14 +558,14 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": c_data
             }
         )
     row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
     saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
 
     if saved_password != password:
-        n1, n2, new_token = generate_captcha()
+        n1, n2, c_data = generate_captcha()
         return templates.TemplateResponse(
             request=request,
             name="login.html",
@@ -589,7 +574,7 @@ async def login_post(
                 "error": "نام کاربری یا رمز اشتباه است.",
                 "num1": n1,
                 "num2": n2,
-                "captcha_token": new_token
+                "captcha_token": c_data
             }
         )
 
@@ -609,7 +594,6 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     if not user:
         return RedirectResponse(url="/login", status_code=303)
 
-    # قفل فراگیر برای تمام نقش‌ها
     if not user_has_bale(request):
         return RedirectResponse(url="/activate-bale", status_code=303)
         
@@ -742,9 +726,11 @@ async def update_status(
     from_place = ""
     final_place = place
 
+    # رفع مشکل Deadlock: خواندن تمام شیت‌ها با یک قفل واحد
     with FileLock(LOCK_PATH):
         try:
-            cars_df = read_sheet(CARS_SHEET)
+            all_sheets = pd.read_excel(DB_PATH, sheet_name=None)
+            cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
             cars_df["car_code"] = cars_df["car_code"].astype(str)
             car_code = str(car_code).strip()
             row_idx = cars_df[cars_df["car_code"] == car_code].index
@@ -764,13 +750,23 @@ async def update_status(
                 cars_df.loc[idx, "last_updated_at"] = now_str
                 cars_df.loc[idx, "last_updated_by"] = user_fullname
 
-                # ذخیره خودروها
-                all_sheets = pd.read_excel(DB_PATH, sheet_name=None)
+                if status == "reserved(4 hours)":
+                    cars_df.loc[idx, "reserved_until"] = (datetime.now() + pd.Timedelta(hours=4)).strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    cars_df.loc[idx, "reserved_until"] = ""
+
                 all_sheets[CARS_SHEET] = cars_df
 
-                logs_df = read_sheet(HISTORY_SHEET)
+                logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS))
+                new_id = 1
+                if not logs_df.empty and "id" in logs_df.columns:
+                    try:
+                        new_id = int(pd.to_numeric(logs_df["id"], errors="coerce").max() or 0) + 1
+                    except Exception:
+                        new_id = len(logs_df) + 1
+
                 new_log = {
-                    "id": len(logs_df) + 1,
+                    "id": new_id,
                     "car_code": car_code,
                     "changed_at": now_str,
                     "changed_by": user_fullname,
@@ -848,3 +844,4 @@ if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", "80"))
     uvicorn.run(app, host="0.0.0.0", port=port)
+    
