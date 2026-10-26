@@ -853,6 +853,7 @@ async def add_car(
     })
 
 
+
 @app.get("/cars/history/{car_code}")
 def car_history(car_code: str, user=Depends(require_user)):
     history_df = read_sheet(HISTORY_SHEET)
