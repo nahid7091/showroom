@@ -523,9 +523,15 @@ async def bale_webhook(request: Request):
                                         s_df.to_excel(writer, sheet_name=s_name, index=False)
                                 
                                 PENDING_VERIFICATIONS.pop(str(chat_id), None)
+                                keyboard = {
+                                    "keyboard": [[{"text": "ورود به سایت", "request_contact": True}]],
+                                    "resize_keyboard": True,
+                                    "one_time_keyboard": True
+                                }    
                                 send_bale_message(
                                     chat_id,
-                                    f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد. اکنون می‌توانید بدون محدودیت از سایت استفاده کنید."
+                                    f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد. اکنون می‌توانید بدون محدودیت از سایت استفاده کنید.",
+                                    reply_markup=keyboard
                                 )
                             else:
                                 users_df.drop(columns=["norm_phone"], inplace=True)
