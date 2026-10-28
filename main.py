@@ -351,35 +351,33 @@ def set_session(response: RedirectResponse, user: dict):
 def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
-def get_current_user(request: Request) -> dict:
+def get_current_user(request: Request) -> Optional[dict]:
     token = request.cookies.get("session") or request.cookies.get("session_token")
     if not token:
-        raise HTTPException(status_code=303, headers={"Location": "/login"})
+        return None
     try:
-        username = serializer.loads(token, max_age=86400 * 7)
+        data = serializer.loads(token, max_age=86400 * 7)
+        if isinstance(data, dict):
+            username = data.get("username")
+        else:
+            username = str(data)
     except BadSignature:
-        raise HTTPException(status_code=303, headers={"Location": "/login"})
+        return None
 
     users_df = read_sheet(USERS_SHEET)
     if users_df.empty or "username" not in users_df.columns:
-        raise HTTPException(status_code=303, headers={"Location": "/login"})
+        return None
 
-    user_match = users_df[users_df["username"].astype(str) == str(username)]
+    user_match = users_df[users_df["username"].astype(str).str.strip() == str(username).strip()]
     if user_match.empty:
-        raise HTTPException(status_code=303, headers={"Location": "/login"})
+        return None
 
-    user_dict = user_match.iloc[0].to_dict()
-    # بررسی اتصال اجباری به پیام‌رسان بله
-    has_bale = str(user_dict.get("user_has_bale", "")).strip().lower()
-    if has_bale not in ["1", "true", "yes", "بله"] and request.url.path not in ["/activate-bale", "/logout"]:
-        raise HTTPException(status_code=303, headers={"Location": "/activate-bale"})
-
-    return user_dict
+    return user_match.iloc[0].to_dict()
 
 def require_user(request: Request) -> dict:
     user = get_current_user(request)
     if not user:
-        raise HTTPException(status_code=401, detail="Not authenticated")
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
     return user
 
 def require_role(*allowed_roles):
@@ -617,8 +615,8 @@ async def read_root(request: Request,user: dict = Depends(get_current_user)):
     return RedirectResponse("/login", status_code=303)
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_get(request: Request, user: dict = Depends(get_current_user)):
-    
+async def login_get(request: Request, error: Optional[str] = None):
+    user = get_current_user(request)
     if user:
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
@@ -674,7 +672,10 @@ async def login_post(
         (users_df["password"].astype(str).str.strip() == password.strip())
     ]
     if matched.empty:
-        return RedirectResponse(url="/login?error=نام کاربری یا رمز عبور اشتباه است", status_code=303)
+        return RedirectResponse(url="/login?error=نام کاربری یا کلمه عبور اشتباه است", status_code=303)
+
+    # حتماً row را تعریف کنید:
+    row = matched.iloc[0].to_dict()
 
     raw_bale = str(row.get("bale_chat_id", "")).strip().lower()
     has_bale = raw_bale not in ["", "nan", "none", "-", "0"]
@@ -684,7 +685,7 @@ async def login_post(
     resp = RedirectResponse(target_url, status_code=303)
     set_session(resp, row)
     return resp
-
+    
 @app.get("/logout")
 def logout():
     resp = RedirectResponse("/login", status_code=302)
