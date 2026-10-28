@@ -390,7 +390,7 @@ def require_role(*allowed_roles):
     return dep
 
 def user_has_bale(request: Request, user: dict = Depends(get_current_user)) -> bool:
-    username = user.get("username", "")
+    
     if not user:
         return False
     try:
@@ -592,7 +592,7 @@ async def bale_webhook(request: Request):
 # -----------------------------
 @app.get("/activate-bale", response_class=HTMLResponse)
 def activate_bale_page(request: Request, user: dict = Depends(get_current_user)):
-    username = user.get("username", "")
+    
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     
@@ -609,7 +609,7 @@ def activate_bale_page(request: Request, user: dict = Depends(get_current_user))
 
 @app.get("/")
 async def read_root(request: Request,user: dict = Depends(get_current_user)):
-    username = user.get("username", "")
+    
     if user:
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
@@ -618,7 +618,7 @@ async def read_root(request: Request,user: dict = Depends(get_current_user)):
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request, user: dict = Depends(get_current_user)):
-    username = user.get("username", "")
+    
     if user:
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
@@ -693,7 +693,7 @@ def logout():
 
 @app.get("/cars", response_class=HTMLResponse)
 async def cars_page(request: Request, q: str = "", status: str = "", place: str = "",user: dict = Depends(get_current_user)):
-    username = user.get("username", "")
+    
     if not user:
         return RedirectResponse(url="/login", status_code=303)
 
@@ -746,7 +746,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 # -----------------------------
 @app.get("/cars/add", response_class=HTMLResponse)
 async def add_car_page(request: Request, user: dict = Depends(get_current_user)):
-    username = user.get("username", "")
+    
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     if not user_has_bale(request):
