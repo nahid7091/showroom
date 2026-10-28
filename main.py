@@ -306,46 +306,34 @@ def append_history(car_code: str, changed_by: str, from_status: str, to_status: 
     cars_df = read_sheet(CARS_SHEET)
     write_sheets(users_df, cars_df, history_df)
     
-def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
-    cars_df = read_sheet(CARS_SHEET)
+def check_auto_release_reservations(cars_df: pd.DataFrame) -> pd.DataFrame:
+    """بررسی منقضی شدن رزروهای ۴ ساعته و تبدیل وضعیت به free"""
     if cars_df.empty or "reserved_until" not in cars_df.columns:
-        return
+        return cars_df
+    
+    now_dt = jdatetime.datetime.now(IRAN_TZ)
+    changed = False
 
-    now_jalali = get_current_jalali_now()
-
-    status_series = cars_df["status"].fillna("").astype(str).str.strip()
-    reserved_until_series = cars_df["reserved_until"].fillna("").astype(str).str.strip()
-
-    expired_mask = (
-        (status_series == "reserved(4 hours)")
-        & (reserved_until_series != "")
-        & (reserved_until_series <= now_jalali)
-    )
-
-    expired_idx = cars_df.index[expired_mask].tolist()
-    if not expired_idx:
-        return
-
-    for i in expired_idx:
-        car_code = str(cars_df.at[i, "car_code"])
-        old_status = str(cars_df.at[i, "status"])
-        old_place = "" if pd.isna(cars_df.at[i, "place"]) else str(cars_df.at[i, "place"])
-
-        cars_df.at[i, "status"] = "free"
-        cars_df.at[i, "reserved_until"] = ""
-        cars_df.at[i, "last_updated_by"] = system_user_label
-        cars_df.at[i, "last_updated_at"] = now_jalali
-
-        append_history(
-            car_code=car_code,
-            changed_by=system_user_label,
-            from_status=old_status,
-            to_status="free",
-            from_place=old_place,
-            to_place=old_place,
-        )
-
-    save_cars(cars_df)
+    for idx, row in cars_df.iterrows():
+        if row.get("status") == "reserved(4 hours)":
+            r_until = str(row.get("reserved_until", "")).strip()
+            if r_until:
+                try:
+                    exp_dt = jdatetime.datetime.strptime(r_until, "%Y/%m/%d %H:%M").replace(tzinfo=IRAN_TZ)
+                    if now_dt >= exp_dt:
+                        old_s = cars_df.at[idx, "status"]
+                        cars_df.at[idx, "status"] = "free"
+                        cars_df.at[idx, "reserved_until"] = ""
+                        cars_df.at[idx, "last_updated_at"] = get_current_jalali_now()
+                        cars_df.at[idx, "last_updated_by"] = "انقضای سیستمی"
+                        changed = True
+                        append_history(row["car_code"], "سیستم", old_s, "free", row.get("place", ""), row.get("place", ""))
+                except Exception:
+                    pass
+    if changed:
+        users_df = read_sheet(USERS_SHEET)
+        write_sheets(users_df, cars_df)
+    return cars_df
 
 # -----------------------------
 # Auth & Session Helpers
@@ -363,28 +351,30 @@ def set_session(response: RedirectResponse, user: dict):
 def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
-def get_current_user(request: Request) -> Optional[dict]:
-    token = request.cookies.get("session")
+async def get_current_user(request: Request) -> dict:
+    token = request.cookies.get("session") or request.cookies.get("session_token")
     if not token:
-        return None
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
     try:
-        data = serializer.loads(token, max_age=86400 * 7)
-        username = data.get("username") if isinstance(data, dict) else data
-        
-        df_users = read_sheet(USERS_SHEET)
-        if df_users.empty or "username" not in df_users.columns:
-            return None
-            
-        df_users["username"] = df_users["username"].astype(str).str.strip()
-        matched = df_users[df_users["username"] == str(username).strip()]
-        if not matched.empty:
-            user = matched.iloc[0].to_dict()
-            user["role"] = str(user.get("role", "")).strip().lower()
-            user["user_has_bale"] = str(user.get("user_has_bale", "")).strip().lower() in ["1", "true", "yes"]
-            return user
-    except Exception:
-        return None
-    return None
+        username = serializer.loads(token, max_age=86400 * 7)
+    except BadSignature:
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
+
+    users_df = read_sheet(USERS_SHEET)
+    if users_df.empty or "username" not in users_df.columns:
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
+
+    user_match = users_df[users_df["username"].astype(str) == str(username)]
+    if user_match.empty:
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
+
+    user_dict = user_match.iloc[0].to_dict()
+    # بررسی اتصال اجباری به پیام‌رسان بله
+    has_bale = str(user_dict.get("user_has_bale", "")).strip().lower()
+    if has_bale not in ["1", "true", "yes", "بله"] and request.url.path not in ["/activate-bale", "/logout"]:
+        raise HTTPException(status_code=303, headers={"Location": "/activate-bale"})
+
+    return user_dict
 
 def require_user(request: Request) -> dict:
     user = get_current_user(request)
