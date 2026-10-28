@@ -170,7 +170,7 @@ PENDING_VERIFICATIONS = {}
 # -----------------------------
 # App
 # -----------------------------
-app = FastAPI()
+app = FastAPI(title="Showroom Management System")
 templates = Jinja2Templates(directory="templates")
 
 if os.path.isdir("static"):
@@ -182,7 +182,7 @@ if os.path.isdir("static"):
 def get_current_jalali_now() -> str:
     """دریافت تاریخ و ساعت جاری ایران به صورت شمسی و رشته‌ای"""
     now = jdatetime.datetime.now(IRAN_TZ)
-    return now.strftime("%Y/%m/%d %H:%M:%S")
+    return now.strftime("%Y/%m/%d %H:%M")
 
 def to_jalali_display(dt_val) -> str:
     """تبدیل هر نوع تاریخی به رشته شمسی زیبا"""
@@ -204,7 +204,7 @@ def to_jalali_display(dt_val) -> str:
 
 def get_jalali_reserve_expiry(hours=4) -> str:
     expiry = jdatetime.datetime.now(IRAN_TZ) + jdatetime.timedelta(hours=hours)
-    return expiry.strftime("%Y/%m/%d %H:%M:%S")
+    return expiry.strftime("%Y/%m/%d %H:%M")
 
 def clean_phone(phone) -> str:
     """استانداردسازی شماره موبایل و حذف اعشار و کدهای متفرقه"""
@@ -255,19 +255,22 @@ def read_sheet(sheet_name: str) -> pd.DataFrame:
         try:
             df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=str)
         except Exception:
-            return pd.DataFrame()
+            df = pd.DataFrame()
+        if not df.empty:
+            df = df.map(normalize_digits_value)
+            df = df.fillna("")
+        return df
 
-    df = df.map(normalize_digits_value)
-    return df
-
-def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame):
+def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame, logs_df: Optional[pd.DataFrame] = None):
     with FileLock(LOCK_PATH):
         try:
             all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
         except Exception:
             all_sheets = {}
-        all_sheets[USERS_SHEET] = users_df
-        all_sheets[CARS_SHEET] = cars_df
+        all_sheets[USERS_SHEET] = users_df.fillna("")
+        all_sheets[CARS_SHEET] = cars_df.fillna("")
+        if logs_df is not None:
+            all_sheets[HISTORY_SHEET] = logs_df.fillna("")
         with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
             for s_name, s_df in all_sheets.items():
                 s_df.to_excel(writer, sheet_name=s_name, index=False)
@@ -284,34 +287,25 @@ def append_history(car_code: str, changed_by: str, from_status: str, to_status: 
     history_df = read_sheet(HISTORY_SHEET)
     next_id = 1
     if not history_df.empty and "id" in history_df.columns:
-        try:
-            next_id = int(pd.to_numeric(history_df["id"], errors="coerce").max() or 0) + 1
-        except Exception:
-            next_id = len(history_df) + 1
+        next_id = int(pd.to_numeric(history_df["id"], errors="coerce").max() or 0) + 1
+    elif not history_df.empty:
+        next_id = len(history_df) + 1
 
-    now_jalali = get_current_jalali_now()
-    row = {
-        "id": next_id,
+    new_log = {
+        "id": str(next_id),
         "car_code": str(car_code),
-        "changed_at": now_jalali,
-        "changed_by": changed_by,
-        "from_status": from_status,
-        "to_status": to_status,
-        "from_place": from_place,
-        "to_place": to_place,
+        "changed_at": get_current_jalali_now(),
+        "changed_by": str(changed_by),
+        "from_status": str(from_status),
+        "to_status": str(to_status),
+        "from_place": str(from_place),
+        "to_place": str(to_place),
     }
-    history_df = pd.concat([history_df, pd.DataFrame([row])], ignore_index=True)
-
-    with FileLock(LOCK_PATH):
-        try:
-            all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
-        except Exception:
-            all_sheets = {}
-        all_sheets[HISTORY_SHEET] = history_df
-        with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
-            for s_name, s_df in all_sheets.items():
-                s_df.to_excel(writer, sheet_name=s_name, index=False)
-
+    history_df = pd.concat([history_df, pd.DataFrame([new_log])], ignore_index=True)
+    users_df = read_sheet(USERS_SHEET)
+    cars_df = read_sheet(CARS_SHEET)
+    write_sheets(users_df, cars_df, history_df)
+    
 def expire_reserved_if_needed(system_user_label: str = "SYSTEM"):
     cars_df = read_sheet(CARS_SHEET)
     if cars_df.empty or "reserved_until" not in cars_df.columns:
