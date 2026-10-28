@@ -920,6 +920,7 @@ async def update_status(
         except Exception as e:
             print(f"Error in update_status: {e}")
             raise e
+    append_history(car_code, user.get("username"), from_status, status, from_place, final_place)
 
     try:
         broadcast_car_update(
