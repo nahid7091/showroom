@@ -64,7 +64,7 @@ COLUMN_TITLES_FA = {
     "physical_issue": "مشکل ظاهری",
     "doc":"سند",
     "plate":"پلاک",
-    "price(Rials):"قیمت(ریال)",
+    "price(Rials)":"قیمت(ریال)",
     "buyer":"خریدار",
     "bime":"انقضای بیمه",
 
@@ -120,6 +120,11 @@ REQUIRED_CAR_COLS = [
     "Due",
     "technical_issue",
     "physical_issue",
+    "doc",
+    "plate",
+    "price(Rials)",
+    "buyer",
+    "bime",
 ]
 
 REQUIRED_HISTORY_COLS = [
@@ -132,7 +137,34 @@ REQUIRED_HISTORY_COLS = [
     "from_place",
     "to_place",
 ]
-
+    
+SHOWN_COLS = [
+    "car_code",
+    "title",
+    "VIN",
+    "model_year",
+    "color",
+    "place",
+    "status",
+    "reserved_until",
+    "options"
+]   
+    
+OTHER_CAR_COLS = [
+    "production_year",
+    "owner",
+    "No_Guarantee",
+    "last_updated_at",
+    "last_updated_by",
+    "Due",
+    "physical_issue",
+    "technical_issue",
+    "doc",
+    "plate",
+    "price(Rials)",
+    "buyer",
+    "bime"
+]
 PENDING_VERIFICATIONS = {}
 
 # -----------------------------
