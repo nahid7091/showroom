@@ -389,8 +389,8 @@ def require_role(*allowed_roles):
         return user
     return dep
 
-def user_has_bale(request: Request) -> bool:
-    user = get_current_user(request)
+def user_has_bale(request: Request, user: dict = Depends(get_current_user)) -> bool:
+    username = user.get("username", "")
     if not user:
         return False
     try:
@@ -591,8 +591,8 @@ async def bale_webhook(request: Request):
 # UI Pages
 # -----------------------------
 @app.get("/activate-bale", response_class=HTMLResponse)
-def activate_bale_page(request: Request):
-    user = get_current_user(request)
+def activate_bale_page(request: Request, user: dict = Depends(get_current_user)):
+    username = user.get("username", "")
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     
@@ -608,8 +608,8 @@ def activate_bale_page(request: Request):
     )
 
 @app.get("/")
-async def read_root(request: Request):
-    user = get_current_user(request)
+async def read_root(request: Request,user: dict = Depends(get_current_user)):
+    username = user.get("username", "")
     if user:
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
@@ -617,8 +617,8 @@ async def read_root(request: Request):
     return RedirectResponse("/login", status_code=303)
 
 @app.get("/login", response_class=HTMLResponse)
-async def login_get(request: Request):
-    user = get_current_user(request)
+async def login_get(request: Request, user: dict = Depends(get_current_user)):
+    username = user.get("username", "")
     if user:
         if not user_has_bale(request):
             return RedirectResponse("/activate-bale", status_code=303)
@@ -692,8 +692,8 @@ def logout():
     return resp
 
 @app.get("/cars", response_class=HTMLResponse)
-async def cars_page(request: Request, q: str = "", status: str = "", place: str = ""):
-    user = get_current_user(request)
+async def cars_page(request: Request, q: str = "", status: str = "", place: str = "",user: dict = Depends(get_current_user)):
+    username = user.get("username", "")
     if not user:
         return RedirectResponse(url="/login", status_code=303)
 
@@ -745,8 +745,8 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 # روت فرم افزودن خودرو
 # -----------------------------
 @app.get("/cars/add", response_class=HTMLResponse)
-async def add_car_page(request: Request):
-    user = get_current_user(request)
+async def add_car_page(request: Request, user: dict = Depends(get_current_user)):
+    username = user.get("username", "")
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     if not user_has_bale(request):
@@ -845,9 +845,9 @@ async def update_status(
     request: Request,
     car_code: str = Form(...),
     status: str = Form(...),
-    place: str = Form(None)
+    place: str = Form(None),
+    user: dict = Depends(get_current_user)
 ):
-    user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
     if not user_has_bale(request):
