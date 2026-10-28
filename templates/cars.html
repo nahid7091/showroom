@@ -340,16 +340,16 @@
             </select>
             <button type="submit">اعمال فیلتر</button>
             {% if q or status or place %}
-                <a href="/cars">پاک کردن فیلترها</a>
+                <a href="/cars" style="font-size: 12px; color: #64748b; text-decoration: none;">پاک کردن فیلترها</a>            {% endif %}
             {% endif %}
         </form>
 
-        <!-- دکمه ثبت خودرو فقط برای admin و showroom_manager -->
-        {% if user.role in ['admin', 'showroom_manager'] %}
-        <button class="btn-add-car" onclick="openCarModal()">
-            ➕ ثبت خودرو جدید
-        </button>
-        {% endif %}
+        <div class="admin-actions">
+            {% if user.role in roles_can_manage %}
+            <button class="btn-add-car" onclick="openModal('addCarModal')">➕ ثبت خودرو</button>
+            <button class="btn-add-user" onclick="openModal('addUserModal')">👤 افزودن کاربر</button>
+            {% endif %}
+        </div>
     </div>
 
     <!-- جدول نمایش اطلاعات خودروها -->
@@ -357,55 +357,69 @@
         <table id="carsTable">
             <thead>
                 <tr>
-                    <th>کد خودرو</th>
-                    <th>عنوان خودرو</th>
-                    <th>VIN</th>
-                    <th>مدل</th>
-                    <th>رنگ</th>
-                    <th>مالک</th>
-                    <th>محل استقرار</th>
-                    <th>وضعیت</th>
-                    <th>مهلت رزرو</th>
-                    <th>آخرین به‌روزرسانی</th>
-                    <th>توسط</th>
-                    <th>گارانتی</th>
-                    <th>ایراد بدنه/رنگ</th>
-                    <th>ایراد فنی</th>
+                    <th style="width: 35px;">سایر</th>
+                    {% for col in shown_cols %}
+                    <th>{{ column_titles.get(col, col) }}</th>
+                    {% endfor %}
+                    <th>عملیات تغییر وضعیت و محل</th>
                 </tr>
             </thead>
             <tbody>
                 {% for car in cars %}
-                <tr>
+                <tr id="row-{{ car.car_code }}">
+                    <td>
+                        <button class="toggle-btn" onclick="toggleDetails('{{ car.car_code }}', this)">◀</button>
+                    </td>
                     <td><strong>{{ car.car_code }}</strong></td>
                     <td>{{ car.title }}</td>
                     <td style="font-family: monospace;">{{ car.VIN }}</td>
                     <td>{{ car.model_year or '-' }}</td>
                     <td>{{ car.color or '-' }}</td>
-                    <td>{{ car.owner or '-' }}</td>
-                    <td>{{ car.place }}</td>
-                    <td>
-                        {% if car.status == 'free' %}
-                            <span class="status-badge status-free">آزاد (free)</span>
-                        {% elif car.status == 'reserved(4 hours)' %}
-                            <span class="status-badge status-reserved">رزرو ۴ ساعته</span>
-                        {% elif car.status == 'بیعانه' %}
-                            <span class="status-badge status-deposit">بیعانه</span>
-                        {% elif car.status == 'فروخته شده' %}
-                            <span class="status-badge status-sold">فروخته شده</span>
-                        {% else %}
-                            <span class="status-badge status-unsellable">غیر قابل فروش</span>
-                        {% endif %}
+                    
+                    <!-- محل خودرو -->
+                    <td id="place-cell-{{ car.car_code }}">{{ car.place }}</td>
+                    
+                    <!-- وضعیت خودرو -->
+                    <td id="status-cell-{{ car.car_code }}">
+                        <strong>{{ car.status }}</strong>
                     </td>
-                    <td>{{ car.reserved_until or '-' }}</td>
-                    <td>{{ car.last_updated_at or '-' }}</td>
-                    <td>{{ car.last_updated_by or '-' }}</td>
-                    <td>{{ car.No_Guarantee or 'خیر' }}</td>
-                    <td>{{ car.physical_issue or '-' }}</td>
-                    <td>{{ car.technical_issue or '-' }}</td>
+                    
+                    <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
+                    <td id="updated-at-{{ car.car_code }}">{{ car.last_updated_at or '-' }}</td>
+                    <td id="updated-by-{{ car.car_code }}">{{ car.last_updated_by or '-' }}</td>
+
+                    <!-- بخش تغییر وضعیت و مکان برای همه کاربران -->
+                    <td>
+                        <select class="inline-select" id="sel-status-{{ car.car_code }}">
+                            {% for st in allowed_statuses %}
+                            <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="inline-select" id="sel-place-{{ car.car_code }}">
+                            {% for pl in allowed_places %}
+                            <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
+                            {% endfor %}
+                        </select>
+                        <button class="btn-inline-save" onclick="updateCarState('{{ car.car_code }}')">ذخیره</button>
+                    </td>
+                </tr>
+
+                <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
+                <tr id="details-{{ car.car_code }}" class="details-row">
+                    <td colspan="{{ shown_cols|length + 2 }}">
+                        <div class="details-content">
+                            {% for col in other_cols %}
+                            <div class="details-item">
+                                <strong>{{ column_titles.get(col, col) }}:</strong>
+                                <span>{{ car.get(col) or 'ثبت نشده' }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </td>
                 </tr>
                 {% else %}
                 <tr id="noDataRow">
-                    <td colspan="14" style="padding: 20px; color: #64748b;">هیچ خودرویی یافت نشد.</td>
+                    <td colspan="{{ shown_cols|length + 2 }}" style="padding: 20px; color: #64748b;">خودرویی یافت نشد.</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -413,185 +427,241 @@
     </div>
 </div>
 
-<!-- پنجره مودال ثبت اطلاعات خودرو (ثبت بدون رفرش) -->
+<!-- Modal 1: ثبت خودرو جدید -->
 <div id="addCarModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 style="margin: 0;">ثبت و افزودن خودرو جدید</h3>
-            <span class="close-btn" onclick="closeCarModal()">&times;</span>
+            <h3 style="margin: 0;">ثبت اطلاعات خودرو جدید</h3>
+            <span class="close-btn" onclick="closeModal('addCarModal')">&times;</span>
         </div>
-
         <form id="addCarForm">
             <div class="form-grid">
                 <div class="form-group">
                     <label>کد خودرو *</label>
-                    <input type="text" name="car_code" required placeholder="مثال: 1045">
+                    <input type="text" name="car_code" required placeholder="مثال: 102">
                 </div>
                 <div class="form-group">
                     <label>شماره شاسی (VIN) *</label>
-                    <input type="text" name="VIN" required placeholder="۱۷ کاراکتر">
+                    <input type="text" name="VIN" required placeholder="۱۷ رقمی">
                 </div>
                 <div class="form-group">
-                    <label>عنوان / نام خودرو *</label>
-                    <input type="text" name="title" required placeholder="مثال: دیگنیتی پرایم">
+                    <label>مشخصات / عنوان *</label>
+                    <input type="text" name="title" required placeholder="مثال: تارا اتوماتیک V4">
                 </div>
-
                 <div class="form-group">
                     <label>سال مدل (شمسی)</label>
-                    <input type="text" name="model_year" placeholder="مثال: ۱۴۰۲">
+                    <input type="text" name="model_year" placeholder="۱۴۰۳">
                 </div>
                 <div class="form-group">
                     <label>سال ساخت (میلادی)</label>
-                    <input type="text" name="production_year" placeholder="مثال: 2023">
+                    <input type="text" name="production_year" placeholder="2024">
                 </div>
                 <div class="form-group">
-                    <label>رنگ بدنه</label>
-                    <input type="text" name="color" placeholder="مثال: مشکی متالیک">
+                    <label>رنگ</label>
+                    <input type="text" name="color" placeholder="سفید">
                 </div>
-
                 <div class="form-group">
-                    <label>نام مالک</label>
-                    <input type="text" name="owner" placeholder="نام مالک خودرو">
+                    <label>مالک</label>
+                    <input type="text" name="owner" placeholder="نام مالک">
                 </div>
                 <div class="form-group">
                     <label>محل استقرار</label>
-                    <input type="text" name="place" value="نمایشگاه" required>
-                </div>
-                <div class="form-group">
-                    <label>وضعیت اولیه *</label>
-                    <select name="status">
-                        <option value="free">free</option>
-                        <option value="reserved(4 hours)">reserved(4 hours)</option>
-                        <option value="بیعانه">بیعانه</option>
-                        <option value="غیر قابل فروش">غیر قابل فروش</option>
-                        <option value="فروخته شده">فروخته شده</option>
+                    <select name="place">
+                        {% for pl in allowed_places %}
+                        <option value="{{ pl }}">{{ pl }}</option>
+                        {% endfor %}
                     </select>
                 </div>
-
+                <div class="form-group">
+                    <label>وضعیت اولیه</label>
+                    <select name="status">
+                        {% for st in allowed_statuses %}
+                        <option value="{{ st }}">{{ st }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>فاقد گارانتی</label>
                     <select name="No_Guarantee">
-                        <option value="خیر">خیر (گارانتی دارد)</option>
-                        <option value="بله">بله (فاقد گارانتی)</option>
+                        <option value="خیر">خیر</option>
+                        <option value="بله">بله</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>موعد تحویل (Due)</label>
+                    <label>موعد وکالت / تحویل</label>
                     <input type="text" name="Due" placeholder="فوری / تاریخ">
                 </div>
-                <div class="form-group">
-                    <label>آپشن‌ها</label>
-                    <input type="text" name="options" placeholder="فول، دوربین ۳۶۰، رادار...">
-                </div>
-
                 <div class="form-group full-span">
-                    <label>ایرادات بدنه و رنگ‌شدگی</label>
-                    <input type="text" name="physical_issue" placeholder="مثال: بدون رنگ، لیسه‌گیری لبه گلگیر">
+                    <label>متعلقات و آپشن‌ها</label>
+                    <input type="text" name="options" placeholder="کیلس، گرمکن، رادار...">
                 </div>
                 <div class="form-group full-span">
-                    <label>ایرادات و توضیحات فنی</label>
-                    <input type="text" name="technical_issue" placeholder="مثال: سلامت کامل موتور و گیربکس">
+                    <label>مشکلات ظاهری / رنگ</label>
+                    <input type="text" name="physical_issue" placeholder="بدون رنگ یا لیسه...">
+                </div>
+                <div class="form-group full-span">
+                    <label>مشکلات فنی</label>
+                    <input type="text" name="technical_issue" placeholder="سالم / ایراد باتری...">
                 </div>
             </div>
+            <button type="submit" class="btn-modal-submit" id="carSubmitBtn">ثبت خودرو</button>
+        </form>
+    </div>
+</div>
 
-            <button type="submit" class="btn-submit" id="submitBtn">ثبت نهایی و درج در سیستم</button>
+<!-- Modal 2: افزودن کاربر جدید -->
+<div id="addUserModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h3 style="margin: 0;">ثبت و افزودن کاربر جدید</h3>
+            <span class="close-btn" onclick="closeModal('addUserModal')">&times;</span>
+        </div>
+        <form id="addUserForm">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div class="form-group">
+                    <label>نام کاربری (انگلیسی) *</label>
+                    <input type="text" name="username" required placeholder="مثال: ali_rezaei">
+                </div>
+                <div class="form-group">
+                    <label>رمز عبور *</label>
+                    <input type="text" name="password" required placeholder="رمز عبور">
+                </div>
+                <div class="form-group">
+                    <label>نام *</label>
+                    <input type="text" name="name" required placeholder="علی">
+                </div>
+                <div class="form-group">
+                    <label>نام خانوادگی *</label>
+                    <input type="text" name="lastname" required placeholder="رضایی">
+                </div>
+                <div class="form-group">
+                    <label>نقش *</label>
+                    <select name="role">
+                        <option value="expert">کارشناس فروش (expert)</option>
+                        <option value="showroom_manager">مدیر نمایشگاه (showroom_manager)</option>
+                        <option value="admin">مدیر سیستم (admin)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>شماره موبایل (جهت اتصال بله)</label>
+                    <input type="text" name="phone" placeholder="0912xxxxxxx">
+                </div>
+            </div>
+            <button type="submit" class="btn-modal-submit" id="userSubmitBtn" style="background-color: var(--info);">ثبت کاربر</button>
         </form>
     </div>
 </div>
 
 <script>
-    const modal = document.getElementById("addCarModal");
-
-    function openCarModal() {
-        modal.style.display = "block";
+    function openModal(id) {
+        document.getElementById(id).style.display = "block";
     }
 
-    function closeCarModal() {
-        modal.style.display = "none";
+    function closeModal(id) {
+        document.getElementById(id).style.display = "none";
     }
 
-    // بستن مدال با کلیک در پس‌زمینه
     window.onclick = function(event) {
-        if (event.target === modal) {
-            closeCarModal();
+        if (event.target.classList.contains('modal')) {
+            event.target.style.display = "none";
         }
     };
 
-    // برچسب استایل وضعیت
-    function getStatusBadge(status) {
-        switch(status) {
-            case 'free': return '<span class="status-badge status-free">آزاد (free)</span>';
-            case 'reserved(4 hours)': return '<span class="status-badge status-reserved">رزرو ۴ ساعته</span>';
-            case 'بیعانه': return '<span class="status-badge status-deposit">بیعانه</span>';
-            case 'فروخته شده': return '<span class="status-badge status-sold">فروخته شده</span>';
-            default: return '<span class="status-badge status-unsellable">غیر قابل فروش</span>';
+    // باز و بسته کردن سطر اطلاعات تکمیلی خودرو (OTHER_CAR_COLS)
+    function toggleDetails(carCode, btn) {
+        const row = document.getElementById("details-" + carCode);
+        if (row.style.display === "table-row") {
+            row.style.display = "none";
+            btn.classList.remove("open");
+            btn.innerText = "◀";
+        } else {
+            row.style.display = "table-row";
+            btn.classList.add("open");
+            btn.innerText = "▼";
         }
     }
 
-    // ثبت فرم بدون رفرش و درج در ردیف اول جدول
-    document.getElementById("addCarForm").addEventListener("submit", async function(e) {
-        e.preventDefault();
+    // ارسال تغییر وضعیت و محل خودرو توسط هر کاربری
+    async function updateCarState(carCode) {
+        const newStatus = document.getElementById("sel-status-" + carCode).value;
+        const newPlace = document.getElementById("sel-place-" + carCode).value;
 
-        const submitBtn = document.getElementById("submitBtn");
-        submitBtn.disabled = true;
-        submitBtn.innerText = "در حال ذخیره اطلاعات در اکسل...";
-
-        const formData = new FormData(this);
+        const formData = new FormData();
+        formData.append("car_code", carCode);
+        formData.append("new_status", newStatus);
+        formData.append("new_place", newPlace);
 
         try {
-            const response = await fetch("/cars/add", {
+            const res = await fetch("/cars/update-state", {
                 method: "POST",
                 body: formData
             });
-
-            const result = await response.json();
-
-            if (response.ok && result.success) {
-                const car = result.car;
-
-                // اگر پیام "هیچ خودرویی یافت نشد" وجود دارد، آن را حذف کنیم
-                const noDataRow = document.getElementById("noDataRow");
-                if (noDataRow) {
-                    noDataRow.remove();
-                }
-
-                // ساخت سطر جدید
-                const tbody = document.querySelector("#carsTable tbody");
-                const newRow = document.createElement("tr");
-                newRow.style.backgroundColor = "#ecfdf5"; // هایلایت سبز روشن موقت برای رکورد جدید
-
-                newRow.innerHTML = `
-                    <td><strong>${car.car_code}</strong></td>
-                    <td>${car.title}</td>
-                    <td style="font-family: monospace;">${car.VIN}</td>
-                    <td>${car.model_year || '-'}</td>
-                    <td>${car.color || '-'}</td>
-                    <td>${car.owner || '-'}</td>
-                    <td>${car.place}</td>
-                    <td>${getStatusBadge(car.status)}</td>
-                    <td>${car.reserved_until || '-'}</td>
-                    <td>${car.last_updated_at || '-'}</td>
-                    <td>${car.last_updated_by || '-'}</td>
-                    <td>${car.No_Guarantee || 'خیر'}</td>
-                    <td>${car.physical_issue || '-'}</td>
-                    <td>${car.technical_issue || '-'}</td>
-                `;
-
-                // اضافه شدن به بالای جدول
-                tbody.insertBefore(newRow, tbody.firstChild);
-
-                // بازنشانی فرم و بستن پنجره
-                document.getElementById("addCarForm").reset();
-                closeCarModal();
+            const data = await res.json();
+            if (res.ok && data.success) {
+                document.getElementById("status-cell-" + carCode).innerHTML = "<strong>" + newStatus + "</strong>";
+                document.getElementById("place-cell-" + carCode).innerText = newPlace;
+                document.getElementById("res-cell-" + carCode).innerText = data.reserved_until || "-";
+                document.getElementById("updated-at-" + carCode).innerText = data.last_updated_at;
+                document.getElementById("updated-by-" + carCode).innerText = data.last_updated_by;
+                alert("تغییرات با موفقیت ذخیره شد و در لاگ‌ها ثبت گردید.");
             } else {
-                alert("خطا: " + (result.message || "امکان ذخیره اطلاعات وجود ندارد."));
+                alert("خطا: " + (data.message || "امکان به‌روزرسانی وجود ندارد."));
             }
-        } catch (error) {
-            console.error(error);
-            alert("خطا در برقراری ارتباط با سرور.");
+        } catch (e) {
+            alert("خطا در شبکه یا اتصال به سرور.");
+        }
+    }
+
+    // ثبت خودرو جدید به شکل AJAX و رفرش نرم صفحه
+    document.getElementById("addCarForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById("carSubmitBtn");
+        btn.disabled = true;
+        btn.innerText = "در حال ذخیره...";
+        try {
+            const res = await fetch("/cars/add", {
+                method: "POST",
+                body: new FormData(this)
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(data.message);
+                window.location.reload();
+            } else {
+                alert("خطا: " + (data.message || "خطا در ثبت خودرو"));
+            }
+        } catch (e) {
+            alert("خطای ارتباط با سرور");
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = "ثبت نهایی و درج در سیستم";
+            btn.disabled = false;
+            btn.innerText = "ثبت خودرو";
+        }
+    });
+
+    // ثبت کاربر جدید توسط مدیر
+    document.getElementById("addUserForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const btn = document.getElementById("userSubmitBtn");
+        btn.disabled = true;
+        btn.innerText = "در حال ثبت...";
+        try {
+            const res = await fetch("/users/add", {
+                method: "POST",
+                body: new FormData(this)
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                alert(data.message);
+                closeModal("addUserModal");
+                this.reset();
+            } else {
+                alert("خطا: " + (data.message || "خطا در ثبت کاربر"));
+            }
+        } catch (e) {
+            alert("خطای ارتباط با سرور");
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "ثبت کاربر";
         }
     });
 </script>
