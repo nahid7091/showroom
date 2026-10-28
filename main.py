@@ -669,41 +669,12 @@ async def login_post(
         )
 
     users_df = read_sheet(USERS_SHEET)
-    username = str(username).strip()
-    password = str(password)
-
-    if users_df.empty or username not in users_df["username"].astype(str).str.strip().values:
-        n1, n2, new_token = generate_captcha()
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context={
-                "request": request,
-                "error": "نام کاربری یا رمز اشتباه است.",
-                "num1": n1,
-                "num2": n2,
-                "captcha_token": new_token
-            },
-            status_code=400
-        )
-
-    row = users_df[users_df["username"].astype(str).str.strip() == username].iloc[0].to_dict()
-    saved_password = "" if pd.isna(row.get("password")) else str(row.get("password"))
-
-    if saved_password != password:
-        n1, n2, new_token = generate_captcha()
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context={
-                "request": request,
-                "error": "نام کاربری یا رمز اشتباه است.",
-                "num1": n1,
-                "num2": n2,
-                "captcha_token": new_token
-            },
-            status_code=400
-        )
+    matched = users_df[
+        (users_df["username"].astype(str).str.strip() == username.strip()) &
+        (users_df["password"].astype(str).str.strip() == password.strip())
+    ]
+    if matched.empty:
+        return RedirectResponse(url="/login?error=نام کاربری یا رمز عبور اشتباه است", status_code=303)
 
     raw_bale = str(row.get("bale_chat_id", "")).strip().lower()
     has_bale = raw_bale not in ["", "nan", "none", "-", "0"]
@@ -729,50 +700,46 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     if not user_has_bale(request):
         return RedirectResponse(url="/activate-bale", status_code=303)
         
-    expire_reserved_if_needed(system_user_label="SYSTEM (auto)")
     cars_df = read_sheet(CARS_SHEET)
-    if q:
-        q_lower = q.lower()
-        mask = (
-            cars_df.get("car_code", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df.get("title", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False) |
-            cars_df.get("owner", pd.Series(dtype=str)).astype(str).str.lower().str.contains(q_lower, na=False)
-        )
-        cars_df = cars_df[mask]
+    cars_df = check_auto_release_reservations(cars_df)
 
-    if status:
-        cars_df = cars_df[cars_df["status"].astype(str) == str(status)]
+    if not cars_df.empty:
+        if q:
+            q_clean = q.strip().lower()
+            mask = (
+                cars_df["title"].astype(str).str.lower().str.contains(q_clean) |
+                cars_df["car_code"].astype(str).str.lower().str.contains(q_clean) |
+                cars_df["VIN"].astype(str).str.lower().str.contains(q_clean)
+            )
+            cars_df = cars_df[mask]
 
-    if place:
-        cars_df = cars_df[cars_df["place"].astype(str) == str(place)]
+        if status:
+            cars_df = cars_df[cars_df["status"].astype(str) == status.strip()]
 
-    status_options = ALLOWED_STATUSES
-    place_options = ALLOWED_PLACES
+        if place:
+            cars_df = cars_df[cars_df["place"].astype(str) == place.strip()]
 
-    can_add = user["role"] in ROLES_CAN_ADD_CAR
+    cars_list = cars_df.to_dict(orient="records") if not cars_df.empty else []
 
-    if "last_updated_at" in cars_df.columns:
-        cars_df["last_updated_at"] = cars_df["last_updated_at"].apply(to_jalali_display)
-    if "reserved_until" in cars_df.columns:
-        cars_df["reserved_until"] = cars_df["reserved_until"].apply(to_jalali_display)
-
-    cars = cars_df.fillna("").to_dict(orient="records")    
     return templates.TemplateResponse(
         request=request,
         name="cars.html",
         context={
             "request": request,
             "user": user,
-            "cars": cars,
-            "col_names": COLUMN_TITLES_FA,
-            "q": q or "",
-            "status": status or "",
-            "place": place or "",
-            "status_options": status_options,
-            "place_options": place_options,
-            "can_add": can_add,
+            "cars": cars_list,
+            "q": q,
+            "status": status,
+            "place": place,
+            "shown_cols": SHOWN_COLS,
+            "other_cols": OTHER_CAR_COLS,
+            "column_titles": COLUMN_TITLES_FA,
+            "allowed_statuses": ALLOWED_STATUSES,
+            "allowed_places": ALLOWED_PLACES,
+            "roles_can_manage": ROLES_CAN_MANAGE
         }
     )
+
 
 # -----------------------------
 # روت فرم افزودن خودرو
@@ -815,16 +782,12 @@ async def add_car(
     user: dict = Depends(get_current_user)
 ):
     # بررسی دسترسی: فقط ادمین و مدیر نمایشگاه
-    if user.get("role") not in ["admin", "showroom_manager"]:
-        return JSONResponse(status_code=403, content={"success": False, "message": "دسترسی غیرمجاز است."})
+    if user.get("role") not in ROLES_CAN_MANAGE:
+        return JSONResponse(status_code=403, content={"success": False, "message": "فقط مدیران اجازه ثبت خودرو دارند."})
 
-    now_jalali = jdatetime.datetime.now(IRAN_TZ).strftime("%Y/%m/%d %H:%M")
-    
-    # محاسبه زمان انقضا در صورت رزرو ۴ ساعته
-    reserved_until = ""
-    if status == "reserved(4 hours)":
-        expire_time = jdatetime.datetime.now(IRAN_TZ) + jdatetime.timedelta(hours=4)
-        reserved_until = expire_time.strftime("%Y/%m/%d %H:%M")
+    now_jalali = get_current_jalali_now()
+    reserved_until = get_jalali_reserve_expiry(4) if status == "reserved(4 hours)" else ""
+
 
     new_car = {
         "car_code": car_code.strip(),
@@ -848,37 +811,21 @@ async def add_car(
 
     # قفل فایل اکسل و ثبت رکورد جدید
     with FileLock(LOCK_FILE, timeout=10):
-        cars_df = read_sheet("cars")
+        cars_df = read_sheet(CARS_SHEET)
         
         # بررسی عدم تکراری بودن کد خودرو یا VIN
-        if not cars_df.empty:
-            if "car_code" in cars_df.columns and str(car_code) in cars_df["car_code"].astype(str).values:
-                return JSONResponse(status_code=400, content={"success": False, "message": "کد خودرو تکراری است."})
+        if not cars_df.empty and "car_code" in cars_df.columns:
+            if str(car_code.strip()) in cars_df["car_code"].astype(str).values:
+                return JSONResponse(status_code=400, content={"success": False, "message": "این کد خودرو قبلاً ثبت شده است."})
 
         # افزودن به دیتافریم
-        new_row_df = pd.DataFrame([new_car])
-        cars_df = pd.concat([cars_df, new_row_df], ignore_index=True)
-        write_sheet("cars", cars_df)
+        cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
+        users_df = read_sheet(USERS_SHEET)
+        write_sheets(users_df, cars_df)
 
-        # ثبت لاگ در car_logs
-        log_entry = {
-            "car_code": car_code,
-            "action": "ایجاد خودرو",
-            "changed_by": user.get("username"),
-            "timestamp": now_jalali,
-            "details": f"ثبت اولیه خودرو با وضعیت {status}"
-        }
-        logs_df = read_sheet("car_logs")
-        logs_df = pd.concat([logs_df, pd.DataFrame([log_entry])], ignore_index=True)
-        write_sheet("car_logs", logs_df)
+    append_history(new_car["car_code"], user.get("username"), "-", new_car["status"], "-", new_car["place"])
 
-    return JSONResponse(content={
-        "success": True, 
-        "message": "خودرو با موفقیت اضافه شد.",
-        "car": new_car
-    })
-
-
+    return JSONResponse(content={"success": True, "message": "خودرو با موفقیت اضافه شد.", "car": new_car})
 
 @app.get("/cars/history/{car_code}")
 def car_history(car_code: str, user=Depends(require_user)):
