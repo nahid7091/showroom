@@ -591,7 +591,7 @@ async def bale_webhook(request: Request):
 # UI Pages
 # -----------------------------
 @app.get("/activate-bale", response_class=HTMLResponse)
-async def activate_bale_page(request: Request):
+def activate_bale_page(request: Request):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
