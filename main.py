@@ -542,10 +542,15 @@ async def bale_webhook(request: Request):
                                 
                                 PENDING_VERIFICATIONS.pop(str(chat_id), None)
                                 keyboard = {
-                                    "keyboard": [[{"text": "ورود به سایت", "request_contact": True}]],
-                                    "resize_keyboard": True,
-                                    "one_time_keyboard": True
-                                }    
+                                    "inline_keyboard": [
+                                        [
+                                            {
+                                                "text": "🌐 ورود به سایت",
+                                                "url": "https://iranianmoqim.ir/cars"
+                                            }
+                                        ]
+                                    ]
+                                }
                                 send_bale_message(
                                     chat_id,
                                     f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد. اکنون می‌توانید بدون محدودیت از سایت استفاده کنید.",
