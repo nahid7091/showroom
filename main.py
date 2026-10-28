@@ -34,15 +34,14 @@ BALE_BOT_LINK = f"https://ble.ir/{BALE_BOT_USERNAME}"
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
 captcha_serializer = URLSafeSerializer(APP_SECRET, salt="captcha-salt")
 
-ROLES_CAN_ADD_CAR = {"admin", "manager"}
-ROLES_CAN_DELETE_CAR = {"admin", "manager"}
+ROLES_CAN_MANAGE = {"admin", "manager"}
 
 USERS_SHEET = "users"
 CARS_SHEET = "cars"
 HISTORY_SHEET = "car_logs"
 
 ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده", "غیر قابل فروش"]
-ALLOWED_PLACES = ["شوروم تهران", "انزلی", "ساری"]
+ALLOWED_PLACES = ["شوروم فلاحی", "انزلی", "ساری", "تنکابن","سالار","جمهوری","شهرک غرب","اتو شیخ","یافت آباد","...."]
 
 COLUMN_TITLES_FA = {
     # شیت خودروها
