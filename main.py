@@ -940,40 +940,47 @@ async def update_status(
 # -----------------------------
 # Admin helper: create users
 # -----------------------------
-@app.post("/admin/create_user")
-def create_user(
-    request: Request,
-    user_code: str = Form(...),
+@app.post("/users/add")
+async def add_user(
     username: str = Form(...),
     password: str = Form(...),
     name: str = Form(...),
     lastname: str = Form(...),
-    role: str = Form(...),
+    role: str = Form("expert"),
     phone: str = Form(""),
-    admin=Depends(require_role("admin"))
+    user: dict = Depends(get_current_user)
 ):
-    users_df = read_sheet(USERS_SHEET)
-    username = str(username).strip()
+    if user.get("role") not in ROLES_CAN_MANAGE:
+        return JSONResponse(status_code=403, content={"success": False, "message": "فقط مدیران امکان تعریف کاربر دارند."})
 
-    if username in users_df["username"].astype(str).str.strip().values:
-        raise HTTPException(status_code=400, detail="این username قبلاً ثبت شده است.")
-    if user_code in users_df["user_code"].astype(str).values:
-        raise HTTPException(status_code=400, detail="این کد کاربر قبلاً ثبت شده است.")
+    cleaned_phone = clean_phone(phone)
+    with FileLock(LOCK_PATH):
+        users_df = read_sheet(USERS_SHEET)
+        if not users_df.empty and "username" in users_df.columns:
+            if username.strip() in users_df["username"].astype(str).values:
+                return JSONResponse(status_code=400, content={"success": False, "message": "این نام کاربری قبلاً استفاده شده است."})
 
-    row = {
-        "user_code": str(user_code),
-        "username": username,
-        "password": str(password),
-        "name": name,
-        "lastname": lastname,
-        "role": role,
-        "phone": clean_phone(phone),
-        "bale_chat_id": "",
-        "user_has_bale": "false"
-    }
-    users_df = pd.concat([users_df, pd.DataFrame([row])], ignore_index=True)
-    save_users(users_df)
-    return JSONResponse({"ok": True})
+        next_user_code = 101
+        if not users_df.empty and "user_code" in users_df.columns:
+            next_user_code = int(pd.to_numeric(users_df["user_code"], errors="coerce").max() or 100) + 1
+
+        new_user_data = {
+            "user_code": str(next_user_code),
+            "username": username.strip(),
+            "password": password.strip(),
+            "name": name.strip(),
+            "lastname": lastname.strip(),
+            "role": role.strip(),
+            "phone": cleaned_phone,
+            "bale_chat_id": "",
+            "user_has_bale": "0"
+        }
+        users_df = pd.concat([users_df, pd.DataFrame([new_user_data])], ignore_index=True)
+        cars_df = read_sheet(CARS_SHEET)
+        write_sheets(users_df, cars_df)
+
+    return JSONResponse(content={"success": True, "message": f"کاربر {name} {lastname} با موفقیت ثبت شد."})
+
 
 if __name__ == "__main__":
     import uvicorn
