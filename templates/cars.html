@@ -326,7 +326,18 @@
                 <option value="غیر قابل فروش" {% if status == 'غیر قابل فروش' %}selected{% endif %}>غیر قابل فروش</option>
                 <option value="فروخته شده" {% if status == 'فروخته شده' %}selected{% endif %}>فروخته شده</option>
             </select>
-            <input type="text" name="place" placeholder="محل استقرار" value="{{ place or '' }}">
+            <select name="place">
+                <option value="">-- همه موارد --</option>
+                <option value="شوروم فلاحی" {% if status == 'شوروم فلاحی' %}selected{% endif %}>شوروم فلاحی</option>
+                <option value="انزلی" {% if status == 'انزلی' %}selected{% endif %}>انزلی</option>
+                <option value="ساری" {% if status == 'ساری' %}selected{% endif %}>ساری</option>
+                <option value="اتو شیخ" {% if status == 'اتو شیخ' %}selected{% endif %}>اتو شیخ</option>
+                <option value="یافت آباد" {% if status == 'یافت آباد' %}selected{% endif %}>یافت آباد</option>
+                <option value="تنکابن" {% if status == 'تنکابن' %}selected{% endif %}>تنکابن</option>
+                <option value="جمهوری" {% if status == 'جمهوری' %}selected{% endif %}>جمهوری</option>
+                <option value="شهرک غرب" {% if status == 'شهرک غرب' %}selected{% endif %}>شهرک غرب</option>
+                <option value="اتو سالار" {% if status == 'اتو سالار' %}selected{% endif %}>اتو سالار</option>
+            </select>
             <button type="submit">اعمال فیلتر</button>
             {% if q or status or place %}
                 <a href="/cars">پاک کردن فیلترها</a>
