@@ -351,7 +351,7 @@ def set_session(response: RedirectResponse, user: dict):
 def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
-async def get_current_user(request: Request) -> dict:
+def get_current_user(request: Request) -> dict:
     token = request.cookies.get("session") or request.cookies.get("session_token")
     if not token:
         raise HTTPException(status_code=303, headers={"Location": "/login"})
