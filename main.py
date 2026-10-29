@@ -580,7 +580,7 @@ async def bale_webhook(request: Request):
                             matched_username = match_users.iloc[0]["username"]
                             users_df.loc[users_df["username"] == matched_username, "bale_chat_id"] = str(chat_id)
                             users_df.loc[users_df["username"] == matched_username, "user_has_bale"] = "true"
-                            users_df.drop(columns=["norm_phone"], inplace=True)
+                            users_df.drop(columns=["norm_phone"], inplace=True, errors="ignore")
                             all_sheets[USERS_SHEET] = users_df
                             
                             with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
@@ -589,13 +589,11 @@ async def bale_webhook(request: Request):
                                     
                             send_bale_message(chat_id, f"✅ حساب کاربری «{matched_username}» با موفقیت فعال شد.")
                         else:
-                            users_df.drop(columns=["norm_phone"], inplace=True)
+                            users_df.drop(columns=["norm_phone"], inplace=True, errors="ignore")
                             send_bale_message(chat_id, "❌ شماره موبایل شما در لیست کاربران سیستم یافت نشد.")
 
     except Exception as e:
         print(f"WEBHOOK PROCESSING ERROR: {e}")
-
-    return {"status": "ok"}
 
 # -----------------------------
 # UI Pages
