@@ -517,12 +517,9 @@ async def bale_webhook(request: Request):
                     
                     if "bale_chat_id" not in users_df.columns:
                         users_df["bale_chat_id"] = ""
-                    users_df["bale_chat_id"] = users_df["bale_chat_id"].astype("object")
-                    
                     if "user_has_bale" not in users_df.columns:
-                        users_df["user_has_bale"] = "false"
-                    users_df["user_has_bale"] = users_df["user_has_bale"].astype("object")
-                    
+                        users_df["user_has_bale"] = "false"                    
+                                    
                     users_df["norm_phone"] = users_df["phone"].apply(clean_phone)
 
                     if target_user:
