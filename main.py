@@ -403,8 +403,8 @@ def user_has_bale(request: Request, user: dict = Depends(get_current_user)) -> b
         
         target = row.iloc[0]
         cid = str(target.get("bale_chat_id", "")).strip()
-        has_bale_flag = target.get("user_has_bale", False)
-
+        has_bale_flag = str(target.get("user_has_bale", "false")).strip().lower()
+        
         valid_cid = bool(cid and cid.lower() not in ["nan", "none", "", "-", "0"])
         valid_flag = str(has_bale_flag).strip().lower() in ["true", "1", "yes"]
 
@@ -980,7 +980,7 @@ async def add_user(
             "role": role.strip(),
             "phone": cleaned_phone,
             "bale_chat_id": "",
-            "user_has_bale": "0"
+            "user_has_bale": "false"
         }
         users_df = pd.concat([users_df, pd.DataFrame([new_user_data])], ignore_index=True)
         cars_df = read_sheet(CARS_SHEET)
