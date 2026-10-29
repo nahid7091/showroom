@@ -541,7 +541,17 @@ async def bale_webhook(request: Request):
                                         s_df.to_excel(writer, sheet_name=s_name, index=False)
                                 
                                 PENDING_VERIFICATIONS.pop(str(chat_id), None)
-                                keyboard = {
+                                remove_keyboard_markup = {
+                                    "remove_keyboard": True
+                                }
+                                send_bale_message(
+                                    chat_id,
+                                    f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد.",
+                                    reply_markup=remove_keyboard_markup
+                                )
+
+                                # ۲. بلافاصله پیام حاوی دکمه شیشه‌ای (Inline) برای ورود به سایت را بفرستید
+                                inline_keyboard_markup = {
                                     "inline_keyboard": [
                                         [
                                             {
@@ -553,8 +563,8 @@ async def bale_webhook(request: Request):
                                 }
                                 send_bale_message(
                                     chat_id,
-                                    f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد. اکنون می‌توانید بدون محدودیت از سایت استفاده کنید.",
-                                    reply_markup=keyboard
+                                    "اکنون می‌توانید بدون محدودیت از طریق دکمه زیر وارد سامانه شوید:",
+                                    reply_markup=inline_keyboard_markup
                                 )
                             else:
                                 users_df.drop(columns=["norm_phone"], inplace=True)
