@@ -683,9 +683,10 @@ async def login_post(
     row = matched.iloc[0].to_dict()
 
     raw_bale = str(row.get("bale_chat_id", "")).strip().lower()
-    has_bale = raw_bale not in ["", "nan", "none", "-", "0"]
+    has_bale_id = raw_bale not in ["", "nan", "none", "-", "0"]
+    has_bale_flag = str(row.get("user_has_bale", "")).strip().lower() == "true"
     
-    target_url = "/cars" if has_bale else "/activate-bale"
+    target_url = "/cars" if (has_bale_id and has_bale_flag) else "/activate-bale"
     
     resp = RedirectResponse(target_url, status_code=303)
     set_session(resp, row)
