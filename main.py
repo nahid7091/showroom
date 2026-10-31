@@ -920,6 +920,14 @@ async def update_status(
                 
                 all_sheets[CARS_SHEET] = cars_df
 
+                status = status.strip()
+                place = place.strip()
+                if not status or not place:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="وضعیت و محل خودرو هر دو الزامی هستند."
+                    )
+                   
                 logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS))
                 new_id = 1
                 if not logs_df.empty and "id" in logs_df.columns:
