@@ -571,13 +571,13 @@ th.col-title, td.col-title {
         <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
             <input type="hidden" name="car_code" value="{{ car.car_code }}">
             
-            <select name="status" style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+            <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
                 {% for st in allowed_statuses %}
                 <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
                 {% endfor %}
             </select>
 
-            <select name="place" style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+            <select name="place" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
                 {% for pl in allowed_places %}
                 <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
                 {% endfor %}
