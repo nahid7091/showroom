@@ -352,18 +352,21 @@ def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
 def get_current_user(request: Request) -> Optional[dict]:
-    token = request.cookies.get("session") or request.cookies.get("session_token")
+    token = request.cookies.get("session")
     if not token:
         return None
     try:
-        data = serializer.loads(token, max_age=86400 * 7)
-        if isinstance(data, dict):
-            username = data.get("username")
-        else:
-            username = str(data)
-    except BadSignature:
+        data = serializer.loads(token, max_age=60 * 60 * 24 * 7) # تطابق تایم با max_age
+        username = data.get("username")
+        if not username:
+            return None
+        
+        # خواندن مشخصات کاربر از اکسل
+        user = get_user_by_username(username)
+        return user
+    except (BadSignature, Exception):
         return None
-
+        
     users_df = read_sheet(USERS_SHEET)
     if users_df.empty or "username" not in users_df.columns:
         return None
