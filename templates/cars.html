@@ -472,17 +472,33 @@
                     
                     <!-- بخش تغییر وضعیت و مکان برای همه کاربران -->
                     <td>
-                        <select class="inline-select" id="sel-status-{{ car.car_code }}">
-                            {% for st in allowed_statuses %}
-                            <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
-                            {% endfor %}
-                        </select>
-                        <select class="inline-select" id="sel-place-{{ car.car_code }}">
-                            {% for pl in allowed_places %}
-                            <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
-                            {% endfor %}
-                        </select>
-                        <button class="btn-inline-save" onclick="updateCarState('{{ car.car_code }}')">ذخیره</button>
+                        {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
+        <!-- حالت قفل‌شده برای کارشناسان و کاربران عادی -->
+        <span style="display: inline-block; padding: 6px 12px; background-color: #e2e8f0; color: #64748b; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
+            🔒 قفل (فقط مدیر)
+        </span>
+    {% else %}
+        <!-- حالت فعال برای مدیران یا خودروهای غیرفروخته‌شده -->
+        <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
+            <input type="hidden" name="car_code" value="{{ car.car_code }}">
+            
+            <select name="status" style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                {% for st in allowed_statuses %}
+                <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="place" style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                {% for pl in allowed_places %}
+                <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
+                {% endfor %}
+            </select>
+
+            <button type="submit" style="background-color: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                ثبت
+            </button>
+        </form>
+    {% endif %}
                     </td>
                 </tr>
 
