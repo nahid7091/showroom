@@ -538,30 +538,15 @@ async def bale_webhook(request: Request):
                                         s_df.to_excel(writer, sheet_name=s_name, index=False)
                                 
                                 PENDING_VERIFICATIONS.pop(str(chat_id), None)
-                                remove_keyboard_markup = {
-                                    "remove_keyboard": True
-                                }
+                                
                                 send_bale_message(
                                     chat_id,
                                     f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد.",
-                                    reply_markup=remove_keyboard_markup
-                                )
-
-                                # ۲. بلافاصله پیام حاوی دکمه شیشه‌ای (Inline) برای ورود به سایت را بفرستید
-                                inline_keyboard_markup = {
-                                    "inline_keyboard": [
-                                        [
-                                            {
-                                                "text": "🌐 ورود به سایت",
-                                                "url": "https://iranianmoqim.ir/cars"
-                                            }
-                                        ]
-                                    ]
-                                }
-                                send_bale_message(
-                                    chat_id,
-                                    "اکنون می‌توانید بدون محدودیت از طریق دکمه زیر وارد سامانه شوید:",
-                                    reply_markup=inline_keyboard_markup
+                                    reply_markup={
+                                            "inline_keyboard": [
+                                                [{"text": "🌐 ورود به سامانه شوروم", "url": "https://iranianmoqim.ir/cars"}]
+                                            ]
+                                    }      
                                 )
                             else:
                                 users_df.drop(columns=["norm_phone"], inplace=True)
