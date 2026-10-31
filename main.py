@@ -894,6 +894,9 @@ async def update_status(
                 idx = row_idx[0]
                 title = str(cars_df.loc[idx, "title"]) if "title" in cars_df.columns else "نامشخص"
                 from_status = str(cars_df.loc[idx, "status"]) if "status" in cars_df.columns else "نامشخص"
+                if from_status == "فروخته شده" and user.get("role") not in ROLES_CAN_MANAGE:
+                    raise HTTPException(status_code=403, detail="خودروی فروخته شده فقط توسط مدیر قابل ویرایش است.")
+
                 from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
 
                 if not final_place:
