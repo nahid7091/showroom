@@ -363,7 +363,9 @@ def get_current_user(request: Request) -> Optional[dict]:
             return None
         
         # پیدا کردن کاربر از اکسل (همان کدی که در پروژه داشتید)
-        df_users = read_excel_sheet("users")
+        df_users = read_sheet(USERS_SHEET)
+        if df_users.empty or "username" not in df_users.columns:
+            return None
         df_users["username"] = df_users["username"].astype(str).str.strip()
         matched = df_users[df_users["username"] == str(username).strip()]
         
@@ -371,7 +373,8 @@ def get_current_user(request: Request) -> Optional[dict]:
             return None
             
         return matched.iloc[0].to_dict()
-    except Exception:
+    except Exception as e:
+        print(f"Error in get_current_user: {e}")
         return None
 
 def require_user(request: Request) -> dict:
@@ -538,10 +541,10 @@ async def bale_webhook(request: Request):
                                         s_df.to_excel(writer, sheet_name=s_name, index=False)
                                 
                                 PENDING_VERIFICATIONS.pop(str(chat_id), None)
-                                login_token = serializer.dumps({"auto_login": matched_username})
+                                login_token = serializer.dumps({"auto_login": target_user})
                                 send_bale_message(
                                     chat_id,
-                                    f"✅ احراز هویت با موفقیت انجام شد!\nحساب کاربری «{matched_username}» فعال شد.\n\nبرای ورود مستقیم به پنل روی دکمه زیر کلیک کنید:",
+                                    f"✅ احراز هویت با موفقیت انجام شد!\nحساب کاربری «{target_user}» فعال شد.\n\nبرای ورود مستقیم به پنل روی دکمه زیر کلیک کنید:",
                                     reply_markup={
                                         "inline_keyboard": [
                                             [{"text": "🌐 ورود به سامانه شوروم", "url": f"https://iranianmoqim.ir/auth/bale-login?token={login_token}"}]
@@ -587,7 +590,7 @@ async def bale_webhook(request: Request):
 def bale_auto_login(token: str):
     try:
         # توکن فقط ۱۰ دقیقه برای کلیک کردن وقت دارد
-        data = serializer.loads(token, max_age=600)
+        data = serializer.loads(token)
         username = data.get("auto_login")
         if not username:
             return RedirectResponse("/login")
