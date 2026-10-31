@@ -356,26 +356,22 @@ def get_current_user(request: Request) -> Optional[dict]:
     if not token:
         return None
     try:
-        data = serializer.loads(token, max_age=60 * 60 * 24 * 7) # تطابق تایم با max_age
+        data = serializer.loads(token)
         username = data.get("username")
         if not username:
             return None
         
-        # خواندن مشخصات کاربر از اکسل
-        user = get_user_by_username(username)
-        return user
-    except (BadSignature, Exception):
-        return None
+        # پیدا کردن کاربر از اکسل (همان کدی که در پروژه داشتید)
+        df_users = read_excel_sheet("users")
+        df_users["username"] = df_users["username"].astype(str).str.strip()
+        matched = df_users[df_users["username"] == str(username).strip()]
         
-    users_df = read_sheet(USERS_SHEET)
-    if users_df.empty or "username" not in users_df.columns:
+        if matched.empty:
+            return None
+            
+        return matched.iloc[0].to_dict()
+    except Exception:
         return None
-
-    user_match = users_df[users_df["username"].astype(str).str.strip() == str(username).strip()]
-    if user_match.empty:
-        return None
-
-    return user_match.iloc[0].to_dict()
 
 def require_user(request: Request) -> dict:
     user = get_current_user(request)
