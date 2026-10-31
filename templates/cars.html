@@ -370,7 +370,33 @@
 @media (max-width: 600px) {
     .other-grid { grid-template-columns: 1fr; }
 }
+/* تنظیم رفتار ستون‌های متنی طولانی */
+.col-options {
+    max-width: 250px;           /* حداکثر عرض ستون آپشن‌ها */
+    min-width: 180px;           /* حداقل عرض مناسب */
+    white-space: normal !important; /* لغو اجبار یک خطی بودن و فعال‌سازی wrap */
+    word-break: break-word;     /* شکستن کلمات طولانی برای جلوگیری از سرریز */
+    line-height: 1.6;
+    text-align: right;          /* متن راست‌چین خواناتر */
+    font-size: 12px;
+}
 
+/* ستون عنوان/مشخصات ماشین نیز اگر متنش طولانی شد جمع‌وجور شود */
+.col-title {
+    max-width: 200px;
+    white-space: normal !important;
+    word-break: break-word;
+    line-height: 1.5;
+}
+
+/* اجازه به ردیف‌های جدول برای هماهنگی خودکار ارتفاع بر اساس محتوا */
+#carsTable tr {
+    height: auto;
+}
+
+#carsTable td {
+    vertical-align: middle;     /* قرارگیری مرتب آیتم‌ها در وسط ردیف‌هایی که ارتفاعشان زیاد شده */
+}
     </style>
 </head>
 <body>
@@ -454,7 +480,7 @@
                         onclick="toggleDetails({{ loop.index }}, this)">◀</button>
                     </td>
                     <td><strong>{{ car.car_code }}</strong></td>
-                    <td>{{ car.title }}</td>
+                    <td class="col-title">{{ car.title }}</td>
                     <td style="font-family: monospace;">{{ car.VIN }}</td>
                     <td>{{ car.model_year or '-' }}</td>
                     <td>{{ car.color or '-' }}</td>
@@ -468,7 +494,7 @@
                     </td>
 
                     <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
-                    <td>{{ car.options or '-' }}</td>
+                    <td class="col-options">{{ car.options or '-' }}</td>
                     
                     <!-- بخش تغییر وضعیت و مکان برای همه کاربران -->
                     <td>
