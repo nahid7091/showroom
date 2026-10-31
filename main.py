@@ -541,15 +541,15 @@ async def bale_webhook(request: Request):
                                         s_df.to_excel(writer, sheet_name=s_name, index=False)
                                 
                                 PENDING_VERIFICATIONS.pop(str(chat_id), None)
-                                
+                                login_token = serializer.dumps({"auto_login": matched_username})
                                 send_bale_message(
                                     chat_id,
-                                    f"✅ احراز هویت با موفقیت تأیید شد!\nحساب کاربری «{target_user}» در سیستم فعال شد.",
+                                    f"✅ احراز هویت با موفقیت انجام شد!\nحساب کاربری «{matched_username}» فعال شد.\n\nبرای ورود مستقیم به پنل روی دکمه زیر کلیک کنید:",
                                     reply_markup={
-                                            "inline_keyboard": [
-                                                [{"text": "🌐 ورود به سامانه شوروم", "url": "https://iranianmoqim.ir/cars"}]
-                                            ]
-                                    }      
+                                        "inline_keyboard": [
+                                            [{"text": "🌐 ورود به سامانه شوروم", "url": f"https://iranianmoqim.ir/auth/bale-login?token={login_token}"}]
+                                        ]
+                                    }
                                 )
                             else:
                                 users_df.drop(columns=["norm_phone"], inplace=True)
@@ -586,6 +586,21 @@ async def bale_webhook(request: Request):
 # -----------------------------
 # UI Pages
 # -----------------------------
+@app.get("/auth/bale-login")
+def bale_auto_login(token: str):
+    try:
+        # توکن فقط ۱۰ دقیقه برای کلیک کردن وقت دارد
+        data = serializer.loads(token, max_age=600)
+        username = data.get("auto_login")
+        if not username:
+            return RedirectResponse("/login")
+        
+        # لاگین کردن کاربر و ریدایرکت مستقیم به صفحه خودروها
+        response = RedirectResponse(url="/cars", status_code=303)
+        return set_session(response, username)
+    except Exception:
+        return RedirectResponse("/login")
+
 @app.get("/activate-bale", response_class=HTMLResponse)
 def activate_bale_page(request: Request, user: dict = Depends(get_current_user)):
     
