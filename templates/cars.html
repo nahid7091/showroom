@@ -572,7 +572,7 @@ th.col-title, td.col-title {
             <input type="hidden" name="car_code" value="{{ car.car_code }}">
             
             <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
-                {% for st in allowed_statuses %}
+                {% for st in ALLOWED_STATUSES %}
                 <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
                 {% endfor %}
             </select>
