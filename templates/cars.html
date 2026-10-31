@@ -313,11 +313,35 @@
     overflow-x: auto;
 }
 
+/* ۱. جدول اصلی: عرض ستون‌ها فیت محتوا و کنترل‌شده باشد نه کش‌آمده */
 #carsTable {
-    width: max-content;
-    min-width: 100%;
+    width: auto !important;          /* جلوگیری از کشیده شدن زورکی جدول تا انتهای صفحه */
+    min-width: 100%;                 /* پر کردن صفحه در صورت کم بودن ستون‌ها */
+    border-collapse: collapse;
 }
 
+/* ۲. مهار قطعی عرض ستون‌های آپشن و عنوان */
+th.col-options, td.col-options {
+    width: 220px !important;
+    max-width: 220px !important;
+    min-width: 180px !important;
+    white-space: normal !important;   /* حتماً خط جدید بشکند */
+    word-break: break-word !important;
+    line-height: 1.6;
+    text-align: right;
+    font-size: 12px;
+}
+
+th.col-title, td.col-title {
+    width: 180px !important;
+    max-width: 180px !important;
+    min-width: 140px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    line-height: 1.5;
+    text-align: right;
+}
+        
 .toggle-btn {
     cursor: pointer;
     border: 1px solid var(--border);
@@ -397,6 +421,45 @@
 #carsTable td {
     vertical-align: middle;     /* قرارگیری مرتب آیتم‌ها در وسط ردیف‌هایی که ارتفاعشان زیاد شده */
 }
+
+        /* ۳. جمع‌وجور کردن و Fit Content شدن بخش OTHER_COLS (کرکره سایر مشخصات) */
+.other-details-container {
+    width: fit-content !important;    /* دیگر تا انتهای جدول کش نمی‌آید */
+    max-width: 850px;                 /* سقف منطقی */
+    margin: 8px auto 8px 0;           /* یا margin: 8px 0 برای چسبیدن به راست */
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px 16px;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
+}
+/* گرید ۲ یا ۳ ستونه مرتب داخل بخش سایر مشخصات */
+.other-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px 20px;
+    width: fit-content;
+}
+
+        .other-detail-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.other-detail-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.other-detail-value {
+    color: #1e293b;
+    font-weight: bold;
+}
+
+        
     </style>
 </head>
 <body>
@@ -494,7 +557,7 @@
                     </td>
 
                     <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
-                    <td class="col-options">{{ car.options or '-' }}</td>
+                    <td class="col-options">{{ car.options  if car.options else '-' }}</td>
                     
                     <!-- بخش تغییر وضعیت و مکان برای همه کاربران -->
                     <td>
@@ -529,18 +592,19 @@
                 </tr>
 
                 <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
-                <tr id="details-{{ loop.index }}" class="details-row" hidden>
-                    <td class="details-cell" colspan="{{ shown_cols|length + 2 }}">
-                        <div class="other-grid">
-                            {% for col in other_cols %}
-                            <div class="other-item">
-                                <span class="other-label">{{ column_titles.get(col, col) }}</span>
-                                <span class="other-value"
-                                      {% if col == 'last_updated_at' %}id="updated-at-{{ car.car_code }}"
-                                      {% elif col == 'last_updated_by' %}id="updated-by-{{ car.car_code }}"
-                                      {% endif %}>{{ car.get(col) or '-' }}</span>
+                <tr id="details-{{ car.car_code }}" style="display: none; background-color: #f1f5f9;">
+                    <td colspan="10" style="padding: 10px 15px;">
+                        <div class="other-details-container">
+                            <div class="other-details-grid">
+                                {% for col in other_car_cols %}
+                                    {% if car[col] %}
+                                    <div class="other-detail-item">
+                                        <span class="other-detail-label">{{ col }}:</span>
+                                        <span class="other-detail-value">{{ car[col] }}</span>
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         </div>
                     </td>
                 </tr>
