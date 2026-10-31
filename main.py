@@ -390,17 +390,22 @@ def require_role(*allowed_roles):
         return user
     return dep
 
-def user_has_bale(request: Request, user: dict = Depends(get_current_user)) -> bool:
+def user_has_bale(request: Request, user: Optional[dict]=None) -> bool:
     
+    if user is None:
+        user = get_current_user(request)
+        
     if not user:
         return False
+        
     try:
         users_df = read_sheet(USERS_SHEET)
         if users_df.empty or "username" not in users_df.columns:
             return False
         
         users_df["username"] = users_df["username"].astype(str).str.strip()
-        row = users_df[users_df["username"] == str(user.get("username", "")).strip()]
+        current_username = str(user.get("username", "")).strip()
+        row = users_df[users_df["username"] == current_username]
         if row.empty:
             return False
         
@@ -409,12 +414,13 @@ def user_has_bale(request: Request, user: dict = Depends(get_current_user)) -> b
         has_bale_flag = str(target.get("user_has_bale", "false")).strip().lower()
         
         valid_cid = bool(cid and cid.lower() not in ["nan", "none", "", "-", "0"])
-        valid_flag = str(has_bale_flag).strip().lower() in ["true", "1", "yes"]
+        valid_flag = has_bale_flag in ["true", "1", "yes"]
 
         return valid_cid and valid_flag
     except Exception as e:
         print(f"user_has_bale check error: {e}")
         return False
+
 
 def broadcast_car_update(car_code: str, title: str, from_status: str, to_status: str, from_place: str, to_place: str, changed_by: str, changed_at: str):
     try:
