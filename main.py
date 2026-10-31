@@ -12,6 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from filelock import FileLock
 from itsdangerous import URLSafeSerializer, BadSignature
+from openpyxl import load_workbook
 
 import jdatetime
 from zoneinfo import ZoneInfo
@@ -285,11 +286,7 @@ def save_users(users_df: pd.DataFrame):
 
 def append_history(car_code: str, changed_by: str, from_status: str, to_status: str, from_place: str, to_place: str):
     history_df = read_sheet(HISTORY_SHEET)
-    next_id = 1
-    if not history_df.empty and "id" in history_df.columns:
-        next_id = int(pd.to_numeric(history_df["id"], errors="coerce").max() or 0) + 1
-    elif not history_df.empty:
-        next_id = len(history_df) + 1
+    next_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
 
     new_log = {
         "id": str(next_id),
@@ -766,6 +763,45 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         }
     )
 
+def get_next_id(file_path: str, sheet_name: str, id_column: str = "id") -> int:
+    """
+    بیشترین مقدار ستون شناسه را پیدا کرده و مقدار بعدی (+1) را برمی‌گرداند.
+    اگر شیت خالی باشد یا هیچ رکوردی نباشد، عدد 1 را برمی‌گرداند.
+    
+    مثال استفاده:
+        next_car_id = get_next_id("/data/showroom/database.xlsx", "cars", "car_code")
+        next_log_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
+    """
+    try:
+        # فقط همان شیت مورد نظر خوانده می‌شود
+        df = pd.read_excel(file_path, sheet_name=sheet_name)
+        
+        # اگر ستون وجود نداشت یا دیتایی نبود
+        if df.empty or id_column not in df.columns:
+            return 1
+            
+        # تبدیل ستون به رشته، نرمال‌سازی ارقام فارسی/عربی و تبدیل امن به عدد
+        s = df[id_column].astype(str)
+        
+        # تبدیل اعداد فارسی/عربی به انگلیسی در صورت وجود
+        persian_digits = "۰۱۲۳۴۵۶۷۸۹"
+        arabic_digits = "٠١٢٣٤٥٦٧٨٩"
+        for i in range(10):
+            s = s.str.replace(persian_digits[i], str(i))
+            s = s.str.replace(arabic_digits[i], str(i))
+            
+        # استخراج مقادیر عددی (خطاها تبدیل به NaN می‌شوند)
+        numeric_ids = pd.to_numeric(s, errors="coerce").dropna()
+        
+        if numeric_ids.empty:
+            return 1
+            
+        # بزرگترین مقدار را گرفته و یک واحد اضافه می‌کند
+        return int(numeric_ids.max()) + 1
+
+    except Exception:
+        # در صورت نبود شیت یا فایل، پیش‌فرض از 1 شروع می‌شود
+        return 1
 
 # -----------------------------
 # روت فرم افزودن خودرو
@@ -929,12 +965,7 @@ async def update_status(
                     )
                    
                 logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS))
-                new_id = 1
-                if not logs_df.empty and "id" in logs_df.columns:
-                    try:
-                        new_id = int(pd.to_numeric(logs_df["id"], errors="coerce").max() or 0) + 1
-                    except Exception:
-                        new_id = len(logs_df) + 1
+                new_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
                 
                 new_log = {
                     "id": new_id,
@@ -999,7 +1030,7 @@ async def add_user(
 
         next_user_code = 101
         if not users_df.empty and "user_code" in users_df.columns:
-            next_user_code = int(pd.to_numeric(users_df["user_code"], errors="coerce").max() or 100) + 1
+            next_user_code = get_next_id("/data/showroom/database.xlsx", "users", "user_code")
 
         new_user_data = {
             "user_code": str(next_user_code),
