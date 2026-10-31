@@ -825,7 +825,7 @@ async def add_car(
     }
 
     # قفل فایل اکسل و ثبت رکورد جدید
-    with FileLock(LOCK_FILE, timeout=10):
+    with FileLock(LOCK_PATH, timeout=10):
         cars_df = read_sheet(CARS_SHEET)
         
         # بررسی عدم تکراری بودن کد خودرو یا VIN
