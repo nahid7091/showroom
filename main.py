@@ -41,7 +41,7 @@ CARS_SHEET = "cars"
 HISTORY_SHEET = "car_logs"
 
 ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده", "غیر قابل فروش"]
-ALLOWED_PLACES = ["شوروم فلاحی", "انزلی", "ساری", "تنکابن","سالار","جمهوری","شهرک غرب","اتو شیخ","یافت آباد","...."]
+ALLOWED_PLACES = ["شوروم فلاحی", "انزلی", "ساری", "تنکابن","سالار","جمهوری","شهرک غرب","اتو شیخ","یافت آباد","تحویل خریدار"]
 
 COLUMN_TITLES_FA = {
     # شیت خودروها
@@ -739,6 +739,8 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 
         if place:
             cars_df = cars_df[cars_df["place"].astype(str) == place.strip()]
+        elif not place && status=="فروخته شده":
+            place="محل خریدار"
 
     cars_list = cars_df.to_dict(orient="records") if not cars_df.empty else []
 
