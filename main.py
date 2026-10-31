@@ -744,6 +744,9 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 
     cars_list = cars_df.to_dict(orient="records") if not cars_df.empty else []
 
+    updated_df = pd.DataFrame(cars_list)
+    updated_df.to_excel("/data/showroom/database.xlsx", index=False)
+    
     return templates.TemplateResponse(
         request=request,
         name="cars.html",
