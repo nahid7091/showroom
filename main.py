@@ -693,7 +693,7 @@ async def login_post(
     target_url = "/cars" if (has_bale_id and has_bale_flag) else "/activate-bale"
     
     resp = RedirectResponse(target_url, status_code=303)
-    set_session(resp, row)
+    set_session(resp, row["username"])
     return resp
     
 @app.get("/logout")
