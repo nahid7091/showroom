@@ -788,7 +788,6 @@ async def add_car_page(request: Request, user: dict = Depends(get_current_user))
 @app.post("/cars/add")
 async def add_car(
     request: Request,
-    car_code: str = Form(...),
     VIN: str = Form(...),
     title: str = Form(...),
     model_year: str = Form(""),
@@ -810,17 +809,17 @@ async def add_car(
 
     now_jalali = get_current_jalali_now()
     reserved_until = get_jalali_reserve_expiry(4) if status == "reserved(4 hours)" else ""
-
+    final_place="محل خریدار" if status=="فروخته شده"
 
     new_car = {
-        "car_code": car_code.strip(),
+        "car_code": nextcarcode(),
         "VIN": VIN.strip(),
         "title": title.strip(),
         "model_year": model_year.strip(),
         "production_year": production_year.strip(),
         "color": color.strip(),
         "owner": owner.strip(),
-        "place": place.strip(),
+        "place": final_place.strip(),
         "status": status.strip(),
         "reserved_until": reserved_until,
         "last_updated_at": now_jalali,
@@ -837,9 +836,9 @@ async def add_car(
         cars_df = read_sheet(CARS_SHEET)
         
         # بررسی عدم تکراری بودن کد خودرو یا VIN
-        if not cars_df.empty and "car_code" in cars_df.columns:
-            if str(car_code.strip()) in cars_df["car_code"].astype(str).values:
-                return JSONResponse(status_code=400, content={"success": False, "message": "این کد خودرو قبلاً ثبت شده است."})
+        if not cars_df.empty and "VIN" in cars_df.columns:
+            if str(VIN.strip()) in cars_df["VIN"].astype(str).values:
+                return JSONResponse(status_code=400, content={"success": False, "message": "این VIN خودرو قبلاً ثبت شده است."})
 
         # افزودن به دیتافریم
         cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
