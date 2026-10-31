@@ -296,6 +296,81 @@
         .btn-submit:hover {
             background-color: var(--primary-hover);
         }
+        .top-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 18px;
+    margin-bottom: 6px;
+}
+
+#tableTopSpacer {
+    height: 1px;
+}
+
+.table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+#carsTable {
+    width: max-content;
+    min-width: 100%;
+}
+
+.toggle-btn {
+    cursor: pointer;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: #fff;
+    padding: 5px 9px;
+}
+
+.details-row[hidden] {
+    display: none !important;
+}
+
+.details-cell {
+    padding: 15px;
+    text-align: right;
+    white-space: normal;
+    background: #f1f5f9;
+}
+
+.other-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.other-item {
+    min-width: 0;
+    padding: 10px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+}
+
+.other-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #475569;
+}
+
+.other-value {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+    .other-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+    .other-grid { grid-template-columns: 1fr; }
+}
+
     </style>
 </head>
 <body>
@@ -353,8 +428,12 @@
     </div>
 
     <!-- جدول نمایش اطلاعات خودروها -->
-    <div class="table-responsive">
-        <table id="carsTable">
+    <div id="tableTopScroll" class="top-scroll" dir="rtl" aria-label="پیمایش افقی جدول">
+    <div id="tableTopSpacer"></div>
+</div>
+
+<div class="table-responsive" id="tableBottomScroll" dir="rtl">
+    <table id="carsTable">
             <thead>
                 <tr>
                     <th style="width: 35px;">سایر</th>
@@ -368,7 +447,11 @@
                 {% for car in cars %}
                 <tr id="row-{{ car.car_code }}">
                     <td>
-                        <button class="toggle-btn" onclick="toggleDetails('{{ car.car_code }}', this)">◀</button>
+                        <button type="button"
+                        class="toggle-btn"
+                        aria-expanded="false"
+                        aria-controls="details-{{ loop.index }}"
+                        onclick="toggleDetails({{ loop.index }}, this)">◀</button>
                     </td>
                     <td><strong>{{ car.car_code }}</strong></td>
                     <td>{{ car.title }}</td>
@@ -383,11 +466,10 @@
                     <td id="status-cell-{{ car.car_code }}">
                         <strong>{{ car.status }}</strong>
                     </td>
-                    
-                    <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
-                    <td id="updated-at-{{ car.car_code }}">{{ car.last_updated_at or '-' }}</td>
-                    <td id="updated-by-{{ car.car_code }}">{{ car.last_updated_by or '-' }}</td>
 
+                    <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
+                    <td>{{ car.options or '-' }}</td>
+                    
                     <!-- بخش تغییر وضعیت و مکان برای همه کاربران -->
                     <td>
                         <select class="inline-select" id="sel-status-{{ car.car_code }}">
@@ -405,13 +487,16 @@
                 </tr>
 
                 <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
-                <tr id="details-{{ car.car_code }}" class="details-row">
-                    <td colspan="{{ shown_cols|length + 2 }}">
-                        <div class="details-content">
+                <tr id="details-{{ loop.index }}" class="details-row" hidden>
+                    <td class="details-cell" colspan="{{ shown_cols|length + 2 }}">
+                        <div class="other-grid">
                             {% for col in other_cols %}
-                            <div class="details-item">
-                                <strong>{{ column_titles.get(col, col) }}:</strong>
-                                <span>{{ car.get(col) or 'ثبت نشده' }}</span>
+                            <div class="other-item">
+                                <span class="other-label">{{ column_titles.get(col, col) }}</span>
+                                <span class="other-value"
+                                      {% if col == 'last_updated_at' %}id="updated-at-{{ car.car_code }}"
+                                      {% elif col == 'last_updated_by' %}id="updated-by-{{ car.car_code }}"
+                                      {% endif %}>{{ car.get(col) or '-' }}</span>
                             </div>
                             {% endfor %}
                         </div>
@@ -568,16 +653,46 @@
     };
 
     // باز و بسته کردن سطر اطلاعات تکمیلی خودرو (OTHER_CAR_COLS)
-    function toggleDetails(carCode, btn) {
-        const row = document.getElementById("details-" + carCode);
-        if (row.style.display === "table-row") {
-            row.style.display = "none";
-            btn.classList.remove("open");
-            btn.innerText = "◀";
-        } else {
-            row.style.display = "table-row";
-            btn.classList.add("open");
-            btn.innerText = "▼";
+    function toggleDetails(index, button) {
+        const row = document.getElementById('details-' + index);
+        if (!row) return;
+    
+        row.hidden = !row.hidden;
+        button.setAttribute('aria-expanded', String(!row.hidden));
+        button.textContent = row.hidden ? '◀' : '▼';
+    
+        requestAnimationFrame(updateTopScrollbar);
+    }
+    
+    const topScroll = document.getElementById('tableTopScroll');
+    const bottomScroll = document.getElementById('tableBottomScroll');
+    const topSpacer = document.getElementById('tableTopSpacer');
+    const carsTable = document.getElementById('carsTable');
+    
+    function updateTopScrollbar() {
+        if (!topScroll || !bottomScroll || !topSpacer || !carsTable) return;
+        topSpacer.style.width = carsTable.scrollWidth + 'px';
+        topScroll.scrollLeft = bottomScroll.scrollLeft;
+    }
+    
+    if (topScroll && bottomScroll && carsTable) {
+        topScroll.addEventListener('scroll', () => {
+            if (Math.abs(bottomScroll.scrollLeft - topScroll.scrollLeft) > 1) {
+                bottomScroll.scrollLeft = topScroll.scrollLeft;
+            }
+        });
+    
+        bottomScroll.addEventListener('scroll', () => {
+            if (Math.abs(topScroll.scrollLeft - bottomScroll.scrollLeft) > 1) {
+                topScroll.scrollLeft = bottomScroll.scrollLeft;
+            }
+        });
+    
+        updateTopScrollbar();
+        window.addEventListener('resize', updateTopScrollbar);
+    
+        if (window.ResizeObserver) {
+            new ResizeObserver(updateTopScrollbar).observe(carsTable);
         }
     }
 
