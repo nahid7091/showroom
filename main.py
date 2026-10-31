@@ -736,7 +736,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 
         if place:
             cars_df = cars_df[cars_df["place"].astype(str) == place.strip()]
-        elif not place && status=="فروخته شده":
+        elif not place and status=="فروخته شده":
             place="محل خریدار"
 
     cars_list = cars_df.to_dict(orient="records") if not cars_df.empty else []
@@ -851,7 +851,7 @@ async def add_car(
     final_place="محل خریدار" if status=="فروخته شده"
 
     new_car = {
-        "car_code": nextcarcode(),
+        "car_code": get_next_id("/data/showroom/database.xlsx", "cars", "car_code"),
         "VIN": VIN.strip(),
         "title": title.strip(),
         "model_year": model_year.strip(),
@@ -906,7 +906,7 @@ async def update_status(
     request: Request,
     car_code: str = Form(...),
     status: str = Form(...),
-    place: str = Form(None),
+    place: str = Form(...),
     user: dict = Depends(get_current_user)
 ):
     if not user:
@@ -914,15 +914,24 @@ async def update_status(
     if not user_has_bale(request):
         return RedirectResponse(url="/activate-bale", status_code=303)
 
+    status = (status or "").strip()
+    place = (place or "").strip()
+    car_code = (car_code or "").strip()
+
+    if not status or not place:
+        raise HTTPException(
+            status_code=400,
+            detail="وضعیت و محل خودرو هر دو الزامی هستند."
+        )
+
     user_fullname = f"{user.get('name', '')} {user.get('lastname', '')}".strip() or user.get("username", "ناشناس")
     
     title = ""
     from_status = ""
     from_place = ""
-    final_place = place
     current_jalali_time = get_current_jalali_now()
 
-    with FileLock(LOCK_PATH):
+    with FileLock(LOCK_PATH), timeout=10):
         try:
             all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
@@ -930,14 +939,15 @@ async def update_status(
             car_code = str(car_code).strip()
             row_idx = cars_df[cars_df["car_code"] == car_code].index
 
-            if not row_idx.empty:
-                idx = row_idx[0]
-                title = str(cars_df.loc[idx, "title"]) if "title" in cars_df.columns else "نامشخص"
-                from_status = str(cars_df.loc[idx, "status"]) if "status" in cars_df.columns else "نامشخص"
-                if from_status == "فروخته شده" and user.get("role") not in ROLES_CAN_MANAGE:
-                    raise HTTPException(status_code=403, detail="خودروی فروخته شده فقط توسط مدیر قابل ویرایش است.")
+            if row_idx.empty:
+                raise HTTPException(status_code=404, detail=f"خودرو با کد {car_code} یافت نشد.")
+            idx = row_idx[0]
+            title = str(cars_df.loc[idx, "title"]) if "title" in cars_df.columns else "نامشخص"
+            from_status = str(cars_df.loc[idx, "status"]) if "status" in cars_df.columns else "نامشخص"
+            if from_status == "فروخته شده" and user.get("role") not in ROLES_CAN_MANAGE:
+                raise HTTPException(status_code=403, detail="خودروی فروخته شده فقط توسط مدیر قابل ویرایش است.")
 
-                from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
+            from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
 
                 if not final_place:
                     final_place = from_place
