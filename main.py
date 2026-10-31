@@ -338,16 +338,17 @@ def check_auto_release_reservations(cars_df: pd.DataFrame) -> pd.DataFrame:
 # -----------------------------
 # Auth & Session Helpers
 # -----------------------------
-def set_session(response: RedirectResponse, user: dict):
-    session_data = serializer.dumps({
-        "username": user["username"],
-        "role": user["role"],
-        "user_code": user["user_code"],
-        "name": user["name"],
-        "lastname": user["lastname"],
-    })
-    response.set_cookie("session", session_data, httponly=True, samesite="lax")
-
+def set_session(response: RedirectResponse, username: str)-> RedirectResponse:
+    token = serializer.dumps({"username": str(username)})
+    response.set_cookie(
+        key="session",
+        value=token,
+        httponly=True,
+        path="/",
+        samesite="lax",
+    )
+    return response
+    
 def clear_session(response: RedirectResponse):
     response.delete_cookie("session")
 
