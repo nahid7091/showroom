@@ -863,7 +863,7 @@ async def add_car(
 
     now_jalali = get_current_jalali_now()
     reserved_until = get_jalali_reserve_expiry(4) if status == "reserved(4 hours)" else ""
-    final_place="تحویل خریدار" if status=="فروخته شده"
+    final_place="تحویل خریدار" if status=="فروخته شده" else "place"
 
     new_car = {
         "car_code": get_next_id("/data/showroom/database.xlsx", "cars", "car_code"),
