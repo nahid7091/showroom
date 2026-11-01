@@ -543,7 +543,8 @@ th.col-title, td.col-title {
                 </tr>
             </thead>
             <tbody>
-                {% for car in cars %}
+                {% for car in cars 
+                if car.status!="فروخته شده" or car.status!="غیرقابل فروش" %}
                 <tr id="row-{{ car.car_code }}">
                     <td>
                         <button type="button"
@@ -600,7 +601,7 @@ th.col-title, td.col-title {
     {% endif %}
                     </td>
                 </tr>
-
+                {% endif %}
                 <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
                 <tr id="details-{{ loop.index }}" hidden style="background-color: #f8fafc;">
                     <td colspan="10" style="padding: 10px 15px;">
