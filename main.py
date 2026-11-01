@@ -717,33 +717,48 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 
     if not user_has_bale(request):
         return RedirectResponse(url="/activate-bale", status_code=303)
-        
+       
     cars_df = read_sheet(CARS_SHEET)
     cars_df = check_auto_release_reservations(cars_df)
 
-    if not cars_df.empty:
+    # -------------------------------------------------------------
+    # اصلاح دائمی در اکسل: اگر فروخته شده و محل خالی است -> محل خریدار
+    # -------------------------------------------------------------
+    if not cars_df.empty and "status" in cars_df.columns and "place" in cars_df.columns:
+        # پیدا کردن خودروهای فروخته شده‌ای که محل ندارند یا nan هستند
+        is_sold = cars_df["status"].astype(str).str.strip() == "فروخته شده"
+        is_empty_place = cars_df["place"].astype(str).str.strip().isin(["", "nan", "None"])
+        
+        needs_update_mask = is_sold & is_empty_place
+        
+        # اگر موردی نیاز به اصلاح داشت، یک‌بار در اکسل ذخیره می‌کنیم
+        if needs_update_mask.any():
+            cars_df.loc[needs_update_mask, "place"] = "محل خریدار"
+            # استفاده از تابع امن خودتان که شیت‌های users و car_logs را حفظ می‌کند:
+            save_cars(cars_df)
+            
+    # -------------------------------------------------------------
+    # حالا فیلترهای جستجو را برای نمایش اعمال می‌کنیم:
+    # -------------------------------------------------------------
+    filtered_df = cars_df.copy()
+    if not filtered_df.empty:
         if q:
             q_clean = q.strip().lower()
             mask = (
-                cars_df["title"].astype(str).str.lower().str.contains(q_clean) |
-                cars_df["car_code"].astype(str).str.lower().str.contains(q_clean) |
-                cars_df["VIN"].astype(str).str.lower().str.contains(q_clean)
+                filtered_df["title"].astype(str).str.lower().str.contains(q_clean) |
+                filtered_df["car_code"].astype(str).str.lower().str.contains(q_clean) |
+                filtered_df["VIN"].astype(str).str.lower().str.contains(q_clean)
             )
-            cars_df = cars_df[mask]
+            filtered_df = filtered_df[mask]
 
         if status:
-            cars_df = cars_df[cars_df["status"].astype(str) == status.strip()]
+            filtered_df = filtered_df[filtered_df["status"].astype(str).str.strip() == status.strip()]
 
         if place:
-            cars_df = cars_df[cars_df["place"].astype(str) == place.strip()]
-        elif not place and status=="فروخته شده":
-            place="تحویل خریدار"
+            filtered_df = filtered_df[filtered_df["place"].astype(str).str.strip() == place.strip()]
 
-    cars_list = cars_df.to_dict(orient="records") if not cars_df.empty else []
+    cars_list = filtered_df.to_dict(orient="records") if not filtered_df.empty else []
 
-    updated_df = pd.DataFrame(cars_list)
-    updated_df.to_excel("/data/showroom/database.xlsx", index=False)
-    
     return templates.TemplateResponse(
         request=request,
         name="cars.html",
