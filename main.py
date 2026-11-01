@@ -946,7 +946,7 @@ async def update_status(
     from_place = ""
     current_jalali_time = get_current_jalali_now()
 
-    with FileLock(LOCK_PATH), timeout=10):
+    with FileLock(LOCK_PATH, timeout=10):
         try:
             all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
