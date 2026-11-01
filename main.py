@@ -41,7 +41,7 @@ USERS_SHEET = "users"
 CARS_SHEET = "cars"
 HISTORY_SHEET = "car_logs"
 
-ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده", "غیر قابل فروش"]
+ALLOWED_STATUSES = ["free", "reserved(4 hours)", "بیعانه", "فروخته شده", "غیرقابل فروش"]
 ALLOWED_PLACES = ["شوروم فلاحی", "انزلی", "ساری", "تنکابن","سالار","جمهوری","شهرک غرب","اتو شیخ","یافت آباد","تحویل خریدار"]
 
 COLUMN_TITLES_FA = {
@@ -722,7 +722,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     cars_df = check_auto_release_reservations(cars_df)
 
     # -------------------------------------------------------------
-    # اصلاح دائمی در اکسل: اگر فروخته شده و محل خالی است -> محل خریدار
+    # اصلاح دائمی در اکسل: اگر فروخته شده و محل خالی است -> تحویل خریدار
     # -------------------------------------------------------------
     if not cars_df.empty and "status" in cars_df.columns and "place" in cars_df.columns:
         # پیدا کردن خودروهای فروخته شده‌ای که محل ندارند یا nan هستند
@@ -733,7 +733,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         
         # اگر موردی نیاز به اصلاح داشت، یک‌بار در اکسل ذخیره می‌کنیم
         if needs_update_mask.any():
-            cars_df.loc[needs_update_mask, "place"] = "محل خریدار"
+            cars_df.loc[needs_update_mask, "place"] = "تحویل خریدار"
             # استفاده از تابع امن خودتان که شیت‌های users و car_logs را حفظ می‌کند:
             save_cars(cars_df)
             
