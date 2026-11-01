@@ -737,7 +737,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         if place:
             cars_df = cars_df[cars_df["place"].astype(str) == place.strip()]
         elif not place and status=="فروخته شده":
-            place="محل خریدار"
+            place="تحویل خریدار"
 
     cars_list = cars_df.to_dict(orient="records") if not cars_df.empty else []
 
@@ -848,7 +848,7 @@ async def add_car(
 
     now_jalali = get_current_jalali_now()
     reserved_until = get_jalali_reserve_expiry(4) if status == "reserved(4 hours)" else ""
-    final_place="محل خریدار" if status=="فروخته شده"
+    final_place="تحویل خریدار" if status=="فروخته شده"
 
     new_car = {
         "car_code": get_next_id("/data/showroom/database.xlsx", "cars", "car_code"),
@@ -935,6 +935,8 @@ async def update_status(
         try:
             all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
+            if cars_df.empty or "car_code" not in cars_df.columns:
+                raise HTTPException(status_code=404, detail="اطلاعات خودروها یافت نشد.")
             cars_df["car_code"] = cars_df["car_code"].astype(str)
             car_code = str(car_code).strip()
             row_idx = cars_df[cars_df["car_code"] == car_code].index
@@ -949,55 +951,51 @@ async def update_status(
 
             from_place = str(cars_df.loc[idx, "place"]) if "place" in cars_df.columns else ""
 
-                if not final_place:
-                    final_place = from_place
+            cars_df.loc[idx, "status"] = status
+            if place:
+                cars_df.loc[idx, "place"] = place
 
-                cars_df.loc[idx, "status"] = status
-                if place:
-                    cars_df.loc[idx, "place"] = place
+            cars_df.loc[idx, "last_updated_at"] = current_jalali_time
+            cars_df.loc[idx, "last_updated_by"] = user_fullname
 
-                cars_df.loc[idx, "last_updated_at"] = current_jalali_time
-                cars_df.loc[idx, "last_updated_by"] = user_fullname
+            if status == "reserved(4 hours)":
+                cars_df.loc[idx, "reserved_until"] = get_jalali_reserve_expiry(4)
+            else:
+                cars_df.loc[idx, "reserved_until"] = ""
+            
+            all_sheets[CARS_SHEET] = cars_df
 
-                if status == "reserved(4 hours)":
-                    cars_df.loc[idx, "reserved_until"] = get_jalali_reserve_expiry(4)
-                else:
-                    cars_df.loc[idx, "reserved_until"] = ""
-                
-                all_sheets[CARS_SHEET] = cars_df
-
-                status = status.strip()
-                place = place.strip()
-                if not status or not place:
-                    raise HTTPException(
-                        status_code=400,
-                        detail="وضعیت و محل خودرو هر دو الزامی هستند."
-                    )
+            status = status.strip()
+            place = place.strip()
+            if not status or not place:
+                raise HTTPException(
+                    status_code=400,
+                    detail="وضعیت و محل خودرو هر دو الزامی هستند."
+                )
                    
-                logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS))
-                new_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
+            logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS))
+            new_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
                 
-                new_log = {
-                    "id": new_id,
-                    "car_code": car_code,
-                    "changed_at": current_jalali_time,
-                    "changed_by": user_fullname,
-                    "from_status": from_status,
-                    "to_status": status,
-                    "from_place": from_place,
-                    "to_place": final_place
-                }
-                logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
-                all_sheets[HISTORY_SHEET] = logs_df
+            new_log = {
+                "id": new_id,
+                "car_code": car_code,
+                "changed_at": current_jalali_time,
+                "changed_by": user_fullname,
+                "from_status": from_status,
+                "to_status": status,
+                "from_place": from_place,
+                "to_place": place
+            }
+            logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
+            all_sheets[HISTORY_SHEET] = logs_df
 
-                with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
-                    for s_name, s_df in all_sheets.items():
-                        s_df.to_excel(writer, sheet_name=s_name, index=False)
+            with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+                for s_name, s_df in all_sheets.items():
+                    s_df.to_excel(writer, sheet_name=s_name, index=False)
 
         except Exception as e:
             print(f"Error in update_status: {e}")
-            raise e
-    append_history(car_code, user.get("username"), from_status, status, from_place, final_place)
+            raise HTTPException(status_code=500, detail=f"خطا در ثبت وضعیت: {str(e)}")
 
     try:
         broadcast_car_update(
@@ -1006,7 +1004,7 @@ async def update_status(
             from_status=from_status,
             to_status=status,
             from_place=from_place,
-            to_place=final_place,
+            to_place=place,
             changed_by=user_fullname,
             changed_at=current_jalali_time
         )
