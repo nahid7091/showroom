@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
+<!-- ۱. استایل تقویم -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+
+<!-- ۲. جی‌کوئری -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- ۳. هسته تاریخ شمسی (persian-date) -->
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+
+<!-- ۴. تقویم شمسی (persian-datepicker) -->
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مدیریت موجودی نمایشگاه خودرو</title>
@@ -595,12 +607,12 @@ th.sortable.desc::after {
                     <input type="text" name="title" required placeholder="مثال: تارا اتوماتیک V4">
                 </div>
                 <div class="form-group">
-                    <label>سال مدل (شمسی)</label>
-                    <input type="text" name="model_year" placeholder="۱۴۰۳">
+                    <label>سال مدل (میلادی) *</label>
+                    <input type="text" name="model_year" required placeholder="2026">
                 </div>
                 <div class="form-group">
                     <label>سال ساخت (میلادی)</label>
-                    <input type="text" name="production_year" placeholder="2024">
+                    <input type="text" name="production_year" placeholder="2026">
                 </div>
                 <div class="form-group">
                     <label>رنگ</label>
@@ -611,31 +623,44 @@ th.sortable.desc::after {
                     <input type="text" name="owner" placeholder="نام مالک">
                 </div>
                 <div class="form-group">
-                    <label>محل استقرار</label>
-                    <select name="place">
+                    <label>محل استقرار *</label>
+                    <select name="place" required>
                         {% for pl in allowed_places %}
                             <option value="{{ pl }}">{{ pl }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>وضعیت اولیه</label>
-                    <select name="status">
+                    <label>وضعیت اولیه *</label>
+                    <select name="status" required>
                         {% for st in allowed_statuses %}
                             <option value="{{ st }}">{{ st }}</option>
                         {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>فاقد گارانتی</label>
-                    <select name="No_Guarantee">
-                        <option value="خیر">خیر</option>
-                        <option value="بله">بله</option>
-                    </select>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <label for="warrantyStartInput" style="margin-bottom: 0;">شروع گارانتی</label>
+                        <label style="font-size: 11px; font-weight: normal; color: var(--danger); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-bottom: 0;">
+                            <input type="checkbox" id="noGuaranteeCheckbox" onchange="toggleWarrantyInput(this)">
+                            فاقد گارانتی
+                        </label>
+                    </div>
+                    
+                    <input type="text" 
+                           id="warrantyStartInput" 
+                           name="No_Guarantee" 
+                           placeholder="انتخاب تاریخ شروع گارانتی..."
+                           autocomplete="off">
                 </div>
+
                 <div class="form-group">
-                    <label>موعد وکالت / تحویل</label>
-                    <input type="text" name="Due" placeholder="فوری / تاریخ">
+                    <label for="dueDateInput">موعد سررسید وکالت</label>
+                    <input type="text" 
+                           id="dueDateInput" 
+                           name="Due" 
+                           placeholder="مثال: ۱۴۰۳/۰۵/۱۵ یا فوری"> 
+                           <!-- placeholder را کمی تغییر دادم تا حالت فوری هم در نظر گرفته شود -->
                 </div>
                 <div class="form-group full-span">
                     <label>متعلقات و آپشن‌ها</label>
@@ -931,7 +956,84 @@ th.sortable.desc::after {
     });
 });
 
+$(document).ready(function() {
+    // ۱. فعال‌سازی تقویم شمسی برای شروع گارانتی
+    const warrantyPicker = $("#warrantyStartInput").pDatepicker({
+        format: 'YYYY/MM/DD',
+        autoClose: true,
+        initialValue: false,
+        toolbox: {
+            calendarSwitch: { enabled: false }
+        }
+    });
 
+    // ۲. فعال‌سازی تقویم شمسی برای موعد سررسید وکالت
+    $("#dueDateInput").pDatepicker({
+        format: 'YYYY/MM/DD',
+        autoClose: true,
+        initialValue: false,
+        toolbox: {
+            calendarSwitch: { enabled: false }
+        }
+    });
+});
+
+// تابع مدیریت تیک «فاقد گارانتی»
+function toggleWarrantyInput(checkbox) {
+    const $input = $("#warrantyStartInput");
+    
+    if (checkbox.checked) {
+        // ذخیره مقدار قبلی و غیرفعال‌سازی موقت تقویم
+        $input.data("prev-val", $input.val());
+        $input.val("فاقد گارانتی");
+        $input.prop("readonly", true);
+        $input.css({
+            "background-color": "#f1f5f9",
+            "color": "#64748b",
+            "cursor": "not-allowed"
+        });
+    } else {
+        // بازگرداندن به حالت انتخاب تاریخ
+        $input.prop("readonly", false);
+        $input.val($input.data("prev-val") || "");
+        $input.attr("placeholder", "انتخاب تاریخ شروع گارانتی...");
+        $input.css({
+            "background-color": "",
+            "color": "",
+            "cursor": "text"
+        });
+        $input.focus();
+    }
+}
+
+
+// فعال‌سازی Persian Datepicker برای فیلد Due Date
+if (window.self === window.top) { // اطمینان از اینکه در frame اصلی اجرا می شود
+    $(function() {
+        $("#dueDateInput").persianDatepicker({
+            format: "YYYY/MM/DD", // فرمت نمایش تاریخ
+            altFormat: "YYYY/MM/DD", // فرمت ارسال به سرور (اگر فرمت دیگری مد نظر است)
+            altFieldFormatter: function(unix) { // برای تنظیم مقدار دقیق تر
+                return persianDate.unixToDate(unix).gregorian.date;
+            },
+            minDate: "1400/01/01", // مثلاً از سال ۱۴۰۰ به بعد
+            autoClose: true, // بستن خودکار پس از انتخاب تاریخ
+            initialValue: false, // اگر می خواهید مقدار اولیه ای نداشته باشد
+            observer: true, // برای شناسایی خودکار تغییرات ورودی
+            onChange: function(unix) {
+                // وقتی تاریخ انتخاب می شود، می توانید مقداری را در فیلد دیگر (مثلا hidden) ذخیره کنید
+                // یا مستقیما همین مقدار را نگه دارید
+                // console.log("Date chosen:", persianDate.unixToDate(unix));
+            },
+            onSelect: function(selected persianDate){
+                // این تابع وقتی تاریخ انتخاب و فیلد بسته می شود اجرا می شود.
+                // برای حالت 'فوری' نیاز است که یک شرط بگذاریم.
+                // اگر می خواهید 'فوری' را به صورت دستی تایپ کند، باید مدیریت آن را انجام دهید.
+                // فعلا فرض می کنیم یا تاریخ شمسی وارد می شود یا فیلد خالی می ماند.
+            }
+        });
+    });
+}
 
 </script>
 
