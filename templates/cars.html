@@ -844,11 +844,11 @@ th.sortable.desc::after {
     function defaultSortFallahiFirst() {
         const pairs = getRowPairs();
         pairs.sort((a, b) => {
-            const statusA = (a.mainRow.getAttribute("data-status") || "").trim();
-            const statusB = (b.mainRow.getAttribute("data-status") || "").trim();
+            const statusA = (a.mainRow.getAttribute("data-place") || "").trim();
+            const statusB = (b.mainRow.getAttribute("data-place") || "").trim();
 
-            const isFallahiA = statusA === "شوروم فلاحی" ? 0 : 1;
-            const isFallahiB = statusB === "شوروم فلاحی" ? 0 : 1;
+            const isFallahiA = placeA === "شوروم فلاحی" ? 0 : 1;
+            const isFallahiB = placeB === "شوروم فلاحی" ? 0 : 1;
 
             return isFallahiA - isFallahiB;
         });
