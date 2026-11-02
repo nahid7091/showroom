@@ -757,8 +757,10 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         if place:
             filtered_df = filtered_df[filtered_df["place"].astype(str).str.strip() == place.strip()]
 
+    # ۱. تبدیل دیتافریم فیلتر شده به لیست دیکشنری
     cars_list = filtered_df.to_dict(orient="records") if not filtered_df.empty else []
 
+    # ۲. تابع مرتب‌سازی
     def car_display_sort_key(car):
         place = str(car.get("place") or "")
         place = place.replace("ي", "ی").replace("ك", "ک").replace("\u200c", " ")
@@ -776,22 +778,17 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         match = re.fullmatch(r"(\d+)(?:\.0+)?", code)
         if match:
             code_key = (0, int(match.group(1)), "")
-    
         elif code.lower() in ("", "nan", "none"):
             code_key = (2, 0, "")
-    
         else:
             code_key = (1, 0, code.casefold())
     
         return (is_not_fallahi, *code_key)
 
+    # ۳. مرتب‌سازی لیست خودروها (بدون نیاز به hasattr)
+    cars = sorted(cars_list, key=car_display_sort_key)
 
-    # این بخش را پس از فیلتر کردن خودروها قرار دهید، نه پیش از فیلترها.
-    if hasattr(cars, "to_dict"):
-        cars = cars.to_dict(orient="records")
-    
-    cars = sorted(cars, key=car_display_sort_key)
-
+    # ۴. ارسال به قالب
     return templates.TemplateResponse(
         request=request,
         name="cars.html",
