@@ -427,7 +427,7 @@
                 <option value="جمهوری" {% if place == 'جمهوری' %}selected{% endif %}>جمهوری</option>
                 <option value="شهرک غرب" {% if place == 'شهرک غرب' %}selected{% endif %}>شهرک غرب</option>
                 <option value="اتو سالار" {% if place == 'اتو سالار' %}selected{% endif %}>اتو سالار</option>
-                <option value="محل خریدار" {% if place == 'محل خریدار' %}selected{% endif %}>محل خریدار</option>
+                <option value="تحویل خریدار" {% if place == 'تحویل خریدار' %}selected{% endif %}>تحویل خریدار</option>
             </select>
             <button type="submit">اعمال فیلتر</button>
             {% if q or status or place %}
@@ -462,6 +462,7 @@
             </thead>
             <tbody>
                 {% for car in cars %}
+                    {% if car.status not in ["فروخته شده", "غیرقابل فروش"] %}
                     <tr id="row-{{ car.car_code }}">
                         <td>
                             <button type="button"
@@ -532,6 +533,7 @@
                     <tr id="noDataRow">
                         <td colspan="{{ (shown_cols|length) + 2 }}" style="padding: 20px; color: #64748b;">خودرویی یافت نشد.</td>
                     </tr>
+                {% endif %}
                 {% endfor %}
             </tbody>
         </table>
