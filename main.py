@@ -759,13 +759,46 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 
     cars_list = filtered_df.to_dict(orient="records") if not filtered_df.empty else []
 
+    def car_display_sort_key(car):
+    place = str(car.get("place") or "")
+    place = place.replace("ي", "ی").replace("ك", "ک").replace("\u200c", " ")
+    normalized_place = re.sub(r"\s+", "", place)
+
+    is_not_fallahi = normalized_place != "شورومفلاحی"
+
+    digits_map = str.maketrans(
+        "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩",
+        "01234567890123456789",
+    )
+    code = str(car.get("car_code", "")).strip().translate(digits_map)
+
+    # کدهای عددی، از جمله کدهایی که از اکسل به شکل 123.0 خوانده شده‌اند
+    match = re.fullmatch(r"(\d+)(?:\.0+)?", code)
+    if match:
+        code_key = (0, int(match.group(1)), "")
+
+    elif code.lower() in ("", "nan", "none"):
+        code_key = (2, 0, "")
+
+    else:
+        code_key = (1, 0, code.casefold())
+
+    return (is_not_fallahi, *code_key)
+
+
+# این بخش را پس از فیلتر کردن خودروها قرار دهید، نه پیش از فیلترها.
+if hasattr(cars, "to_dict"):
+    cars = cars.to_dict(orient="records")
+
+cars = sorted(cars, key=car_display_sort_key)
+
     return templates.TemplateResponse(
         request=request,
         name="cars.html",
         context={
             "request": request,
             "user": user,
-            "cars": cars_list,
+            "cars": cars,
             "q": q,
             "status": status,
             "place": place,
