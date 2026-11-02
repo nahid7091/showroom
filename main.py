@@ -337,6 +337,28 @@ def check_auto_release_reservations(cars_df: pd.DataFrame) -> pd.DataFrame:
 # -----------------------------
 # Auth & Session Helpers
 # -----------------------------
+def normalize_shamsi_date(date_val: str) -> str:
+    """اعداد فارسی را انگلیسی کرده و فرمت تاریخ را به YYYY/MM/DD استاندارد تبدیل می‌کند"""
+    if not date_val:
+        return ""
+    val = str(date_val).strip()
+    
+    # اگر مقادیر متنی خاص بود کاری باهاش نداشته باشیم
+    if val in ["فاقد گارانتی", "فوری", "-", "nan", "None"]:
+        return val if val not in ["nan", "None"] else ""
+        
+    # تبدیل ارقام فارسی و عربی به انگلیسی
+    digits_map = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+    val = val.translate(digits_map).replace("-", "/")
+    
+    # استانداردسازی پد کردن صفر (مثلاً تبدیل 1403/5/9 به 1403/05/09)
+    match = re.match(r"^(\d{4})/(\d{1,2})/(\d{1,2})$", val)
+    if match:
+        y, m, d = match.groups()
+        return f"{y}/{int(m):02d}/{int(d):02d}"
+        
+    return val
+
 def set_session(response: RedirectResponse, username: str)-> RedirectResponse:
     token = serializer.dumps({"username": str(username)})
     response.set_cookie(
