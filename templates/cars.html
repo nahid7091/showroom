@@ -103,7 +103,8 @@
             align-items: center;
         }
 
-        .filter-form input, .filter-form select {
+        .filter-form input,
+        .filter-form select {
             padding: 8px 12px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
@@ -147,49 +148,132 @@
             background-color: #166534;
         }
 
-        /* استایل جدول خودروها */
+        .admin-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* اسکرول افقی دوتایی */
+        .top-scroll {
+            max-width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+            height: 18px;
+            margin-bottom: 6px;
+        }
+
+        #tableTopSpacer {
+            height: 1px;
+        }
+
         .table-responsive {
+            max-width: 100%;
             overflow-x: auto;
         }
 
-        table {
-            width: 100%;
+        /* استایل جدول اصلی */
+        #carsTable {
+            width: auto !important;
+            min-width: 100%;
             border-collapse: collapse;
             font-size: 13px;
             text-align: center;
         }
 
-        th, td {
+        #carsTable tr {
+            height: auto;
+        }
+
+        #carsTable th,
+        #carsTable td {
             border: 1px solid var(--border);
             padding: 10px 8px;
             white-space: nowrap;
+            vertical-align: middle;
         }
 
-        th {
+        #carsTable th {
             background-color: #f8fafc;
             color: #475569;
             font-weight: bold;
         }
 
-        tbody tr:hover {
+        #carsTable tbody tr:hover {
             background-color: #f8fafc;
         }
 
-        /* بج‌های وضعیت خودرو */
-        .status-badge {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 11px;
+        /* ستون‌های طولانی */
+        th.col-options,
+        td.col-options {
+            width: 220px !important;
+            max-width: 220px !important;
+            min-width: 180px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            line-height: 1.6;
+            text-align: right;
+            font-size: 12px;
+        }
+
+        th.col-title,
+        td.col-title {
+            width: 180px !important;
+            max-width: 180px !important;
+            min-width: 140px !important;
+            white-space: normal !important;
+            word-break: break-word !important;
+            line-height: 1.5;
+            text-align: right;
+        }
+
+        .toggle-btn {
+            cursor: pointer;
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            background: #fff;
+            padding: 5px 9px;
+        }
+
+        /* ردیف و گرید مشخصات سایر */
+        .other-details-container {
+            width: fit-content !important;
+            max-width: 850px;
+            margin: 8px 0 8px auto;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+            text-align: right;
+        }
+
+        .other-details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px 20px;
+            width: fit-content;
+        }
+
+        .other-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .other-detail-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .other-detail-value {
+            color: #1e293b;
             font-weight: bold;
         }
-        .status-free { background-color: #dcfce7; color: #166534; }
-        .status-reserved { background-color: #fef3c7; color: #92400e; }
-        .status-deposit { background-color: #e0f2fe; color: #075985; }
-        .status-sold { background-color: #fee2e2; color: #991b1b; }
-        .status-unsellable { background-color: #f1f5f9; color: #475569; }
 
-        /* پاپ‌آپ / مودال ثبت خودرو */
+        /* مودال‌ها */
         .modal {
             display: none;
             position: fixed;
@@ -210,7 +294,7 @@
             border-radius: 12px;
             width: 90%;
             max-width: 860px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             animation: modalFade 0.25s ease-out;
         }
 
@@ -247,7 +331,9 @@
         }
 
         @media (max-width: 768px) {
-            .form-grid { grid-template-columns: 1fr; }
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .form-group {
@@ -263,7 +349,9 @@
             color: #475569;
         }
 
-        .form-group input, .form-group select, .form-group textarea {
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
             padding: 9px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
@@ -271,7 +359,8 @@
             font-size: 13px;
         }
 
-        .form-group input:focus, .form-group select:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             border-color: var(--primary);
             outline: none;
         }
@@ -280,7 +369,7 @@
             grid-column: 1 / -1;
         }
 
-        .btn-submit {
+        .btn-modal-submit {
             background-color: var(--primary);
             color: white;
             border: none;
@@ -293,186 +382,15 @@
             margin-top: 15px;
         }
 
-        .btn-submit:hover {
+        .btn-modal-submit:hover {
             background-color: var(--primary-hover);
         }
-        .top-scroll {
-    max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    height: 18px;
-    margin-bottom: 6px;
-}
-
-#tableTopSpacer {
-    height: 1px;
-}
-
-.table-responsive {
-    max-width: 100%;
-    overflow-x: auto;
-}
-
-/* ۱. جدول اصلی: عرض ستون‌ها فیت محتوا و کنترل‌شده باشد نه کش‌آمده */
-#carsTable {
-    width: auto !important;          /* جلوگیری از کشیده شدن زورکی جدول تا انتهای صفحه */
-    min-width: 100%;                 /* پر کردن صفحه در صورت کم بودن ستون‌ها */
-    border-collapse: collapse;
-}
-
-/* ۲. مهار قطعی عرض ستون‌های آپشن و عنوان */
-th.col-options, td.col-options {
-    width: 220px !important;
-    max-width: 220px !important;
-    min-width: 180px !important;
-    white-space: normal !important;   /* حتماً خط جدید بشکند */
-    word-break: break-word !important;
-    line-height: 1.6;
-    text-align: right;
-    font-size: 12px;
-}
-
-th.col-title, td.col-title {
-    width: 180px !important;
-    max-width: 180px !important;
-    min-width: 140px !important;
-    white-space: normal !important;
-    word-break: break-word !important;
-    line-height: 1.5;
-    text-align: right;
-}
-        
-.toggle-btn {
-    cursor: pointer;
-    border: 1px solid var(--border);
-    border-radius: 5px;
-    background: #fff;
-    padding: 5px 9px;
-}
-
-.details-row[hidden] {
-    display: none !important;
-}
-
-.details-cell {
-    padding: 15px;
-    text-align: right;
-    white-space: normal;
-    background: #f1f5f9;
-}
-
-.other-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.other-item {
-    min-width: 0;
-    padding: 10px;
-    background: #fff;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-}
-
-.other-label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-    color: #475569;
-}
-
-.other-value {
-    display: block;
-    overflow-wrap: anywhere;
-}
-
-@media (max-width: 900px) {
-    .other-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-
-@media (max-width: 600px) {
-    .other-grid { grid-template-columns: 1fr; }
-}
-/* تنظیم رفتار ستون‌های متنی طولانی */
-.col-options {
-    max-width: 250px;           /* حداکثر عرض ستون آپشن‌ها */
-    min-width: 180px;           /* حداقل عرض مناسب */
-    white-space: normal !important; /* لغو اجبار یک خطی بودن و فعال‌سازی wrap */
-    word-break: break-word;     /* شکستن کلمات طولانی برای جلوگیری از سرریز */
-    line-height: 1.6;
-    text-align: right;          /* متن راست‌چین خواناتر */
-    font-size: 12px;
-}
-
-/* ستون عنوان/مشخصات ماشین نیز اگر متنش طولانی شد جمع‌وجور شود */
-.col-title {
-    max-width: 200px;
-    white-space: normal !important;
-    word-break: break-word;
-    line-height: 1.5;
-}
-
-/* اجازه به ردیف‌های جدول برای هماهنگی خودکار ارتفاع بر اساس محتوا */
-#carsTable tr {
-    height: auto;
-}
-
-#carsTable td {
-    vertical-align: middle;     /* قرارگیری مرتب آیتم‌ها در وسط ردیف‌هایی که ارتفاعشان زیاد شده */
-}
-
-        /* ۳. جمع‌وجور کردن و Fit Content شدن بخش OTHER_COLS (کرکره سایر مشخصات) */
-.other-details-container {
-    width: fit-content !important;    /* دیگر تا انتهای جدول کش نمی‌آید */
-    max-width: 850px;                 /* سقف منطقی */
-    margin: 8px 0 8px auto;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 12px 16px;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.03);
-}
-
-.admin-actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px; /* فاصله بین دو دکمه */
-}
-        
-/* گرید ۲ یا ۳ ستونه مرتب داخل بخش سایر مشخصات */
-.other-details-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px 20px;
-    width: fit-content;
-}
-
-        .other-detail-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    white-space: nowrap;
-}
-
-.other-detail-label {
-    color: #64748b;
-    font-weight: 500;
-}
-
-.other-detail-value {
-    color: #1e293b;
-    font-weight: bold;
-}
-
-        
     </style>
 </head>
 <body>
 
 <div class="container">
-    <!-- هدر: وضعیت هویت کاربر لاگین شده و دکمه خروج -->
+    <!-- هدر: اطلاعات کاربر و خروج -->
     <div class="header-bar">
         <div class="user-info">
             <span class="user-badge">
@@ -485,7 +403,7 @@ th.col-title, td.col-title {
         </div>
     </div>
 
-    <!-- کنترل‌ها: فیلتر، جستجو و دکمه باز کردن فرم ثبت ماشین -->
+    <!-- کنترل‌ها: فیلترها و دکمه‌های افزودن -->
     <div class="controls-bar">
         <form class="filter-form" method="GET" action="/cars">
             <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
@@ -497,132 +415,123 @@ th.col-title, td.col-title {
                 <option value="غیر قابل فروش" {% if status == 'غیر قابل فروش' %}selected{% endif %}>غیر قابل فروش</option>
                 <option value="فروخته شده" {% if status == 'فروخته شده' %}selected{% endif %}>فروخته شده</option>
                 <option value="نامشخص" {% if status == 'نامشخص' %}selected{% endif %}>نامشخص</option>
-
             </select>
             <select name="place">
                 <option value="">-- همه موارد --</option>
-                <option value="شوروم فلاحی" {% if status == 'شوروم فلاحی' %}selected{% endif %}>شوروم فلاحی</option>
-                <option value="انزلی" {% if status == 'انزلی' %}selected{% endif %}>انزلی</option>
-                <option value="ساری" {% if status == 'ساری' %}selected{% endif %}>ساری</option>
-                <option value="اتو شیخ" {% if status == 'اتو شیخ' %}selected{% endif %}>اتو شیخ</option>
-                <option value="یافت آباد" {% if status == 'یافت آباد' %}selected{% endif %}>یافت آباد</option>
-                <option value="تنکابن" {% if status == 'تنکابن' %}selected{% endif %}>تنکابن</option>
-                <option value="جمهوری" {% if status == 'جمهوری' %}selected{% endif %}>جمهوری</option>
-                <option value="شهرک غرب" {% if status == 'شهرک غرب' %}selected{% endif %}>شهرک غرب</option>
-                <option value="اتو سالار" {% if status == 'اتو سالار' %}selected{% endif %}>اتو سالار</option>
-                <option value="محل خریدار" {% if status == 'محل خریدار' %}selected{% endif %}>محل خریدار</option>
+                <option value="شوروم فلاحی" {% if place == 'شوروم فلاحی' %}selected{% endif %}>شوروم فلاحی</option>
+                <option value="انزلی" {% if place == 'انزلی' %}selected{% endif %}>انزلی</option>
+                <option value="ساری" {% if place == 'ساری' %}selected{% endif %}>ساری</option>
+                <option value="اتو شیخ" {% if place == 'اتو شیخ' %}selected{% endif %}>اتو شیخ</option>
+                <option value="یافت آباد" {% if place == 'یافت آباد' %}selected{% endif %}>یافت آباد</option>
+                <option value="تنکابن" {% if place == 'تنکابن' %}selected{% endif %}>تنکابن</option>
+                <option value="جمهوری" {% if place == 'جمهوری' %}selected{% endif %}>جمهوری</option>
+                <option value="شهرک غرب" {% if place == 'شهرک غرب' %}selected{% endif %}>شهرک غرب</option>
+                <option value="اتو سالار" {% if place == 'اتو سالار' %}selected{% endif %}>اتو سالار</option>
+                <option value="محل خریدار" {% if place == 'محل خریدار' %}selected{% endif %}>محل خریدار</option>
             </select>
             <button type="submit">اعمال فیلتر</button>
             {% if q or status or place %}
-                <a href="/cars" style="font-size: 12px; color: #64748b; text-decoration: none;">پاک کردن فیلترها</a> 
+                <a href="/cars">پاک کردن فیلترها</a>
             {% endif %}
         </form>
 
         <div class="admin-actions">
             {% if user.role in roles_can_manage %}
-            <button class="btn-add-car" onclick="openModal('addCarModal')">➕ افزودن خودرو</button>
-            <button class="btn-add-user" onclick="openModal('addUserModal')">👤 افزودن کاربر</button>
+                <button class="btn-add-car" onclick="openModal('addCarModal')">➕ افزودن خودرو</button>
+                <button class="btn-add-car" style="background-color: var(--primary);" onclick="openModal('addUserModal')">👤 افزودن کاربر</button>
             {% endif %}
         </div>
     </div>
 
-    <!-- جدول نمایش اطلاعات خودروها -->
+    <!-- اسکرول افقی هماهنگ بالا -->
     <div id="tableTopScroll" class="top-scroll" dir="rtl" aria-label="پیمایش افقی جدول">
-    <div id="tableTopSpacer"></div>
-</div>
+        <div id="tableTopSpacer"></div>
+    </div>
 
-<div class="table-responsive" id="tableBottomScroll" dir="rtl">
-    <table id="carsTable">
+    <!-- جدول نمایش خودروها -->
+    <div class="table-responsive" id="tableBottomScroll" dir="rtl">
+        <table id="carsTable">
             <thead>
                 <tr>
                     <th style="width: 35px;">سایر</th>
                     {% for col in shown_cols %}
-                    <th>{{ column_titles.get(col, col) }}</th>
+                        <th>{{ column_titles.get(col, col) }}</th>
                     {% endfor %}
                     <th>عملیات تغییر وضعیت و محل</th>
                 </tr>
             </thead>
             <tbody>
-                {% for car in cars 
-                if car.status!="فروخته شده" or car.status!="غیرقابل فروش" %}
-                <tr id="row-{{ car.car_code }}">
-                    <td>
-                        <button type="button"
-                        class="toggle-btn"
-                        aria-expanded="false"
-                        aria-controls="details-{{ loop.index }}"
-                        onclick="toggleDetails({{ loop.index }}, this)">◀</button>
-                    </td>
-                    <td><strong>{{ car.car_code }}</strong></td>
-                    <td class="col-title">{{ car.title }}</td>
-                    <td style="font-family: monospace;">{{ car.VIN }}</td>
-                    <td>{{ car.model_year or '-' }}</td>
-                    <td>{{ car.color or '-' }}</td>
-                    
-                    <!-- محل خودرو -->
-                    <td id="place-cell-{{ car.car_code }}">{{ car.place }}</td>
-                    
-                    <!-- وضعیت خودرو -->
-                    <td id="status-cell-{{ car.car_code }}">
-                        <strong>{{ car.status }}</strong>
-                    </td>
+                {% for car in cars %}
+                    <tr id="row-{{ car.car_code }}">
+                        <td>
+                            <button type="button"
+                                    class="toggle-btn"
+                                    aria-expanded="false"
+                                    aria-controls="details-{{ loop.index }}"
+                                    onclick="toggleDetails({{ loop.index }}, this)">◀</button>
+                        </td>
+                        <td><strong>{{ car.car_code }}</strong></td>
+                        <td class="col-title">{{ car.title }}</td>
+                        <td style="font-family: monospace;">{{ car.VIN }}</td>
+                        <td>{{ car.model_year or '-' }}</td>
+                        <td>{{ car.color or '-' }}</td>
+                        <td id="place-cell-{{ car.car_code }}">{{ car.place }}</td>
+                        <td id="status-cell-{{ car.car_code }}">
+                            <strong>{{ car.status }}</strong>
+                        </td>
+                        <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
+                        <td class="col-options">{{ car.options if car.options else '-' }}</td>
+                        <td>
+                            {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
+                                <span style="display: inline-block; padding: 6px 12px; background-color: #e2e8f0; color: #64748b; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
+                                    🔒 قفل (فقط مدیر)
+                                </span>
+                            {% else %}
+                                <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
+                                    <input type="hidden" name="car_code" value="{{ car.car_code }}">
 
-                    <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
-                    <td class="col-options">{{ car.options  if car.options else '-' }}</td>
-                    
-                    <!-- بخش تغییر وضعیت و مکان برای همه کاربران -->
-                    <td>
-                        {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
-        <!-- حالت قفل‌شده برای کارشناسان و کاربران عادی -->
-        <span style="display: inline-block; padding: 6px 12px; background-color: #e2e8f0; color: #64748b; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
-            🔒 قفل (فقط مدیر)
-        </span>
-    {% else %}
-        <!-- حالت فعال برای مدیران یا خودروهای غیرفروخته‌شده -->
-        <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
-            <input type="hidden" name="car_code" value="{{ car.car_code }}">
-            
-            <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
-                {% for st in allowed_statuses %}
-                <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
-                {% endfor %}
-            </select>
+                                    <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                                        {% for st in allowed_statuses %}
+                                            <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
+                                        {% endfor %}
+                                    </select>
 
-            <select name="place" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
-                {% for pl in allowed_places %}
-                <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
-                {% endfor %}
-            </select>
+                                    <select name="place" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                                        {% for pl in allowed_places %}
+                                            <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
+                                        {% endfor %}
+                                    </select>
 
-            <button type="submit" style="background-color: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">
-                ثبت
-            </button>
-        </form>
-    {% endif %}
-                    </td>
-                </tr>
-                {% endif %}
-                <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
-                <tr id="details-{{ loop.index }}" hidden style="background-color: #f8fafc;">
-                    <td colspan="10" style="padding: 10px 15px;">
-                        <div class="other-details-container">
-                            <div class="other-details-grid">
-                                {% for col in other_cols %}
-                                    {% if car[col] %}
-                                    <div class="other-detail-item">
-                                        <span class="other-detail-label">{{ col }}:</span>
-                                        <span class="other-detail-value">{{ car[col] }}</span>
-                                    </div>
-                                    {% endif %}
-                                {% endfor %}
+                                    <button type="submit" style="background-color: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                        ثبت
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
+                    <tr id="details-{{ loop.index }}" hidden style="background-color: #f8fafc;">
+                        <td colspan="11" style="padding: 10px 15px;">
+                            <div class="other-details-container">
+                                <div class="other-details-grid">
+                                    {% for col in other_cols %}
+                                        {% set val = car.get(col) %}
+                                        {% if val and val|string != 'nan' and val|string != 'None' and val|string != '' %}
+                                            <div class="other-detail-item">
+                                                <span class="other-detail-label">{{ column_titles.get(col, col) }}:</span>
+                                                <span class="other-detail-value">{{ val }}</span>
+                                            </div>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
                             </div>
-                        </div>
-                    </td>
-                </tr>
+                        </td>
+                    </tr>
                 {% else %}
-                <tr id="noDataRow">
-                    <td colspan="{{ shown_cols|length + 2 }}" style="padding: 20px; color: #64748b;">خودرویی یافت نشد.</td>
-                </tr>
+                    <tr id="noDataRow">
+                        <td colspan="{{ (shown_cols|length) + 2 }}" style="padding: 20px; color: #64748b;">خودرویی یافت نشد.</td>
+                    </tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -638,10 +547,6 @@ th.col-title, td.col-title {
         </div>
         <form id="addCarForm">
             <div class="form-grid">
-                <div class="form-group">
-                    <label>کد خودرو *</label>
-                    <input type="text" name="car_code" required placeholder="مثال: 102">
-                </div>
                 <div class="form-group">
                     <label>شماره شاسی (VIN) *</label>
                     <input type="text" name="VIN" required placeholder="۱۷ رقمی">
@@ -670,7 +575,7 @@ th.col-title, td.col-title {
                     <label>محل استقرار</label>
                     <select name="place">
                         {% for pl in allowed_places %}
-                        <option value="{{ pl }}">{{ pl }}</option>
+                            <option value="{{ pl }}">{{ pl }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -678,7 +583,7 @@ th.col-title, td.col-title {
                     <label>وضعیت اولیه</label>
                     <select name="status">
                         {% for st in allowed_statuses %}
-                        <option value="{{ st }}">{{ st }}</option>
+                            <option value="{{ st }}">{{ st }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -749,7 +654,7 @@ th.col-title, td.col-title {
                     <input type="text" name="phone" placeholder="0912xxxxxxx">
                 </div>
             </div>
-            <button type="submit" class="btn-modal-submit" id="userSubmitBtn" style="background-color: var(--info);">ثبت کاربر</button>
+            <button type="submit" class="btn-modal-submit" id="userSubmitBtn" style="background-color: var(--primary);">ثبت کاربر</button>
         </form>
     </div>
 </div>
@@ -773,74 +678,43 @@ th.col-title, td.col-title {
     function toggleDetails(index, button) {
         const row = document.getElementById('details-' + index);
         if (!row) return;
-    
+
         row.hidden = !row.hidden;
         button.setAttribute('aria-expanded', String(!row.hidden));
         button.textContent = row.hidden ? '◀' : '▼';
-    
+
         requestAnimationFrame(updateTopScrollbar);
     }
-    
+
     const topScroll = document.getElementById('tableTopScroll');
     const bottomScroll = document.getElementById('tableBottomScroll');
     const topSpacer = document.getElementById('tableTopSpacer');
     const carsTable = document.getElementById('carsTable');
-    
+
     function updateTopScrollbar() {
         if (!topScroll || !bottomScroll || !topSpacer || !carsTable) return;
         topSpacer.style.width = carsTable.scrollWidth + 'px';
         topScroll.scrollLeft = bottomScroll.scrollLeft;
     }
-    
+
     if (topScroll && bottomScroll && carsTable) {
         topScroll.addEventListener('scroll', () => {
             if (Math.abs(bottomScroll.scrollLeft - topScroll.scrollLeft) > 1) {
                 bottomScroll.scrollLeft = topScroll.scrollLeft;
             }
         });
-    
+
         bottomScroll.addEventListener('scroll', () => {
             if (Math.abs(topScroll.scrollLeft - bottomScroll.scrollLeft) > 1) {
                 topScroll.scrollLeft = bottomScroll.scrollLeft;
             }
         });
-    
+
         updateTopScrollbar();
         window.addEventListener('resize', updateTopScrollbar);
-    
+
         if (window.ResizeObserver) {
             new ResizeObserver(updateTopScrollbar).observe(carsTable);
-        }
-    }
-
-    // ارسال تغییر وضعیت و محل خودرو توسط هر کاربری
-    async function updateCarState(carCode) {
-        const newStatus = document.getElementById("sel-status-" + carCode).value;
-        const newPlace = document.getElementById("sel-place-" + carCode).value;
-
-        const formData = new FormData();
-        formData.append("car_code", carCode);
-        formData.append("new_status", newStatus);
-        formData.append("new_place", newPlace);
-
-        try {
-            const res = await fetch("/cars/update-state", {
-                method: "POST",
-                body: formData
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                document.getElementById("status-cell-" + carCode).innerHTML = "<strong>" + newStatus + "</strong>";
-                document.getElementById("place-cell-" + carCode).innerText = newPlace;
-                document.getElementById("res-cell-" + carCode).innerText = data.reserved_until || "-";
-                document.getElementById("updated-at-" + carCode).innerText = data.last_updated_at;
-                document.getElementById("updated-by-" + carCode).innerText = data.last_updated_by;
-                alert("تغییرات با موفقیت ذخیره شد و در لاگ‌ها ثبت گردید.");
-            } else {
-                alert("خطا: " + (data.message || "امکان به‌روزرسانی وجود ندارد."));
-            }
-        } catch (e) {
-            alert("خطا در شبکه یا اتصال به سرور.");
         }
     }
 
