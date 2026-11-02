@@ -385,6 +385,41 @@
         .btn-modal-submit:hover {
             background-color: var(--primary-hover);
         }
+        /* استایل ستون‌های قابل مرتب‌سازی */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-left: 20px !important; /* فضا برای فلش */
+    transition: background-color 0.2s;
+}
+
+th.sortable:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+th.sortable::after {
+    content: " ⇅";
+    font-size: 0.8em;
+    opacity: 0.35;
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+th.sortable.asc::after {
+    content: " ▲";
+    opacity: 1;
+    color: var(--primary, #1e3a8a);
+}
+
+th.sortable.desc::after {
+    content: " ▼";
+    opacity: 1;
+    color: var(--primary, #1e3a8a);
+}
+
     </style>
 </head>
 <body>
@@ -455,7 +490,7 @@
                 <tr>
                     <th style="width: 35px;">سایر</th>
                     {% for col in shown_cols %}
-                        <th>{{ column_titles.get(col, col) }}</th>
+                        <th class="sortable">{{ column_titles.get(col, col) }}</th>
                     {% endfor %}
                     <th>عملیات تغییر وضعیت و محل</th>
                 </tr>
@@ -512,7 +547,7 @@
                     </tr>
 
                     <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
-                    <tr id="details-{{ loop.index }}" hidden style="background-color: #f8fafc;">
+                    <tr id="details-{{ loop.index }}" data-parent="{{ car.car_code }}" hidden style="background-color: #f8fafc;">
                         <td colspan="11" style="padding: 10px 15px;">
                             <div class="other-details-container">
                                 <div class="other-details-grid">
@@ -768,6 +803,91 @@
             btn.innerText = "ثبت کاربر";
         }
     });
+    document.addEventListener("DOMContentLoaded", function () {
+    const table = document.getElementById("carsTable");
+    if (!table) return;
+    const tbody = table.querySelector("tbody");
+
+    // تبدیل اعداد فارسی/عربی و حذف کاراکترهای اضافی (مثل کامای قیمت یا کیلومتر)
+    function parseValue(text) {
+        if (!text) return "";
+        let clean = text.trim()
+            .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+            .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+            .replace(/[,،\s]/g, "");
+
+        let num = parseFloat(clean);
+        return isNaN(num) ? text.trim().toLowerCase() : num;
+    }
+
+    // بسته‌بندی هر سطر اصلی به همراه سطر جزئیاتش
+    function getRowPairs() {
+        const rows = Array.from(tbody.querySelectorAll("tr:not(.details-row)"));
+        return rows.map(mainRow => {
+            const carCode = mainRow.getAttribute("data-car-code");
+            const detailsRow = tbody.querySelector(`tr.details-row[data-parent="${carCode}"]`);
+            return { mainRow, detailsRow };
+        });
+    }
+
+    // بازنشانی ردیف‌ها درون جدول
+    function renderRows(pairs) {
+        pairs.forEach(pair => {
+            tbody.appendChild(pair.mainRow);
+            if (pair.detailsRow) {
+                tbody.appendChild(pair.detailsRow);
+            }
+        });
+    }
+
+    // ۱. مرتب‌سازی پیش‌فرض: «شوروم فلاحی» اول بیاید
+    function defaultSortFallahiFirst() {
+        const pairs = getRowPairs();
+        pairs.sort((a, b) => {
+            const statusA = (a.mainRow.getAttribute("data-status") || "").trim();
+            const statusB = (b.mainRow.getAttribute("data-status") || "").trim();
+
+            const isFallahiA = statusA === "شوروم فلاحی" ? 0 : 1;
+            const isFallahiB = statusB === "شوروم فلاحی" ? 0 : 1;
+
+            return isFallahiA - isFallahiB;
+        });
+        renderRows(pairs);
+    }
+
+    // اجرای سورت پیش‌فرض در شروع کار صفحه
+    defaultSortFallahiFirst();
+
+    // ۲. مرتب‌سازی داینامیک با کلیک روی هدرها
+    const headers = table.querySelectorAll("th.sortable");
+    headers.forEach((th, colIndex) => {
+        th.addEventListener("click", function () {
+            const isAsc = th.classList.contains("asc");
+            const direction = isAsc ? "desc" : "asc";
+
+            // ریست کردن کلاس بقیه هدرها
+            headers.forEach(h => h.classList.remove("asc", "desc"));
+            th.classList.add(direction);
+
+            const pairs = getRowPairs();
+
+            pairs.sort((a, b) => {
+                const cellA = a.mainRow.children[colIndex]?.innerText || "";
+                const cellB = b.mainRow.children[colIndex]?.innerText || "";
+
+                const valA = parseValue(cellA);
+                const valB = parseValue(cellB);
+
+                if (valA < valB) return direction === "asc" ? -1 : 1;
+                if (valA > valB) return direction === "asc" ? 1 : -1;
+                return 0;
+            });
+
+            renderRows(pairs);
+        });
+    });
+});
+
 </script>
 
 </body>
