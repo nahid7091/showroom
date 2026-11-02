@@ -844,13 +844,18 @@ th.sortable.desc::after {
     function defaultSortFallahiFirst() {
         const pairs = getRowPairs();
         pairs.sort((a, b) => {
-            const statusA = (a.mainRow.getAttribute("data-place") || "").trim();
-            const statusB = (b.mainRow.getAttribute("data-place") || "").trim();
+            const placeA = (a.mainRow.getAttribute("data-place") || "").trim();
+            const placeB = (b.mainRow.getAttribute("data-place") || "").trim();
 
-            const isFallahiA = placeA === "شوروم فلاحی" ? 0 : 1;
-            const isFallahiB = placeB === "شوروم فلاحی" ? 0 : 1;
+            const isFallahiA = placeA.includes("فلاحی");
+            const isFallahiB = placeB.includes("فلاحی");
 
-            return isFallahiA - isFallahiB;
+            // ۱. اگر یکی فلاحی بود و دیگری نبود، فلاحی حتماً بالا بیاید
+        if (isFallahiA && !isFallahiB) return -1;
+        if (!isFallahiA && isFallahiB) return 1;
+
+        // ۲. اگر هر دو فلاحی بودند یا هیچ‌کدام فلاحی نبودند، بقیه را بر اساس حروف الفبای مکان مرتب کن
+        return placeA.localeCompare(placeB, "fa");
         });
         renderRows(pairs);
     }
