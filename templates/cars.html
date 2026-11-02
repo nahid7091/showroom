@@ -865,35 +865,49 @@ th.sortable.desc::after {
     // اجرای سورت پیش‌فرض در شروع کار صفحه
     defaultSortFallahiFirst();
 
-    // ۲. مرتب‌سازی داینامیک با کلیک روی هدرها
-    const headers = table.querySelectorAll("th.sortable");
-    headers.forEach((th, colIndex) => {
+    
+    // ۲. مرتب‌سازی دقیق با کلیک روی هدرها (حل باگ ایندکس اشتباه)
+    const allHeaders = Array.from(table.querySelectorAll("th"));
+    const sortableHeaders = table.querySelectorAll("th.sortable");
+
+    sortableHeaders.forEach(th => {
         th.addEventListener("click", function () {
+            // بدست آوردن ایندکس واقعی ستون در کل سطر
+            const realColIndex = allHeaders.indexOf(th);
             const isAsc = th.classList.contains("asc");
             const direction = isAsc ? "desc" : "asc";
 
-            // ریست کردن کلاس بقیه هدرها
-            headers.forEach(h => h.classList.remove("asc", "desc"));
+            // ریست همه هدرها
+            sortableHeaders.forEach(h => h.classList.remove("asc", "desc"));
             th.classList.add(direction);
 
             const pairs = getRowPairs();
 
             pairs.sort((a, b) => {
-                const cellA = a.mainRow.children[colIndex]?.innerText || "";
-                const cellB = b.mainRow.children[colIndex]?.innerText || "";
+                const cellA = a.mainRow.children[realColIndex];
+                const cellB = b.mainRow.children[realColIndex];
 
-                const valA = parseValue(cellA);
-                const valB = parseValue(cellB);
+                // گرفتن مقدار واقعی (اگر داخل سلول input یا select بود، value آن را برمی‌دارد)
+                const textA = cellA ? (cellA.querySelector("select, input")?.value || cellA.innerText) : "";
+                const textB = cellB ? (cellB.querySelector("select, input")?.value || cellB.innerText) : "";
 
-                if (valA < valB) return direction === "asc" ? -1 : 1;
-                if (valA > valB) return direction === "asc" ? 1 : -1;
-                return 0;
+                const valA = parseValue(textA);
+                const valB = parseValue(textB);
+
+                if (typeof valA === "number" && typeof valB === "number") {
+                    return direction === "asc" ? valA - valB : valB - valA;
+                }
+
+                // مقایسه متنی فارسی
+                const comp = String(valA).localeCompare(String(valB), "fa");
+                return direction === "asc" ? comp : -comp;
             });
 
             renderRows(pairs);
         });
     });
 });
+
 
 </script>
 
