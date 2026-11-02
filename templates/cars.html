@@ -522,43 +522,36 @@ th.sortable.desc::after {
                                     aria-controls="details-{{ loop.index }}"
                                     onclick="toggleDetails({{ loop.index }}, this)">◀</button>
                         </td>
-                        <td><strong>{{ car.car_code }}</strong></td>
-                        <td class="col-title">{{ car.title }}</td>
-                        <td style="font-family: monospace;">{{ car.VIN }}</td>
-                        <td>{{ car.model_year or '-' }}</td>
-                        <td>{{ car.color or '-' }}</td>
-                        <td id="place-cell-{{ car.car_code }}">{{ car.place }}</td>
-                        <td id="status-cell-{{ car.car_code }}">
-                            <strong>{{ car.status }}</strong>
                         </td>
-                        <td id="res-cell-{{ car.car_code }}">{{ car.reserved_until or '-' }}</td>
-                        <td class="col-options">{{ car.options if car.options else '-' }}</td>
+                        {% for col in shown_cols %}
+                            <td>{{ car[col] }}</td>
+                        {% endfor %}
                         <td>
-                            {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
-                                <span style="display: inline-block; padding: 6px 12px; background-color: #e2e8f0; color: #64748b; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
-                                    🔒 قفل (فقط مدیر)
-                                </span>
-                            {% else %}
-                                <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
-                                    <input type="hidden" name="car_code" value="{{ car.car_code }}">
+                        {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
+                            <span style="display: inline-block; padding: 6px 12px; background-color: #e2e8f0; color: #64748b; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
+                                🔒 قفل (فقط مدیر)
+                            </span>
+                        {% else %}
+                            <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
+                                <input type="hidden" name="car_code" value="{{ car.car_code }}">
 
-                                    <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
-                                        {% for st in allowed_statuses %}
-                                            <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
-                                        {% endfor %}
-                                    </select>
+                                <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                                    {% for st in allowed_statuses %}
+                                        <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
+                                    {% endfor %}
+                                </select>
 
-                                    <select name="place" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
-                                        {% for pl in allowed_places %}
-                                            <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
-                                        {% endfor %}
-                                    </select>
+                                <select name="place" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                                    {% for pl in allowed_places %}
+                                        <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
+                                    {% endfor %}
+                                </select>
 
-                                    <button type="submit" style="background-color: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">
-                                        ثبت
-                                    </button>
-                                </form>
-                            {% endif %}
+                                <button type="submit" style="background-color: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                    ثبت
+                                </button>
+                            </form>
+                        {% endif %}
                         </td>
                     </tr>
 
