@@ -509,12 +509,12 @@ th.sortable.desc::after {
             </thead>
             <tbody>
                 {% for car in cars %}
-                {% set current_status = car.status|default('', true)|string|trim %}
+                <!--  {% set current_status = car.status|default('', true)|string|trim %} -->
 
                     {% if car.status not in ["فروخته شده", "غیرقابل فروش"] %}
                     <tr id="row-{{ car.car_code }}"
                         class="car-row"
-                        data-car-code="{{ car.car_code }}" >
+                        data-car-code="{{ car.car_code }}" data-status="{{ car.status }}">
                         <td>
                             <button type="button"
                                     class="toggle-btn"
@@ -522,7 +522,7 @@ th.sortable.desc::after {
                                     aria-controls="details-{{ loop.index }}"
                                     onclick="toggleDetails({{ loop.index }}, this)">◀</button>
                         </td>
-                        </td>
+                        
                         {% for col in shown_cols %}
                             <td>{{ car[col] }}</td>
                         {% endfor %}
