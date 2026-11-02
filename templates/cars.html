@@ -497,10 +497,12 @@ th.sortable.desc::after {
             </thead>
             <tbody>
                 {% for car in cars %}
+                {% set current_status = car.status|default('', true)|string|trim %}
+
                     {% if car.status not in ["فروخته شده", "غیرقابل فروش"] %}
                     <tr id="row-{{ car.car_code }}"
+                        class="car-row"
                         data-car-code="{{ car.car_code }}" 
-                        data-place="{{ car.place|default('') }}">
                         <td>
                             <button type="button"
                                     class="toggle-btn"
@@ -549,8 +551,10 @@ th.sortable.desc::after {
                     </tr>
 
                     <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
-                    <tr id="details-{{ loop.index }}" data-parent="{{ car.car_code }}" hidden style="background-color: #f8fafc;">
-                        <td colspan="11" style="padding: 10px 15px;">
+                    <tr id="details-{{ loop.index }}" 
+                        class="details-row"
+                        data-parent="{{ car.car_code }}" hidden style="background-color: #f8fafc;">
+                            <td colspan="{{ shown_cols|length + 2 }}" style="padding: 10px 15px;">
                             <div class="other-details-container">
                                 <div class="other-details-grid">
                                     {% for col in other_cols %}
@@ -808,105 +812,125 @@ th.sortable.desc::after {
     document.addEventListener("DOMContentLoaded", function () {
     const table = document.getElementById("carsTable");
     if (!table) return;
-    const tbody = table.querySelector("tbody");
 
-    // تبدیل اعداد فارسی/عربی و حذف کاراکترهای اضافی (مثل کامای قیمت یا کیلومتر)
-    function parseValue(text) {
-        if (!text) return "";
-        let clean = text.trim()
+    const tbody = table.tBodies[0];
+    const headers = Array.from(table.querySelectorAll("thead th.sortable"));
+    const collator = new Intl.Collator("fa", {
+        numeric: true,
+        sensitivity: "base"
+    });
+
+    function normalizeDigits(value) {
+        return String(value)
             .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-            .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-            .replace(/[,،\s]/g, "");
-
-        let num = parseFloat(clean);
-        return isNaN(num) ? text.trim().toLowerCase() : num;
+            .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
     }
 
-    // بسته‌بندی هر سطر اصلی به همراه سطر جزئیاتش
+    function sortValue(cell) {
+        const text = normalizeDigits(cell?.textContent || "")
+            .replace(/ي/g, "ی")
+            .replace(/ك/g, "ک")
+            .replace(/\u200c/g, " ")
+            .trim();
+
+        if (!text || text === "-" || text === "—") {
+            return { empty: true, text: "", number: null };
+        }
+
+        const numericText = text
+            .replace(/[,\u066c،\s]/g, "")
+            .replace(/\u066b/g, ".");
+
+        const isNumber = /^[+-]?\d+(?:\.\d+)?$/.test(numericText);
+
+        return {
+            empty: false,
+            text,
+            number: isNumber ? Number(numericText) : null
+        };
+    }
+
     function getRowPairs() {
-        const rows = Array.from(tbody.querySelectorAll("tr:not(.details-row)"));
-        return rows.map(mainRow => {
-            const carCode = mainRow.getAttribute("data-car-code");
-            const detailsRow = tbody.querySelector(`tr.details-row[data-parent="${carCode}"]`);
-            return { mainRow, detailsRow };
-        });
-    }
+        return Array.from(tbody.querySelectorAll("tr.car-row")).map(
+            (mainRow, originalIndex) => {
+                const nextRow = mainRow.nextElementSibling;
 
-    // بازنشانی ردیف‌ها درون جدول
-    function renderRows(pairs) {
-        pairs.forEach(pair => {
-            tbody.appendChild(pair.mainRow);
-            if (pair.detailsRow) {
-                tbody.appendChild(pair.detailsRow);
+                return {
+                    mainRow,
+                    detailsRow: nextRow?.classList.contains("details-row")
+                        ? nextRow
+                        : null,
+                    originalIndex
+                };
             }
-        });
+        );
     }
 
-    // ۱. مرتب‌سازی پیش‌فرض: «شوروم فلاحی» اول بیاید
-    function defaultSortFallahiFirst() {
-        const pairs = getRowPairs();
-        pairs.sort((a, b) => {
-            const placeA = (a.mainRow.getAttribute("data-place") || "").trim();
-            const placeB = (b.mainRow.getAttribute("data-place") || "").trim();
+    function renderRows(pairs) {
+        const fragment = document.createDocumentFragment();
 
-            const isFallahiA = placeA.includes("فلاحی");
-            const isFallahiB = placeB.includes("فلاحی");
+        for (const pair of pairs) {
+            fragment.appendChild(pair.mainRow);
 
-            // ۱. اگر یکی فلاحی بود و دیگری نبود، فلاحی حتماً بالا بیاید
-        if (isFallahiA && !isFallahiB) return -1;
-        if (!isFallahiA && isFallahiB) return 1;
+            if (pair.detailsRow) {
+                fragment.appendChild(pair.detailsRow);
+            }
+        }
 
-        // ۲. اگر هر دو فلاحی بودند یا هیچ‌کدام فلاحی نبودند، بقیه را بر اساس حروف الفبای مکان مرتب کن
-        return placeA.localeCompare(placeB, "fa");
-        });
-        renderRows(pairs);
+        tbody.appendChild(fragment);
+        requestAnimationFrame(updateTopScrollbar);
     }
 
-    // اجرای سورت پیش‌فرض در شروع کار صفحه
-    defaultSortFallahiFirst();
+    // ترتیب اولیه را main.py تعیین کرده است؛ اینجا هنگام لود سورت نکن.
+    headers.forEach(th => {
+        th.setAttribute("aria-sort", "none");
 
-    
-    // ۲. مرتب‌سازی دقیق با کلیک روی هدرها (حل باگ ایندکس اشتباه)
-    const allHeaders = Array.from(table.querySelectorAll("th"));
-    const sortableHeaders = table.querySelectorAll("th.sortable");
-
-    sortableHeaders.forEach(th => {
         th.addEventListener("click", function () {
-            // بدست آوردن ایندکس واقعی ستون در کل سطر
-            const realColIndex = allHeaders.indexOf(th);
-            const isAsc = th.classList.contains("asc");
-            const direction = isAsc ? "desc" : "asc";
+            // شمارهٔ واقعی ستون جدول، نه شمارهٔ آن در فهرست هدرهای sortable
+            const columnIndex = th.cellIndex;
+            const direction = th.classList.contains("asc") ? "desc" : "asc";
+            const multiplier = direction === "asc" ? 1 : -1;
 
-            // ریست همه هدرها
-            sortableHeaders.forEach(h => h.classList.remove("asc", "desc"));
+            headers.forEach(header => {
+                header.classList.remove("asc", "desc");
+                header.setAttribute("aria-sort", "none");
+            });
+
             th.classList.add(direction);
+            th.setAttribute(
+                "aria-sort",
+                direction === "asc" ? "ascending" : "descending"
+            );
 
             const pairs = getRowPairs();
 
             pairs.sort((a, b) => {
-                const cellA = a.mainRow.children[realColIndex];
-                const cellB = b.mainRow.children[realColIndex];
+                const valueA = sortValue(a.mainRow.cells[columnIndex]);
+                const valueB = sortValue(b.mainRow.cells[columnIndex]);
 
-                // گرفتن مقدار واقعی (اگر داخل سلول input یا select بود، value آن را برمی‌دارد)
-                const textA = cellA ? (cellA.querySelector("select, input")?.value || cellA.innerText) : "";
-                const textB = cellB ? (cellB.querySelector("select, input")?.value || cellB.innerText) : "";
-
-                const valA = parseValue(textA);
-                const valB = parseValue(textB);
-
-                if (typeof valA === "number" && typeof valB === "number") {
-                    return direction === "asc" ? valA - valB : valB - valA;
+                // خانه‌های خالی در هر دو جهت آخر بمانند.
+                if (valueA.empty !== valueB.empty) {
+                    return valueA.empty ? 1 : -1;
                 }
 
-                // مقایسه متنی فارسی
-                const comp = String(valA).localeCompare(String(valB), "fa");
-                return direction === "asc" ? comp : -comp;
+                let comparison;
+
+                if (valueA.number !== null && valueB.number !== null) {
+                    comparison = valueA.number - valueB.number;
+                } else {
+                    comparison = collator.compare(valueA.text, valueB.text);
+                }
+
+                return comparison === 0
+                    ? a.originalIndex - b.originalIndex
+                    : comparison * multiplier;
             });
 
             renderRows(pairs);
         });
     });
 });
+
 
 
 </script>
