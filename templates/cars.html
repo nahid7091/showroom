@@ -498,7 +498,9 @@ th.sortable.desc::after {
             <tbody>
                 {% for car in cars %}
                     {% if car.status not in ["فروخته شده", "غیرقابل فروش"] %}
-                    <tr id="row-{{ car.car_code }}">
+                    <tr id="row-{{ car.car_code }}"
+                        data-car-code="{{ car.car_code }}" 
+                        data-place="{{ car.place|default('') }}">
                         <td>
                             <button type="button"
                                     class="toggle-btn"
