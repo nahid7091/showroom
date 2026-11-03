@@ -608,8 +608,91 @@ th.sortable.desc::after {
     background: #0284c7;
     color: #ffffff;
 }
-
-    </style>
+<style>
+/* استایل مودال مدیریت کاربران */
+.users-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.55);
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.users-modal-content {
+    background: #fff;
+    width: 95%;
+    max-width: 1050px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+    overflow: hidden;
+    direction: rtl;
+    display: flex;
+    flex-direction: column;
+}
+.users-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 20px;
+    background: #1f2937;
+    color: #fff;
+}
+.users-close-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 26px;
+    cursor: pointer;
+    line-height: 1;
+}
+.users-modal-body {
+    padding: 16px 20px;
+}
+.users-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: center;
+}
+.users-table th {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 10px 8px;
+    border: 1px solid #d1d5db;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.users-table td {
+    padding: 8px;
+    border: 1px solid #e5e7eb;
+    vertical-align: middle;
+}
+.users-table tr:hover {
+    background: #f9fafb;
+}
+.badge-bale-on {
+    background: #dcfce7;
+    color: #15803d;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+}
+.badge-bale-off {
+    background: #fee2e2;
+    color: #b91c1c;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: bold;
+}
+</style>
 </head>
 <body>
 
@@ -628,6 +711,11 @@ th.sortable.desc::after {
     </div>
 
     <!-- کنترل‌ها: فیلترها و دکمه‌های افزودن -->
+    {% if user.role in roles_can_manage %}
+    <button type="button" class="btn btn-info text-white me-2" onclick="openUsersModal()">
+        👥 مدیریت و مشاهده کاربران
+    </button>
+{% endif %}
     <div class="controls-bar">
         <form class="filter-form" method="GET" action="/cars">
             <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
@@ -1305,6 +1393,69 @@ function fetchCarHistory() {
 $("#histLoadMoreBtn").on("click", function() {
     fetchCarHistory();
 });
+function openUsersModal() {
+    const modal = document.getElementById("usersModal");
+    const loading = document.getElementById("usersLoading");
+    const wrapper = document.getElementById("usersTableWrapper");
+    const tbody = document.getElementById("usersTableBody");
+
+    modal.style.display = "flex";
+    loading.style.display = "block";
+    wrapper.style.display = "none";
+    tbody.innerHTML = "";
+
+    fetch("/api/users/list")
+        .then(res => {
+            if (!res.ok) throw new Error("دسترسی غیرمجاز یا خطای سرور");
+            return res.json();
+        })
+        .then(data => {
+            loading.style.display = "none";
+            wrapper.style.display = "block";
+
+            if (!data.users || data.users.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8">هیچ کاربری یافت نشد.</td></tr>';
+                return;
+            }
+
+            data.users.forEach(u => {
+                const isBaleActive = String(u.user_has_bale || "").toLowerCase() === "true";
+                const baleBadge = isBaleActive 
+                    ? '<span class="badge-bale-on">فعال</span>' 
+                    : '<span class="badge-bale-off">غیرفعال</span>';
+                
+                const fullName = `${u.name || ""} ${u.lastname || ""}`.trim() || "—";
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td style="font-weight: bold; color: #4b5563;">${u.user_code || "—"}</td>
+                    <td><strong>${u.username || "—"}</strong></td>
+                    <td style="font-family: monospace; color: #6b7280; direction: ltr;">${u.password || "—"}</td>
+                    <td>${fullName}</td>
+                    <td><span class="badge bg-secondary">${u.role || "expert"}</span></td>
+                    <td style="direction: ltr;">${u.phone || "—"}</td>
+                    <td style="direction: ltr; font-family: monospace;">${u.bale_chat_id || "—"}</td>
+                    <td>${baleBadge}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(err => {
+            loading.innerHTML = `<span style="color:red;">خطا در دریافت لیست کاربران: ${err.message}</span>`;
+        });
+}
+
+function closeUsersModal() {
+    document.getElementById("usersModal").style.display = "none";
+}
+
+// بستن با کلیک روی پس‌زمینه
+window.addEventListener("click", function(e) {
+    const modal = document.getElementById("usersModal");
+    if (e.target === modal) {
+        closeUsersModal();
+    }
+});
 
 
 </script>
@@ -1327,5 +1478,39 @@ $("#histLoadMoreBtn").on("click", function() {
         </div>
     </div>
 </div>
+
+    <!-- مودال لیست کاربران -->
+<div id="usersModal" class="users-modal-backdrop" style="display:none;">
+    <div class="users-modal-content">
+        <div class="users-modal-header">
+            <h5 style="margin: 0; font-weight: bold;">👥 لیست و مشخصات تمام کاربران سامانه</h5>
+            <button type="button" class="users-close-btn" onclick="closeUsersModal()">&times;</button>
+        </div>
+        <div class="users-modal-body">
+            <div id="usersLoading" style="text-align: center; padding: 20px; color: #666;">
+                در حال بارگذاری اطلاعات کاربران...
+            </div>
+            <div class="table-responsive" id="usersTableWrapper" style="display:none; max-height: 480px; overflow-y: auto;">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>کد کاربر</th>
+                            <th>نام کاربری</th>
+                            <th>کلمه عبور</th>
+                            <th>نام و نام خانوادگی</th>
+                            <th>نقش</th>
+                            <th>شماره همراه</th>
+                            <th>شناسه بله</th>
+                            <th>وضعیت اتصال بله</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
