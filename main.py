@@ -1005,9 +1005,9 @@ async def add_car(
                 "technical_issue": technical_issue.strip(),
                 "physical_issue": physical_issue.strip()
             }
-          cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
-          all_sheets[CARS_SHEET] = cars_df
-          new_log = {
+            cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
+            all_sheets[CARS_SHEET] = cars_df
+            new_log = {
                 "id": get_next_id("/data/showroom/database.xlsx", "car_logs", "id"),
                 "car_code": str(next_car_code),
                 "changed_at": now_jalali,
