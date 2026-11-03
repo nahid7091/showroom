@@ -209,9 +209,15 @@
             vertical-align: middle;
             background: #fff;
         }
-
+        .table-responsive {
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch; /* اسکرول نرم با لمس دست در آیفون و اندروید */
+            width: 100%;
+        }
         
         #carsTable th {
+            white-space: nowrap !important; /* متن تیتر در یک خط باقی می‌ماند */
+            vertical-align: middle;
             background-color: #f8fafc;
             color: #475569;
             font-weight: bold;
