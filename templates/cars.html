@@ -1009,33 +1009,6 @@ function toggleWarrantyInput(checkbox) {
 }
 
 
-// فعال‌سازی Persian Datepicker برای فیلد Due Date
-if (window.self === window.top) { // اطمینان از اینکه در frame اصلی اجرا می شود
-    $(function() {
-        $("#dueDateInput").persianDatepicker({
-            format: "YYYY/MM/DD", // فرمت نمایش تاریخ
-            altFormat: "YYYY/MM/DD", // فرمت ارسال به سرور (اگر فرمت دیگری مد نظر است)
-            altFieldFormatter: function(unix) { // برای تنظیم مقدار دقیق تر
-                return persianDate.unixToDate(unix).gregorian.date;
-            },
-            minDate: "1400/01/01", // مثلاً از سال ۱۴۰۰ به بعد
-            autoClose: true, // بستن خودکار پس از انتخاب تاریخ
-            initialValue: false, // اگر می خواهید مقدار اولیه ای نداشته باشد
-            observer: true, // برای شناسایی خودکار تغییرات ورودی
-            onChange: function(unix) {
-                // وقتی تاریخ انتخاب می شود، می توانید مقداری را در فیلد دیگر (مثلا hidden) ذخیره کنید
-                // یا مستقیما همین مقدار را نگه دارید
-                // console.log("Date chosen:", persianDate.unixToDate(unix));
-            },
-            onSelect: function(selected persianDate){
-                // این تابع وقتی تاریخ انتخاب و فیلد بسته می شود اجرا می شود.
-                // برای حالت 'فوری' نیاز است که یک شرط بگذاریم.
-                // اگر می خواهید 'فوری' را به صورت دستی تایپ کند، باید مدیریت آن را انجام دهید.
-                // فعلا فرض می کنیم یا تاریخ شمسی وارد می شود یا فیلد خالی می ماند.
-            }
-        });
-    });
-}
 
 </script>
 
