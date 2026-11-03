@@ -698,6 +698,15 @@ th.sortable.desc::after {
     font-size: 11px;
     font-weight: bold;
 }
+.col-chassis,
+th.col-chassis,
+td.col-chassis {
+    white-space: nowrap !important; /* هرگز متن شکسته نشود */
+    text-overflow: clip;            /* ۳ نقطه نشود و کامل نمایش یابد */
+    word-break: keep-all !important;
+    min-width: 170px !important;    /* فضای کافی برای نمایش کامل ۱۷ رقم شاسی */
+}
+        
 </style>
 </head>
 <body>
@@ -772,16 +781,17 @@ th.sortable.desc::after {
                 <tr>
                     <th style="width: 35px;">سایر</th>
                     {% for col in shown_cols %}
+                    {% if col in ["VIN"]%}
+                        <th class="sortable col-chassis" data-col="chassis">شماره شاسی</th>
+                    {% else %}
                         <th class="sortable" data-col="{{ col }}">{{ column_titles.get(col, col) }}</th>    
-                    <!-- <th class="col-options sortable" >{{ column_titles.get(col, col) }}</th> -->
+                    {% endif %}
                     {% endfor %}
                     <th>عملیات تغییر وضعیت و محل</th>
                 </tr>
             </thead>
             <tbody>
                 {% for car in cars %}
-                <!--  {% set current_status = car.status|default('', true)|string|trim %} -->
-
                     {% if car.status not in ["فروخته شده", "غیرقابل فروش"] %}
                     <tr id="row-{{ car.car_code }}"
                         class="car-row"
@@ -795,9 +805,15 @@ th.sortable.desc::after {
                         </td>
                         
                         {% for col in shown_cols %}
+                            {% if col in ["VIN"]%}
+                                <td class="col-chassis" style="direction: ltr; font-family: monospace;">
+                                    {{ car.VIN }}
+                                </td>
+                            {% else %}
                             <td class="col-options">
                                 <span class="cell-wrap">{{ car[col] }}</span>
                             </td>
+                        {% endif %}
                         {% endfor %}
                         <td>
                         {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
