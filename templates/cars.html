@@ -186,12 +186,11 @@
 
         /* استایل جدول اصلی */
         #carsTable {
-            width: max-content; /* یا 100% بر حسب نیاز اسکرول افقی */
+            width: auto !important;
             min-width: 100%;
             border-collapse: collapse;
             font-size: 13px;
             text-align: center;
-            table-layout: fixed; /* <-- این خط جادویی حتماً باید اضافه شود */
         }
 
         #carsTable tr {
@@ -200,12 +199,15 @@
 
         #carsTable th,
         #carsTable td {
-            border: 1px solid var(--border);
-            padding: 10px 8px;
-            vertical-align: middle !important; /* همه سلول‌ها دقیقا وسط تراز شوند */
             white-space: nowrap;
+            vertical-align: middle;
         }
 
+        #carsTable td.col-options,
+        #carsTable td.col-accessories {
+            white-space: normal !important;
+        }
+        
         #carsTable th {
             background-color: #f8fafc;
             color: #475569;
@@ -236,29 +238,17 @@
             line-height: 1.5;
             text-align: right;
         }
-        .cell-wrap {
-            display: block;
-            max-width: 220px;                   /* حداکثر عرض */
-            min-width: 120px;
-            white-space: normal !important;      /* شکستن متن به خط بعد */
-            word-break: break-word !important;
-            overflow-wrap: break-word !important;
-            line-height: 1.5;
-            font-size: 12px;
+        #carsTable .cell-wrap {
+            display: inline-block;
+            max-width: 220px;
+            white-space: normal !important;
+            overflow-wrap: anywhere;
+            word-break: normal;
             text-align: right;
-            margin: 0 auto;  
+            line-height: 1.5;
+            vertical-align: middle;
         }
 
-        /* برای ستون مدل/عنوان هم اگر سقف می‌خواهید */
-        .cell-wrap-title {
-            display: inline-block;
-            max-width: 180px;
-            width: max-content;
-            white-space: normal !important;
-            word-break: break-word !important;
-            line-height: 1.5;
-            text-align: right;
-        }
         .toggle-btn {
             cursor: pointer;
             border: 1px solid var(--border);
@@ -522,7 +512,7 @@ th.sortable.desc::after {
                 <tr>
                     <th style="width: 35px;">سایر</th>
                     {% for col in shown_cols %}
-                        <th class="col-accessories sortable cell-wrap" >{{ column_titles.get(col, col) }}</th>
+                        <th class="col-options sortable" >{{ column_titles.get(col, col) }}</th>
                     {% endfor %}
                     <th>عملیات تغییر وضعیت و محل</th>
                 </tr>
@@ -544,7 +534,9 @@ th.sortable.desc::after {
                         </td>
                         
                         {% for col in shown_cols %}
-                            <td class="col-accessories cell-wrap">{{ car[col] }}</td>
+                            <td class="col-options">
+                                <span class="cell-wrap">{{ car[col] }}</span>
+                            </td>
                         {% endfor %}
                         <td>
                         {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
