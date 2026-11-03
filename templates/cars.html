@@ -484,6 +484,154 @@ th.sortable.desc::after {
     color: var(--primary, #1e3a8a) !important;
     opacity: 1 !important;
 }
+/* استایل پنجره پاپ‌آپ تاریخچه */
+.hist-modal[hidden] {
+    display: none !important;
+}
+.hist-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+.hist-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(2px);
+}
+.hist-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 650px;
+    max-height: 85vh;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    direction: rtl;
+    text-align: right;
+    font-family: inherit;
+}
+.hist-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    background: #f1f5f9;
+    border-bottom: 1px solid #cbd5e1;
+}
+.hist-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #0f172a;
+    font-weight: 700;
+}
+.hist-close-btn {
+    background: none;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+}
+.hist-close-btn:hover {
+    color: #0f172a;
+}
+.hist-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+.hist-msg {
+    text-align: center;
+    padding: 24px;
+    color: #64748b;
+    font-size: 14px;
+}
+.hist-timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.hist-card {
+    border: 1px solid #e2e8f0;
+    border-right: 4px solid #3b82f6;
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    font-size: 13px;
+}
+.hist-card-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    color: #475569;
+    font-size: 12px;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 6px;
+}
+.hist-card-changes {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+.hist-from, .hist-to {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px;
+    line-height: 1.6;
+}
+.hist-from {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: #9f1239;
+}
+.hist-to {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+.hist-footer {
+    text-align: center;
+    margin-top: 14px;
+}
+.hist-btn-more {
+    background: #0284c7;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.hist-btn-more:hover {
+    background: #0369a1;
+}
+.history-btn {
+    background: #e0f2fe;
+    color: #0369a1;
+    border: 1px solid #bae6fd;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.history-btn:hover {
+    background: #0284c7;
+    color: #ffffff;
+}
 
     </style>
 </head>
@@ -608,6 +756,13 @@ th.sortable.desc::after {
                                 </button>
                             </form>
                         {% endif %}
+                        <button type="button" 
+                            class="history-btn" 
+                            data-car-code="{{ car.car_code }}" 
+                            title="تاریخچه تغییرات">
+                            📋 تاریخچه
+                        </button>
+
                         </td>
                     </tr>
 
@@ -1064,9 +1219,137 @@ function toggleWarrantyInput(checkbox) {
     }
 }
 
+let currentHistCarCode = null;
+let currentHistOffset = 0;
+let isHistLoading = false;
+
+// کلیک روی دکمه تاریخچه
+$(document).on("click", ".history-btn", function() {
+    const carCode = $(this).data("car-code");
+    if (!carCode) return;
+
+    currentHistCarCode = String(carCode).trim();
+    currentHistOffset = 0;
+    
+    $("#histTitle").text("تاریخچه تغییرات خودرو کد " + currentHistCarCode);
+    $("#histTimeline").empty();
+    $("#histEmpty").hide();
+    $("#histLoadMoreBtn").hide();
+    $("#historyModal").removeAttr("hidden");
+
+    fetchCarHistory();
+});
+
+function closeHistoryModal() {
+    $("#historyModal").attr("hidden", true);
+    currentHistCarCode = null;
+    currentHistOffset = 0;
+}
+
+// بستن پنجره با دکمه Esc کیبورد
+$(document).on("keydown", function(e) {
+    if (e.key === "Escape" && !$("#historyModal").is("[hidden]")) {
+        closeHistoryModal();
+    }
+});
+
+// ارسال درخواست دریافت تاریخچه به سرور
+function fetchCarHistory() {
+    if (!currentHistCarCode || isHistLoading) return;
+
+    isHistLoading = true;
+    $("#histLoading").show();
+    $("#histLoadMoreBtn").prop("disabled", true);
+
+    $.ajax({
+        url: `/api/cars/${encodeURIComponent(currentHistCarCode)}/history?offset=${currentHistOffset}`,
+        method: "GET",
+        success: function(res) {
+            $("#histLoading").hide();
+            isHistLoading = false;
+            $("#histLoadMoreBtn").prop("disabled", false);
+
+            if (!res.items || res.items.length === 0) {
+                if (currentHistOffset === 0) {
+                    $("#histEmpty").show();
+                }
+                $("#histLoadMoreBtn").hide();
+                return;
+            }
+
+            res.items.forEach(function(item) {
+                const card = `
+                    <div class="hist-card">
+                        <div class="hist-card-meta">
+                            <span><strong>تغییردهنده:</strong> ${item.changed_by || '—'}</span>
+                            <span><strong>زمان:</strong> ${item.changed_at || '—'}</span>
+                        </div>
+                        <div class="hist-card-changes">
+                            <div class="hist-from">
+                                <div><strong>از وضعیت:</strong> ${item.from_status || '—'}</div>
+                                <div><strong>از مکان:</strong> ${item.from_place || '—'}</div>
+                            </div>
+                            <div class="hist-to">
+                                <div><strong>به وضعیت:</strong> ${item.to_status || '—'}</div>
+                                <div><strong>به مکان:</strong> ${item.to_place || '—'}</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                $("#histTimeline").append(card);
+            });
+
+            currentHistOffset = res.next_offset;
+
+            // نمایش یا پنهان‌سازی دکمه بارگذاری بیشتر
+            if (res.has_more) {
+                $("#histLoadMoreBtn").show();
+            } else {
+                $("#histLoadMoreBtn").hide();
+            }
+        },
+        error: function(xhr) {
+            $("#histLoading").hide();
+            isHistLoading = false;
+            $("#histLoadMoreBtn").prop("disabled", false);
+            if (xhr.status === 401) {
+                alert("نشست کاربری شما منقضی شده است. لطفاً مجدداً وارد شوید.");
+                window.location.href = "/login";
+            } else if (xhr.status === 403) {
+                alert("حساب بله شما تأیید نشده است.");
+                window.location.href = "/activate-bale";
+            } else {
+                alert("خطا در بارگذاری تاریخچه: " + (xhr.responseJSON?.detail || "خطای ناشناخته"));
+            }
+        }
+    });
+}
+
+// دکمه بارگذاری بیشتر
+$("#histLoadMoreBtn").on("click", function() {
+    fetchCarHistory();
+});
 
 
 </script>
-
+<div id="historyModal" class="hist-modal" hidden>
+    <div class="hist-overlay" onclick="closeHistoryModal()"></div>
+    <div class="hist-dialog">
+        <div class="hist-header">
+            <h3 id="histTitle">تاریخچه تغییر وضعیت خودرو</h3>
+            <button type="button" class="hist-close-btn" onclick="closeHistoryModal()">&times;</button>
+        </div>
+        <div class="hist-body">
+            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
+            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
+            <div id="histTimeline" class="hist-timeline"></div>
+            <div class="hist-footer">
+                <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
+                    بارگذاری ۵۰ تای بعدی
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
