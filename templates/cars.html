@@ -506,7 +506,7 @@ th.sortable.desc::after {
                 <tr>
                     <th style="width: 35px;">سایر</th>
                     {% for col in shown_cols %}
-                        <th class="sortable">{{ column_titles.get(col, col) }}</th>
+                        <th class="col-accessories sortable" data-col="accessories">{{ column_titles.get(col, col) }}</th>
                     {% endfor %}
                     <th>عملیات تغییر وضعیت و محل</th>
                 </tr>
