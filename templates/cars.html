@@ -718,11 +718,13 @@ th.sortable.desc::after {
 
 <script>
     function openModal(id) {
-        document.getElementById(id).style.display = "block";
+        const modal = document.getElementById(id);
+        if (modal) modal.style.display = "block";
     }
 
     function closeModal(id) {
-        document.getElementById(id).style.display = "none";
+        const modal = document.getElementById(id);
+        if (modal) modal.style.display = "none";    
     }
 
     window.onclick = function(event) {
@@ -740,7 +742,9 @@ th.sortable.desc::after {
         button.setAttribute('aria-expanded', String(!row.hidden));
         button.textContent = row.hidden ? '◀' : '▼';
 
-        requestAnimationFrame(updateTopScrollbar);
+        if (typeof updateTopScrollbar === "function") {
+            requestAnimationFrame(updateTopScrollbar);
+        }    
     }
 
     const topScroll = document.getElementById('tableTopScroll');
@@ -776,30 +780,33 @@ th.sortable.desc::after {
     }
 
     // ثبت خودرو جدید به شکل AJAX و رفرش نرم صفحه
-    document.getElementById("addCarForm").addEventListener("submit", async function(e) {
-        e.preventDefault();
-        const btn = document.getElementById("carSubmitBtn");
-        btn.disabled = true;
-        btn.innerText = "در حال ذخیره...";
-        try {
-            const res = await fetch("/cars/add", {
-                method: "POST",
-                body: new FormData(this)
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                alert(data.message);
-                window.location.reload();
-            } else {
-                alert("خطا: " + (data.message || "خطا در ثبت خودرو"));
+    const addCarForm = document.getElementById("addCarForm");
+    if (addCarForm) {
+        addCarForm.addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById("carSubmitBtn");
+            btn.disabled = true;
+            btn.innerText = "در حال ذخیره...";
+            try {
+                const res = await fetch("/cars/add", {
+                    method: "POST",
+                    body: new FormData(this)
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    alert(data.message);
+                    window.location.reload();
+                } else {
+                    alert("خطا: " + (data.message || "خطا در ثبت خودرو"));
+                }
+            } catch (err) {
+                alert("خطای ارتباط با سرور");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "ثبت خودرو";
             }
-        } catch (e) {
-            alert("خطای ارتباط با سرور");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "ثبت خودرو";
-        }
-    });
+        });
+    }
 
     // ثبت کاربر جدید توسط مدیر
     document.getElementById("addUserForm").addEventListener("submit", async function(e) {
@@ -827,6 +834,7 @@ th.sortable.desc::after {
             btn.innerText = "ثبت کاربر";
         }
     });
+    }
     document.addEventListener("DOMContentLoaded", function () {
     const table = document.getElementById("carsTable");
     if (!table) return;
@@ -969,6 +977,7 @@ $(document).ready(function() {
             calendarSwitch: { enabled: false }
         }
     });
+}
 });
 
 // تابع مدیریت تیک «فاقد گارانتی»
