@@ -703,15 +703,14 @@ th.sortable.desc::after {
             <span class="user-badge">
                 👤 {{ user.name }} {{ user.lastname }} ({{ user.username }})
             </span>
-            <span class="role-tag">نقش: {{ user.role }}</span>
         </div>
         <div>
-            <a href="/logout" class="btn-logout">خروج از حساب</a>
+            <a href="/logout" class="btn-logout">خروج</a>
         </div>
     </div>
 
     <!-- کنترل‌ها: فیلترها و دکمه‌های افزودن -->
-    {% if user.role in roles_can_manage %}
+    {% if user.role in ["admin"]%}
     <button type="button" class="btn btn-info text-white me-2" onclick="openUsersModal()">
         👥 مدیریت و مشاهده کاربران
     </button>
