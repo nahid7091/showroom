@@ -958,57 +958,80 @@ async def add_car(
     place: str = Form("نمایشگاه"),
     status: str = Form("free"),
     options: str = Form(""),
-    No_Guarantee: str = Form("خیر"),
+    No_Guarantee: str = Form(""),
     Due: str = Form(""),
     technical_issue: str = Form(""),
     physical_issue: str = Form(""),
     user: dict = Depends(get_current_user)
 ):
     # بررسی دسترسی: فقط ادمین و مدیر نمایشگاه
-    if user.get("role") not in ROLES_CAN_MANAGE:
+    if not user or user.get("role") not in ROLES_CAN_MANAGE:
         return JSONResponse(status_code=403, content={"success": False, "message": "فقط مدیران اجازه ثبت خودرو دارند."})
 
+    clean_vin = VIN.strip()
+    clean_place = place.strip()
+    clean_status = status.strip()
     now_jalali = get_current_jalali_now()
     reserved_until = get_jalali_reserve_expiry(4) if status == "reserved(4 hours)" else ""
-    final_place="تحویل خریدار" if status=="فروخته شده" else "place"
+    final_place="تحویل خریدار" if status=="فروخته شده" else clean_place
 
-    new_car = {
-        "car_code": get_next_id("/data/showroom/database.xlsx", "cars", "car_code"),
-        "VIN": VIN.strip(),
-        "title": title.strip(),
-        "model_year": model_year.strip(),
-        "production_year": production_year.strip(),
-        "color": color.strip(),
-        "owner": owner.strip(),
-        "place": final_place.strip(),
-        "status": status.strip(),
-        "reserved_until": reserved_until,
-        "last_updated_at": now_jalali,
-        "last_updated_by": user.get("username", "system"),
-        "options": options.strip(),
-        "No_Guarantee": No_Guarantee.strip(),
-        "Due": Due.strip(),
-        "technical_issue": technical_issue.strip(),
-        "physical_issue": physical_issue.strip()
-    }
+    try:
+        with FileLock(LOCK_PATH, timeout=10):
+            all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
+            cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS)).fillna("")
+            logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS)).fillna("")
 
-    # قفل فایل اکسل و ثبت رکورد جدید
-    with FileLock(LOCK_PATH, timeout=10):
-        cars_df = read_sheet(CARS_SHEET)
-        
-        # بررسی عدم تکراری بودن کد خودرو یا VIN
-        if not cars_df.empty and "VIN" in cars_df.columns:
-            if str(VIN.strip()) in cars_df["VIN"].astype(str).values:
-                return JSONResponse(status_code=400, content={"success": False, "message": "این VIN خودرو قبلاً ثبت شده است."})
+            # بررسی تکراری نبودن شاسی
+            if not cars_df.empty and "VIN" in cars_df.columns:
+                if clean_vin and clean_vin in cars_df["VIN"].astype(str).str.strip().values:
+                    return JSONResponse(status_code=400, content={"success": False, "message": "این شماره شاسی (VIN) قبلاً ثبت شده است."})
+            next_car_code = get_next_id("/data/showroom/database.xlsx", "cars", "car_code")     
+            new_car = {
+                "car_code": next_car_code,
+                "VIN": clean_vin,
+                "title": title.strip(),
+                "model_year": model_year.strip(),
+                "production_year": production_year.strip(),
+                "color": color.strip(),
+                "owner": owner.strip(),
+                "place": final_place,
+                "status": clean_status,
+                "reserved_until": reserved_until,
+                "last_updated_at": now_jalali,
+                "last_updated_by": user.get("username", "system"),
+                "options": options.strip(),
+                "No_Guarantee": normalize_shamsi_date(No_Guarantee),
+                "Due": normalize_shamsi_date(Due),
+                "technical_issue": technical_issue.strip(),
+                "physical_issue": physical_issue.strip()
+            }
+          cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
+          all_sheets[CARS_SHEET] = cars_df
+          new_log = {
+                "id": get_next_id("/data/showroom/database.xlsx", "car_logs", "id"),
+                "car_code": str(next_car_code),
+                "changed_at": now_jalali,
+                "changed_by": user.get("username", "سیستم"),
+                "from_status": "-",
+                "to_status": clean_status,
+                "from_place": "-",
+                "to_place": final_place
+            }
+            logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
+            all_sheets[HISTORY_SHEET] = logs_df
 
-        # افزودن به دیتافریم
-        cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
-        users_df = read_sheet(USERS_SHEET)
-        write_sheets(users_df, cars_df)
+            # ذخیره نهایی اکسل فقط با ۱ بار باز شدن
+            with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+                for s_name, s_df in all_sheets.items():
+                    s_df.to_excel(writer, sheet_name=s_name, index=False)
+            
+        return JSONResponse(content={"success": True, "message": "خودرو با موفقیت اضافه شد.", "car": new_car})
 
-    append_history(new_car["car_code"], user.get("username"), "-", new_car["status"], "-", new_car["place"])
+    except Exception as e:
+      print(f"Error in add_car: {e}")
+      return JSONResponse(status_code=500, content={"success": False, "message": f"خطا در ثبت خودرو: {str(e)}"})
 
-    return JSONResponse(content={"success": True, "message": "خودرو با موفقیت اضافه شد.", "car": new_car})
+
 
 @app.get("/cars/history/{car_code}")
 def car_history(car_code: str, user=Depends(require_user)):
