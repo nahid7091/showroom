@@ -202,8 +202,8 @@
         #carsTable td {
             border: 1px solid var(--border);
             padding: 10px 8px;
+            vertical-align: middle !important; /* همه سلول‌ها دقیقا وسط تراز شوند */
             white-space: nowrap;
-            vertical-align: middle;
         }
 
         #carsTable th {
@@ -223,7 +223,6 @@
         td.col-accessories {
             white-space: normal !important;
             text-align: right;
-            vertical-align: middle;
         }
 
         th.col-title,
@@ -238,15 +237,16 @@
             text-align: right;
         }
         .cell-wrap {
-            display: inline-block;
-            max-width: 220px;                   /* سقف عرض ستون */
-            width: max-content;                  /* اگر محتوا کم باشد، عرضش به اندازه متن جمع می‌شود */
-            white-space: normal !important;      /* فعال کردن wrap */
-            word-break: break-word !important;   /* شکستن کلمات طولانی */
+            display: block;
+            max-width: 220px;                   /* حداکثر عرض */
+            min-width: 120px;
+            white-space: normal !important;      /* شکستن متن به خط بعد */
+            word-break: break-word !important;
             overflow-wrap: break-word !important;
-            line-height: 1.6;
+            line-height: 1.5;
             font-size: 12px;
             text-align: right;
+            margin: 0 auto;  
         }
 
         /* برای ستون مدل/عنوان هم اگر سقف می‌خواهید */
