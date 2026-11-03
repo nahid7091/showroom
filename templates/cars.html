@@ -221,15 +221,9 @@
         td.col-options,
         th.col-accessories,
         td.col-accessories {
-            width: 220px !important;
-            max-width: 220px !important;
-            min-width: 220px !important;
-            white-space: normal !important;      /* باطل کردن nowrap کلی جدول */
-            word-break: break-word !important;   /* شکستن کلمات چسبیده یا بلند */
-            overflow-wrap: break-word !important;
-            line-height: 1.6;
+            white-space: normal !important;
             text-align: right;
-            font-size: 12px;
+            vertical-align: middle;
         }
 
         th.col-title,
@@ -240,6 +234,28 @@
             white-space: normal !important;
             word-break: break-word !important;
             overflow-wrap: break-word !important;
+            line-height: 1.5;
+            text-align: right;
+        }
+        .cell-wrap {
+            display: inline-block;
+            max-width: 220px;                   /* سقف عرض ستون */
+            width: max-content;                  /* اگر محتوا کم باشد، عرضش به اندازه متن جمع می‌شود */
+            white-space: normal !important;      /* فعال کردن wrap */
+            word-break: break-word !important;   /* شکستن کلمات طولانی */
+            overflow-wrap: break-word !important;
+            line-height: 1.6;
+            font-size: 12px;
+            text-align: right;
+        }
+
+        /* برای ستون مدل/عنوان هم اگر سقف می‌خواهید */
+        .cell-wrap-title {
+            display: inline-block;
+            max-width: 180px;
+            width: max-content;
+            white-space: normal !important;
+            word-break: break-word !important;
             line-height: 1.5;
             text-align: right;
         }
@@ -506,7 +522,7 @@ th.sortable.desc::after {
                 <tr>
                     <th style="width: 35px;">سایر</th>
                     {% for col in shown_cols %}
-                        <th class="col-accessories sortable" data-col="accessories">{{ column_titles.get(col, col) }}</th>
+                        <th class="col-accessories sortable cell-wrap" >{{ column_titles.get(col, col) }}</th>
                     {% endfor %}
                     <th>عملیات تغییر وضعیت و محل</th>
                 </tr>
