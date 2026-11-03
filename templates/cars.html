@@ -544,7 +544,7 @@ th.sortable.desc::after {
                         </td>
                         
                         {% for col in shown_cols %}
-                            <td>{{ car[col] }}</td>
+                            <td class="col-accessories cell-wrap">{{ car[col] }}</td>
                         {% endfor %}
                         <td>
                         {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
