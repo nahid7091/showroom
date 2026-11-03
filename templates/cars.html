@@ -186,13 +186,17 @@
 
         /* استایل جدول اصلی */
         #carsTable {
-            width: auto !important;
+            /* width: auto !important;
             min-width: 100%;
             border-spacing: 5px; /* فاصله بین سلول‌های جدول */
             border-collapse: separate !important;
             font-size: 13px;
             text-align: center;
-            padding: 3px;
+            padding: 3px; */
+            width: 100% !important;
+            border-collapse: collapse !important;
+            font-size: 13px;
+            text-align: center;
         }
 
         #carsTable tr {
@@ -201,17 +205,21 @@
 
         #carsTable th,
         #carsTable td {
-            border: 1px solid var(--border);
+            /* border: 1px solid var(--border);
             padding: 10px 8px;
             vertical-align: middle;
             white-space: nowrap;
+            background: #fff; */
+            border: 1px solid #cbd5e1 !important; /* کادر مشخص برای تمام سلول‌ها */
+            padding: 10px 8px;
+            vertical-align: middle;
             background: #fff;
         }
 
-        #carsTable td.col-options
+        /* #carsTable td.col-options
         {
             white-space: normal !important;
-        }
+        } */
         
         #carsTable th {
             background-color: #f8fafc;
@@ -263,10 +271,11 @@
         /* ردیف و گرید مشخصات سایر */
         .other-details-container {
             width: 100%;
-            max-width: 900px;
+            /* max-width: 900px; */
             box-sizing: border-box;
-            margin: 8px 0 8px auto;
-            padding: 12px;
+            margin: 8px 0;
+                /* 8px auto; */
+            padding: 15px;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
             background: #f8fafc;
@@ -275,37 +284,40 @@
 
         .other-details-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 10px;
+            /* grid-template-columns: repeat(3, minmax(0, 1fr)); */
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); /* پخش خودکار داده‌ها در ستون‌های متعدد */
+            gap: 12px;
             width: 100%;
         }
 
         .other-detail-item {
             display: flex;
             align-items: flex-start;
-            gap: 6px;
-            min-width: 0;
-            padding: 8px;
+            gap: 8px;
+            /* min-width: 0; */
+            padding: 10px;
             border: 1px solid #e2e8f0;
             border-radius: 6px;
             background: #fff;
-            white-space: normal;
-            overflow-wrap: anywhere;
+            /* white-space: normal;
+            overflow-wrap: anywhere; */
             box-sizing: border-box;
         }
 
         .other-detail-label {
             color: #64748b;
             font-weight: 500;
-            min-width: 0;
-            overflow-wrap: anywhere;
+            /* min-width: 0;
+            overflow-wrap: anywhere; */
+            white-space: nowrap;
         }
 
         .other-detail-value {
             color: #1e293b;
             font-weight: bold;
-            min-width: 0;
-            overflow-wrap: anywhere;
+            word-break: break-word;
+            /* min-width: 0;
+            overflow-wrap: anywhere; */
         }
 
         /* مودال‌ها */
@@ -447,30 +459,30 @@ th.sortable:hover {
 
 th.sortable::after {
     content: " ⇅";
-    font-size: 1.1em;
-    font-weight: bold;
-    opacity: 0.75;
+    font-size: 1.1em !important;
+    font-weight: bold !important;
+    opacity: 0.8 !important;
     position: absolute;
-    color: #64748b;
+    color: #1e3a8a !important;
     left: 8px;
     top: 50%;
     transform: translateY(-50%);
 }
 
 th.sortable.asc::after {
-    content: " ▲";
-    font-size: 1.1em;
-    font-weight: bold;
+    content: " ▲" !important;
+    /* font-size: 1.1em;
+    font-weight: bold; */
     color: var(--primary, #1e3a8a); /* رنگ اصلی دکمه‌ها */
-    opacity: 1;
+    opacity: 1 !important;
 }
 
 th.sortable.desc::after {
-    content: " ▼";
-    font-size: 1.1em;
-    font-weight: bold;
-    color: var(--primary, #1e3a8a);
-    opacity: 1;
+    content: " ▼" !important;
+    /* font-size: 1.1em;
+    font-weight: bold; */
+    color: var(--primary, #1e3a8a) !important;
+    opacity: 1 !important;
 }
 
     </style>
