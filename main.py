@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 import re
 import pandas as pd
-from fastapi import FastAPI, Request, Form, Depends, HTTPException
+from fastapi import FastAPI, Request, Query, Form, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -18,6 +18,10 @@ import jdatetime
 from zoneinfo import ZoneInfo
 
 IRAN_TZ = ZoneInfo("Asia/Tehran")
+
+HISTORY_DB_PATH = "/data/showroom/database.xlsx"
+CAR_KEY_COL = "car_code"           # نام ستون شناسهٔ یکتای ماشین در cars و تاریخچه
+HISTORY_PAGE_SIZE = 50
 
 # -----------------------------
 # Config
@@ -480,9 +484,58 @@ def broadcast_car_update(car_code: str, title: str, from_status: str, to_status:
     except Exception as e:
         print(f"Error in broadcast_car_update: {e}")
 
-# -----------------------------
-# Bale Webhook Route
-# -----------------------------
+
+@app.get("/api/cars/{car_code}/history")
+def car_status_history(
+    request: Request,
+    car_code: str,
+    offset: int = Query(0, ge=0),
+):
+    # ۱. احراز هویت با استفاده از سشن سیستم خودتان
+    user = get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="ابتدا وارد حساب کاربری شوید.")
+
+    # ۲. بررسی تأیید اتصال بله
+    if not user_has_bale(request, user):
+        raise HTTPException(status_code=403, detail="اتصال به پیام‌رسان بله فعال نیست.")
+
+    # ۳. خواندن شیت لاگ‌ها به کمک تابع امن سیستم (read_sheet)
+    history_df = read_sheet(HISTORY_SHEET)
+    if history_df.empty or "car_code" not in history_df.columns:
+        return {"items": [], "next_offset": offset, "has_more": False}
+
+    # ۴. فیلتر کردن لاگ‌های مربوط به همین خودرو
+    rows = history_df[history_df["car_code"].astype(str).str.strip() == str(car_code).strip()].copy()
+
+    # مرتب‌سازی: جدیدترین‌ها در ابتدا (بر اساس شناسه id)
+    if "id" in rows.columns:
+        rows["num_id"] = pd.to_numeric(rows["id"], errors="coerce").fillna(0)
+        rows = rows.sort_values(by="num_id", ascending=False)
+
+    total = len(rows)
+    page = rows.iloc[offset:offset + HISTORY_PAGE_SIZE]
+
+    # ۵. قالب‌بندی خروجی با ستون‌های واقعی اکسل شما
+    items = []
+    for _, r in page.iterrows():
+        items.append({
+            "changed_at": to_jalali_display(r.get("changed_at", "")),
+            "changed_by": r.get("changed_by", "—"),
+            "from_status": r.get("from_status", "—"),
+            "to_status": r.get("to_status", "—"),
+            "from_place": r.get("from_place", "—"),
+            "to_place": r.get("to_place", "—"),
+        })
+
+    next_offset = offset + len(items)
+    return {
+        "items": items,
+        "next_offset": next_offset,
+        "has_more": next_offset < total,
+    }
+
+
 @app.post("/bale/webhook")
 async def bale_webhook(request: Request):
     try:
