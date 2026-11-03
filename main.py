@@ -535,6 +535,23 @@ def car_status_history(
         "has_more": next_offset < total,
     }
 
+@app.get("/api/users/list")
+async def list_users(request: Request, user: dict = Depends(get_current_user)):
+    # بررسی دسترسی: فقط ادمین و مدیر
+    if not user or user.get("role") not in ROLES_CAN_MANAGE:
+        raise HTTPException(status_code=403, detail="دسترسی غیرمجاز. فقط مدیران مجاز هستند.")
+
+    users_df = read_sheet(USERS_SHEET)
+    if users_df.empty:
+        return {"users": []}
+
+    # اطمینان از وجود ستون‌های استاندارد و جایگزینی مقادیر خالی
+    users_df = users_df.fillna("")
+    
+    # ساخت لیست دیکشنری از کاربران
+    users_list = users_df.to_dict(orient="records")
+    return {"users": users_list}
+
 
 @app.post("/bale/webhook")
 async def bale_webhook(request: Request):
