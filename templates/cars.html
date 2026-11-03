@@ -782,7 +782,7 @@ td.col-chassis {
                     <th style="width: 35px;">سایر</th>
                     {% for col in shown_cols %}
                     {% if col in ["VIN"]%}
-                        <th class="sortable col-chassis" data-col="chassis">شماره شاسی</th>
+                        <th class="sortable col-chassis" data-col="{{ col }}">شماره شاسی</th>
                     {% else %}
                         <th class="sortable" data-col="{{ col }}">{{ column_titles.get(col, col) }}</th>    
                     {% endif %}
