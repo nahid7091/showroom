@@ -1171,37 +1171,61 @@ async def add_user(
     phone: str = Form(""),
     user: dict = Depends(get_current_user)
 ):
-    if user.get("role") not in ROLES_CAN_MANAGE:
+    if not user or user.get("role") not in ROLES_CAN_MANAGE:
         return JSONResponse(status_code=403, content={"success": False, "message": "فقط مدیران امکان تعریف کاربر دارند."})
 
+    clean_uname = username.strip()
     cleaned_phone = clean_phone(phone)
-    with FileLock(LOCK_PATH):
-        users_df = read_sheet(USERS_SHEET)
-        if not users_df.empty and "username" in users_df.columns:
-            if username.strip() in users_df["username"].astype(str).values:
-                return JSONResponse(status_code=400, content={"success": False, "message": "این نام کاربری قبلاً استفاده شده است."})
 
-        next_user_code = 101
-        if not users_df.empty and "user_code" in users_df.columns:
+    try:
+        # ۲. فقط یک بار قفل و یک بار باز کردن کل اکسل
+        with FileLock(LOCK_PATH, timeout=10):
+            try:
+                all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
+            except Exception:
+                all_sheets = {}
+
+            users_df = all_sheets.get(USERS_SHEET, pd.DataFrame(columns=REQUIRED_USER_COLS)).fillna("")
+
+            # بررسی تکراری نبودن نام کاربری
+            if not users_df.empty and "username" in users_df.columns:
+                existing_users = users_df["username"].astype(str).str.strip().values
+                if clean_uname in existing_users:
+                    return JSONResponse(
+                        status_code=400, 
+                        content={"success": False, "message": "این نام کاربری قبلاً استفاده شده است."}
+                    )
             next_user_code = get_next_id("/data/showroom/database.xlsx", "users", "user_code")
 
-        new_user_data = {
-            "user_code": str(next_user_code),
-            "username": username.strip(),
-            "password": password.strip(),
-            "name": name.strip(),
-            "lastname": lastname.strip(),
-            "role": role.strip(),
-            "phone": cleaned_phone,
-            "bale_chat_id": "",
-            "user_has_bale": "false"
-        }
-        users_df = pd.concat([users_df, pd.DataFrame([new_user_data])], ignore_index=True)
-        cars_df = read_sheet(CARS_SHEET)
-        write_sheets(users_df, cars_df)
+            new_user_data = {
+                "user_code": str(next_user_code),
+                "username": clean_uname,
+                "password": password.strip(),
+                "name": name.strip(),
+                "lastname": lastname.strip(),
+                "role": role.strip(),
+                "phone": cleaned_phone,
+                "bale_chat_id": "",
+                "user_has_bale": "false"
+            }
+            users_df = pd.concat([users_df, pd.DataFrame([new_user_data])], ignore_index=True)
+            all_sheets[USERS_SHEET] = users_df
 
-    return JSONResponse(content={"success": True, "message": f"کاربر {name} {lastname} با موفقیت ثبت شد."})
+            # ذخیره تمیز و سریع
+            with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+                for s_name, s_df in all_sheets.items():
+                    s_df.to_excel(writer, sheet_name=s_name, index=False)
 
+        return JSONResponse(
+            content={"success": True, "message": f"کاربر {name} {lastname} با موفقیت ثبت شد."}
+        )
+
+    except Exception as e:
+        print(f"Error in add_user: {e}")
+        return JSONResponse(
+            status_code=500, 
+            content={"success": False, "message": f"خطا در ثبت کاربر: {str(e)}"}
+        )
 
 if __name__ == "__main__":
     import uvicorn
