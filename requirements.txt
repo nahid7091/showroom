@@ -1,10 +1,9 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pandas
 openpyxl
-filelock
-passlib[bcrypt]
+jinja2
 python-multipart
 itsdangerous
-jinja2
-jdatetime
+filelock
+requests
