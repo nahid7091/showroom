@@ -732,6 +732,30 @@ td.col-chassis {
 {% endif %}
     <div class="controls-bar">
         <form class="filter-form" method="GET" action="/cars">
+        <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
+        
+        <!-- انتخاب وضعیت بر اساس ALLOWED_STATUSES -->
+        <select name="status">
+            <option value="">-- همه وضعیت‌ها --</option>
+            {% for st in allowed_statuses %}
+                <option value="{{ st }}" {% if status == st %}selected{% endif %}>{{ st }}</option>
+            {% endfor %}
+        </select>
+        
+        <!-- انتخاب محل بر اساس ALLOWED_PLACES -->
+        <select name="place">
+            <option value="">-- همه موارد --</option>
+            {% for pl in allowed_places %}
+                <option value="{{ pl }}" {% if place == pl %}selected{% endif %}>{{ pl }}</option>
+            {% endfor %}
+        </select>
+        
+        <button type="submit">اعمال فیلتر</button>
+        {% if q or status or place %}
+            <a href="/cars">پاک کردن فیلترها</a>
+        {% endif %}
+    </form>
+        <!-- <form class="filter-form" method="GET" action="/cars">
             <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
             <select name="status">
                 <option value="">-- همه وضعیت‌ها --</option>
@@ -759,7 +783,7 @@ td.col-chassis {
             {% if q or status or place %}
                 <a href="/cars">پاک کردن فیلترها</a>
             {% endif %}
-        </form>
+        </form> -->
 
         <div class="admin-actions">
             {% if user.role in roles_can_manage %}
