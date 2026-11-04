@@ -836,12 +836,12 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     # -------------------------------------------------------------
     filtered_df = cars_df.copy()
     if not filtered_df.empty:
-        if q:
+        if q and q.strip():
             q_clean = q.strip().lower()
-            mask = (
-                filtered_df["title"].astype(str).str.lower().str.contains(q_clean) |
-                filtered_df["car_code"].astype(str).str.lower().str.contains(q_clean) |
-                filtered_df["VIN"].astype(str).str.lower().str.contains(q_clean)
+            # در تمام ستون‌ها می‌گردد؛ اگر در هر ستونی پیدا شد، آن ردیف را برمی‌دارد
+            mask = filtered_df.astype(str).apply(
+                lambda row: row.str.lower().str.contains(q_clean, na=False).any(), 
+                axis=1
             )
             filtered_df = filtered_df[mask]
 
