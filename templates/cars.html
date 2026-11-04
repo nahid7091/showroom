@@ -755,37 +755,7 @@ td.col-chassis {
             <a href="/cars">پاک کردن فیلترها</a>
         {% endif %}
     </form>
-        <!-- <form class="filter-form" method="GET" action="/cars">
-            <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
-            <select name="status">
-                <option value="">-- همه وضعیت‌ها --</option>
-                <option value="free" {% if status == 'free' %}selected{% endif %}>free</option>
-                <option value="reserved(4 hours)" {% if status == 'reserved(4 hours)' %}selected{% endif %}>reserved(4 hours)</option>
-                <option value="بیعانه" {% if status == 'بیعانه' %}selected{% endif %}>بیعانه</option>
-                <option value="غیر قابل فروش" {% if status == 'غیر قابل فروش' %}selected{% endif %}>غیر قابل فروش</option>
-                <option value="فروخته شده" {% if status == 'فروخته شده' %}selected{% endif %}>فروخته شده</option>
-                <option value="نامشخص" {% if status == 'نامشخص' %}selected{% endif %}>نامشخص</option>
-            </select>
-            <select name="place">
-                <option value="">-- همه موارد --</option>
-                <option value="شوروم فلاحی" {% if place == 'شوروم فلاحی' %}selected{% endif %}>شوروم فلاحی</option>
-                <option value="انزلی" {% if place == 'انزلی' %}selected{% endif %}>انزلی</option>
-                <option value="ساری" {% if place == 'ساری' %}selected{% endif %}>ساری</option>
-                <option value="اتو شیخ" {% if place == 'اتو شیخ' %}selected{% endif %}>اتو شیخ</option>
-                <option value="یافت آباد" {% if place == 'یافت آباد' %}selected{% endif %}>یافت آباد</option>
-                <option value="تنکابن" {% if place == 'تنکابن' %}selected{% endif %}>تنکابن</option>
-                <option value="جمهوری" {% if place == 'جمهوری' %}selected{% endif %}>جمهوری</option>
-                <option value="شهرک غرب" {% if place == 'شهرک غرب' %}selected{% endif %}>شهرک غرب</option>
-                <option value="اتو سالار" {% if place == 'اتو سالار' %}selected{% endif %}>اتو سالار</option>
-                <option value="تحویل خریدار" {% if place == 'تحویل خریدار' %}selected{% endif %}>تحویل خریدار</option>
-            </select>
-            <button type="submit">اعمال فیلتر</button>
-            {% if q or status or place %}
-                <a href="/cars">پاک کردن فیلترها</a>
-            {% endif %}
-        </form> -->
-
-        <div class="admin-actions">
+       <div class="admin-actions">
             {% if user.role in roles_can_manage %}
                 <button class="btn-add-car" onclick="openModal('addCarModal')">➕ افزودن خودرو</button>
                 <button class="btn-add-car" style="background-color: var(--primary);" onclick="openModal('addUserModal')">👤 افزودن کاربر</button>
@@ -816,7 +786,7 @@ td.col-chassis {
             </thead>
             <tbody>
                 {% for car in cars %}
-                    {% if car.status not in ["فروخته شده", "غیرقابل فروش"] %}
+                    {% if status or place or (car.status not in ["فروخته شده", "غیرقابل فروش"]) %}
                     <tr id="row-{{ car.car_code }}"
                         class="car-row"
                         data-car-code="{{ car.car_code }}" data-status="{{ car.status }}">
