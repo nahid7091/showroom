@@ -726,11 +726,164 @@ td.col-chassis {
     word-break: keep-all !important;
     width: max-content
 }
-        
+  /* کانتینر کلی پس‌زمینه مودال */
+.app-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+/* پرده تاریک پشت پنجره با افکت شیشه‌ای مدرن */
+.app-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+/* بدنه پنجره سفید مودال */
+.app-modal-dialog {
+    position: relative;
+    background: #ffffff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 600px; /* عرض استاندارد مودال تاریخچه */
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    z-index: 1;
+    overflow: hidden;
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+/* مودال عریض‌تر مخصوص جدول کاربران */
+.app-modal-lg {
+    max-width: 950px;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* هدر مشترک */
+.app-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.app-modal-title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* دکمه بستن (ضربدر) */
+.app-modal-close {
+    background: transparent;
+    border: none;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: color 0.15s ease;
+}
+
+.app-modal-close:hover {
+    color: #ef4444;
+}
+
+/* بدنه مودال با اسکرول عمودی داخلی تمیز */
+.app-modal-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+}
+
+/* فوتر (در صورت نیاز) */
+.app-modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+    text-align: center;
+}
+
+/* تنظیم جدول داخل مودال */
+.app-modal-body .table-responsive {
+    max-height: 60vh;
+    overflow-x: auto;
+    overflow-y: auto;
+}      
 </style>
 </head>
 <body>
+<!-- <div id="historyModal" class="hist-modal" hidden>
+    <div class="hist-overlay" onclick="closeHistoryModal()"></div>
+    <div class="hist-dialog">
+        <div class="hist-header">
+            <h3 id="histTitle">تاریخچه تغییر وضعیت خودرو</h3>
+            <button type="button" class="hist-close-btn" onclick="closeHistoryModal()">&times;</button>
+        </div>
+        <div class="hist-body">
+            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
+            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
+            <div id="histTimeline" class="hist-timeline"></div>
+            <div class="hist-footer">
+                <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
+                    بارگذاری ۵۰ تای بعدی
+                </button>
+            </div>
+        </div>
+    </div>
+</div> -->
+<!-- ۱. مودال تاریخچه تغییر وضعیت -->
+<div id="historyModal" class="app-modal" style="display: none;">
+    <div class="app-modal-overlay" onclick="closeHistoryModal()"></div>
+    <div class="app-modal-dialog">
+        <div class="app-modal-header">
+            <h3 id="histTitle" class="app-modal-title">تاریخچه تغییر وضعیت خودرو</h3>
+            <button type="button" class="app-modal-close" onclick="closeHistoryModal()" aria-label="بستن">&times;</button>
+        </div>
+        <div class="app-modal-body">
+            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
+            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
+            <div id="histTimeline" class="hist-timeline"></div>
+        </div>
+        <div class="app-modal-footer">
+            <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
+                بارگذاری ۵۰ تای بعدی
+            </button>
+        </div>
+    </div>
+</div>
 
+<!-- ۲. مودال لیست کاربران -->
+<div id="usersModal" class="app-modal" style="display: none;">
+    <div class="app-modal-overlay" onclick="closeUsersModal()"></div>
+    <div class="app-modal-dialog app-modal-lg"> <!-- این مودال به خاطر جدولش کمی عریض‌تر است -->
+        <div class="app-modal-header">
+            <h3 class="app-modal-title">👥 لیست و مشخصات تمام کاربران سامانه</h3>
+            <button type="button" class="app-modal-close" onclick="closeUsersModal()" aria-label="بستن">&times;</button>
+        </div>
+        <div class="app-modal-body">
+            
 <div class="container">
     <!-- هدر: اطلاعات کاربر و خروج -->
     <div class="header-bar">
@@ -788,58 +941,7 @@ td.col-chassis {
         <div id="tableTopSpacer"></div>
     </div>
 
-    <div id="historyModal" class="hist-modal" hidden>
-    <div class="hist-overlay" onclick="closeHistoryModal()"></div>
-    <div class="hist-dialog">
-        <div class="hist-header">
-            <h3 id="histTitle">تاریخچه تغییر وضعیت خودرو</h3>
-            <button type="button" class="hist-close-btn" onclick="closeHistoryModal()">&times;</button>
-        </div>
-        <div class="hist-body">
-            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
-            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
-            <div id="histTimeline" class="hist-timeline"></div>
-            <div class="hist-footer">
-                <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
-                    بارگذاری ۵۰ تای بعدی
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-    <!-- مودال لیست کاربران -->
-<div id="usersModal" class="users-modal-backdrop" style="display:none;">
-    <div class="users-modal-content">
-        <div class="users-modal-header">
-            <h5 style="margin: 0; font-weight: bold;">👥 لیست و مشخصات تمام کاربران سامانه</h5>
-            <button type="button" class="users-close-btn" onclick="closeUsersModal()">&times;</button>
-        </div>
-        <div class="users-modal-body">
-            <div id="usersLoading" style="text-align: center; padding: 20px; color: #666;">
-                در حال بارگذاری اطلاعات کاربران...
-            </div>
-            <div class="table-responsive" id="usersTableWrapper" style="display:none; max-height: 480px; overflow-y: auto;">
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>کد کاربر</th>
-                            <th>نام کاربری</th>
-                            <th>کلمه عبور</th>
-                            <th>نام و نام خانوادگی</th>
-                            <th>نقش</th>
-                            <th>شماره همراه</th>
-                            <th>شناسه بله</th>
-                            <th>وضعیت اتصال بله</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
+    
     <!-- جدول نمایش خودروها -->
     <div class="table-responsive" id="tableBottomScroll" dir="rtl">
         <div class="table-container">
@@ -1550,7 +1652,25 @@ window.addEventListener("click", function(e) {
     }
 });
 
+function openHistoryModal() {
+    const m = document.getElementById('historyModal');
+    m.style.display = 'flex';
+}
 
+function closeHistoryModal() {
+    const m = document.getElementById('historyModal');
+    m.style.display = 'none';
+}
+
+function openUsersModal() {
+    const m = document.getElementById('usersModal');
+    m.style.display = 'flex';
+}
+
+function closeUsersModal() {
+    const m = document.getElementById('usersModal');
+    m.style.display = 'none';
+}
 </script>
 
 
