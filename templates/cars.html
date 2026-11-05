@@ -768,6 +768,58 @@ td.col-chassis {
         <div id="tableTopSpacer"></div>
     </div>
 
+    <div id="historyModal" class="hist-modal" hidden>
+    <div class="hist-overlay" onclick="closeHistoryModal()"></div>
+    <div class="hist-dialog">
+        <div class="hist-header">
+            <h3 id="histTitle">تاریخچه تغییر وضعیت خودرو</h3>
+            <button type="button" class="hist-close-btn" onclick="closeHistoryModal()">&times;</button>
+        </div>
+        <div class="hist-body">
+            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
+            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
+            <div id="histTimeline" class="hist-timeline"></div>
+            <div class="hist-footer">
+                <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
+                    بارگذاری ۵۰ تای بعدی
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <!-- مودال لیست کاربران -->
+<div id="usersModal" class="users-modal-backdrop" style="display:none;">
+    <div class="users-modal-content">
+        <div class="users-modal-header">
+            <h5 style="margin: 0; font-weight: bold;">👥 لیست و مشخصات تمام کاربران سامانه</h5>
+            <button type="button" class="users-close-btn" onclick="closeUsersModal()">&times;</button>
+        </div>
+        <div class="users-modal-body">
+            <div id="usersLoading" style="text-align: center; padding: 20px; color: #666;">
+                در حال بارگذاری اطلاعات کاربران...
+            </div>
+            <div class="table-responsive" id="usersTableWrapper" style="display:none; max-height: 480px; overflow-y: auto;">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>کد کاربر</th>
+                            <th>نام کاربری</th>
+                            <th>کلمه عبور</th>
+                            <th>نام و نام خانوادگی</th>
+                            <th>نقش</th>
+                            <th>شماره همراه</th>
+                            <th>شناسه بله</th>
+                            <th>وضعیت اتصال بله</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
     <!-- جدول نمایش خودروها -->
     <div class="table-responsive" id="tableBottomScroll" dir="rtl">
         <table id="carsTable">
@@ -1474,58 +1526,7 @@ window.addEventListener("click", function(e) {
 
 
 </script>
-<div id="historyModal" class="hist-modal" hidden>
-    <div class="hist-overlay" onclick="closeHistoryModal()"></div>
-    <div class="hist-dialog">
-        <div class="hist-header">
-            <h3 id="histTitle">تاریخچه تغییر وضعیت خودرو</h3>
-            <button type="button" class="hist-close-btn" onclick="closeHistoryModal()">&times;</button>
-        </div>
-        <div class="hist-body">
-            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
-            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
-            <div id="histTimeline" class="hist-timeline"></div>
-            <div class="hist-footer">
-                <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
-                    بارگذاری ۵۰ تای بعدی
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
-    <!-- مودال لیست کاربران -->
-<div id="usersModal" class="users-modal-backdrop" style="display:none;">
-    <div class="users-modal-content">
-        <div class="users-modal-header">
-            <h5 style="margin: 0; font-weight: bold;">👥 لیست و مشخصات تمام کاربران سامانه</h5>
-            <button type="button" class="users-close-btn" onclick="closeUsersModal()">&times;</button>
-        </div>
-        <div class="users-modal-body">
-            <div id="usersLoading" style="text-align: center; padding: 20px; color: #666;">
-                در حال بارگذاری اطلاعات کاربران...
-            </div>
-            <div class="table-responsive" id="usersTableWrapper" style="display:none; max-height: 480px; overflow-y: auto;">
-                <table class="users-table">
-                    <thead>
-                        <tr>
-                            <th>کد کاربر</th>
-                            <th>نام کاربری</th>
-                            <th>کلمه عبور</th>
-                            <th>نام و نام خانوادگی</th>
-                            <th>نقش</th>
-                            <th>شماره همراه</th>
-                            <th>شناسه بله</th>
-                            <th>وضعیت اتصال بله</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody">
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
 
 </body>
 </html>
