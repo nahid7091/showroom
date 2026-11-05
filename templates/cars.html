@@ -873,6 +873,30 @@ td.col-chassis {
             <button type="button" class="app-modal-close" onclick="closeUsersModal()" aria-label="بستن">&times;</button>
         </div>
         <div class="app-modal-body">
+            <div id="usersLoading" style="text-align: center; padding: 25px; color: #64748b;">
+                در حال بارگذاری اطلاعات کاربران...
+            </div>
+            <div class="table-responsive" id="usersTableWrapper" style="display: none;">
+                <table class="users-table">
+                    <thead>
+                        <tr>
+                            <th>کد کاربر</th>
+                            <th>نام کاربری</th>
+                            <th>کلمه عبور</th>
+                            <th>نام و نام خانوادگی</th>
+                            <th>نقش</th>
+                            <th>شماره همراه</th>
+                            <th>شناسه بله</th>
+                            <th>وضعیت اتصال بله</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
             
 <div class="container">
     <!-- هدر: اطلاعات کاربر و خروج -->
