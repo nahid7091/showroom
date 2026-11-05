@@ -1574,8 +1574,8 @@ $(document).on("click", ".history-btn", function() {
     $("#histTimeline").empty();
     $("#histEmpty").hide();
     $("#histLoadMoreBtn").hide();
-    $("#historyModal").removeAttr("hidden");
-
+    $("#historyModal").css("display", "flex"); // این دستور، CSS را مجبور به نمایش می‌کند
+    
     fetchCarHistory();
 });
 
