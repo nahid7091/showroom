@@ -74,6 +74,7 @@ COLUMN_TITLES_FA = {
     "price(Rials)":"قیمت(ریال)",
     "buyer":"خریدار",
     "bime":"انقضای بیمه",
+    "keys":"تعداد سوئیچ",
 
     # شیت تاریخچه لاگ‌ها
     "id": "شناسه",
@@ -106,7 +107,7 @@ REQUIRED_USER_COLS = [
     "role",
     "phone",
     "bale_chat_id",
-    "user_has_bale",
+    "user_has_bale"
 ]
 
 REQUIRED_CAR_COLS = [
@@ -132,6 +133,7 @@ REQUIRED_CAR_COLS = [
     "price(Rials)",
     "buyer",
     "bime",
+    "keys"
 ]
 
 REQUIRED_HISTORY_COLS = [
@@ -142,7 +144,7 @@ REQUIRED_HISTORY_COLS = [
     "from_status",
     "to_status",
     "from_place",
-    "to_place",
+    "to_place"
 ]
     
 SHOWN_COLS = [
@@ -170,7 +172,8 @@ OTHER_CAR_COLS = [
     "plate",
     "price(Rials)",
     "buyer",
-    "bime"
+    "bime",
+    "keys"
 ]
 PENDING_VERIFICATIONS = {}
 
