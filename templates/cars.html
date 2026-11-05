@@ -906,12 +906,16 @@ td.col-chassis {
                                 <div class="other-details-grid">
                                     {% for col in other_cols %}
                                         {% set val = car.get(col) %}
-                                        {% if val and val|string != 'nan' and val|string != 'None' and val|string != '' %}
-                                            <div class="other-detail-item">
-                                                <span class="other-detail-label">{{ column_titles.get(col, col) }}:</span>
-                                                <span class="other-detail-value">{{ val }}</span>
-                                            </div>
-                                        {% endif %}
+                                        <div class="other-detail-item">
+                                            <span class="other-detail-label">{{ column_titles.get(col, col) }}:</span>
+                                            <span class="other-detail-value">
+                                                {% if val and val|string != 'nan' and val|string != 'None' and val|string|trim != '' %}
+                                                    {{ val }}
+                                                {% else %}
+                                                    -
+                                                {% endif %}
+                                            </span>
+                                        </div>
                                     {% endfor %}
                                 </div>
                             </div>
