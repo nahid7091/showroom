@@ -943,9 +943,8 @@ td.col-chassis {
 
     
     <!-- جدول نمایش خودروها -->
-    <div class="table-responsive" id="tableBottomScroll" dir="rtl">
-        <div class="table-container">
-        <table id="carsTable">
+    <div class="table-responsive" style="width: 100%; overflow-x: auto;" id="tableBottomScroll" dir="rtl">
+        <table id="carsTable" style="width: 100%;">
             <thead>
                 <tr>
                     <th style="width: 35px;">سایر</th>
@@ -1048,7 +1047,6 @@ td.col-chassis {
                 {% endfor %}
             </tbody>
         </table>
-        </div>
     </div>
 </div>
 
