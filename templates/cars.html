@@ -1332,172 +1332,91 @@ td.col-chassis {
             btn.innerText = "ثبت کاربر";
         }
     });
-    
-//     document.addEventListener("DOMContentLoaded", function () {
-//     const table = document.getElementById("carsTable");
-//     if (!table) return;
-
-//     const tbody = table.tBodies[0];
-//     const headers = Array.from(table.querySelectorAll("thead th.sortable"));
-//     const collator = new Intl.Collator("fa", {
-//         numeric: true,
-//         sensitivity: "base"
-//     });
-
-//     function normalizeDigits(value) {
-//         return String(value)
-//             .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-//             .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-//     }
-
-//     function sortValue(cell) {
-//         const text = normalizeDigits(cell?.textContent || "")
-//             .replace(/ي/g, "ی")
-//             .replace(/ك/g, "ک")
-//             .replace(/\u200c/g, " ")
-//             .trim();
-
-//         if (!text || text === "-" || text === "—") {
-//             return { empty: true, text: "", number: null };
-//         }
-
-//         const numericText = text
-//             .replace(/[,\u066c،\s]/g, "")
-//             .replace(/\u066b/g, ".");
-
-//         const isNumber = /^[+-]?\d+(?:\.\d+)?$/.test(numericText);
-
-//         return {
-//             empty: false,
-//             text,
-//             number: isNumber ? Number(numericText) : null
-//         };
-//     }
-
-//     function getRowPairs() {
-//         return Array.from(tbody.querySelectorAll("tr.car-row")).map(
-//             (mainRow, originalIndex) => {
-//                 const nextRow = mainRow.nextElementSibling;
-
-//                 return {
-//                     mainRow,
-//                     detailsRow: nextRow?.classList.contains("details-row")
-//                         ? nextRow
-//                         : null,
-//                     originalIndex
-//                 };
-//             }
-//         );
-//     }
-
-//     function renderRows(pairs) {
-//         const fragment = document.createDocumentFragment();
-
-//         for (const pair of pairs) {
-//             fragment.appendChild(pair.mainRow);
-
-//             if (pair.detailsRow) {
-//                 fragment.appendChild(pair.detailsRow);
-//             }
-//         }
-
-//         tbody.appendChild(fragment);
-//         requestAnimationFrame(updateTopScrollbar);
-//     }
-
-//     // ترتیب اولیه را main.py تعیین کرده است؛ اینجا هنگام لود سورت نکن.
-//     headers.forEach(th => {
-//         th.setAttribute("aria-sort", "none");
-
-//         th.addEventListener("click", function () {
-//             // شمارهٔ واقعی ستون جدول، نه شمارهٔ آن در فهرست هدرهای sortable
-//             const columnIndex = th.cellIndex;
-//             const direction = th.classList.contains("asc") ? "desc" : "asc";
-//             const multiplier = direction === "asc" ? 1 : -1;
-
-//             headers.forEach(header => {
-//                 header.classList.remove("asc", "desc");
-//                 header.setAttribute("aria-sort", "none");
-//             });
-
-//             th.classList.add(direction);
-//             th.setAttribute(
-//                 "aria-sort",
-//                 direction === "asc" ? "ascending" : "descending"
-//             );
-
-//             const pairs = getRowPairs();
-
-//             pairs.sort((a, b) => {
-//                 const valueA = sortValue(a.mainRow.cells[columnIndex]);
-//                 const valueB = sortValue(b.mainRow.cells[columnIndex]);
-
-//                 // خانه‌های خالی در هر دو جهت آخر بمانند.
-//                 if (valueA.empty !== valueB.empty) {
-//                     return valueA.empty ? 1 : -1;
-//                 }
-
-//                 let comparison;
-
-//                 if (valueA.number !== null && valueB.number !== null) {
-//                     comparison = valueA.number - valueB.number;
-//                 } else {
-//                     comparison = collator.compare(valueA.text, valueB.text);
-//                 }
-
-//                 return comparison === 0
-//                     ? a.originalIndex - b.originalIndex
-//                     : comparison * multiplier;
-//             });
-
-//             renderRows(pairs);
-//         });
-//     });
-// });
 
     document.addEventListener("DOMContentLoaded", function () {
     const table = document.getElementById("carsTable");
     if (!table) return;
 
     const tbody = table.tBodies[0];
-    if (!tbody) return;
-
-    // کش کردن هدرها و بهینه‌سازی رویداد کلیک
     const headers = table.querySelectorAll("thead th.sortable");
-    if (headers.length === 0) return;
+    if (!headers.length) return;
 
-    let currentSortColumn = -1;
+    let currentSortedTh = null;
     let isAscending = true;
 
-    headers.forEach((th, index) => {
+    // تبدیل اعداد فارسی و عربی به انگلیسی برای مرتب‌سازی ریاضی صحیح
+    function normalizeValue(val) {
+        if (!val) return "";
+        let clean = val.trim()
+            .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+            .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+            .replace(/,/g, "")
+            .replace(/[\u200B-\u200D\uFEFF]/g, ""); // حذف فاصله‌های مجازی
+
+        // بررسی اینکه آیا مقدار کاملاً عددی است
+        const num = parseFloat(clean);
+        return (!isNaN(num) && clean === String(num)) ? num : val.trim();
+    }
+
+    headers.forEach(th => {
         th.style.cursor = "pointer";
         th.addEventListener("click", function () {
-            // استفاده از requestAnimationFrame برای جلوگیری از فریز شدن UI
-            requestAnimationFrame(() => {
-                if (currentSortColumn === index) {
-                    isAscending = !isAscending;
-                } else {
-                    isAscending = true;
-                    currentSortColumn = index;
-                }
+            // استفاده مستقیم از cellIndex واقعی برای جلوگیری از شیفت ستون‌ها
+            const colIndex = this.cellIndex;
 
-                // مرتب‌سازی سبک‌تر
-                const rows = Array.from(tbody.querySelectorAll("tr.car-row"));
-                rows.sort((a, b) => {
-                    const aText = a.cells[index]?.innerText.trim() || "";
-                    const bText = b.cells[index]?.innerText.trim() || "";
-                    return isAscending ? aText.localeCompare(bText, 'fa') : bText.localeCompare(aText, 'fa');
+            if (currentSortedTh === this) {
+                isAscending = !isAscending;
+            } else {
+                isAscending = true;
+                if (currentSortedTh) {
+                    currentSortedTh.classList.remove("asc", "desc");
+                }
+                currentSortedTh = this;
+            }
+
+            // به‌روزرسانی جهت فلش‌ها در هدر جدول
+            this.classList.toggle("asc", isAscending);
+            this.classList.toggle("desc", !isAscending);
+
+            requestAnimationFrame(() => {
+                // استخراج ردیف‌های اصلی و ردیف‌های جزئیات بازشونده (details-row) متناظر
+                const mainRows = Array.from(tbody.querySelectorAll("tr.car-row"));
+                const rowPairs = mainRows.map(row => {
+                    const next = row.nextElementSibling;
+                    const detailsRow = (next && next.classList.contains("details-row")) ? next : null;
+                    return { main: row, details: detailsRow };
                 });
 
-                // بازآرایی سریع DOM بدون رندر سنگین اضافی
+                rowPairs.sort((a, b) => {
+                    const cellA = a.main.cells[colIndex];
+                    const cellB = b.main.cells[colIndex];
+
+                    const valA = cellA ? normalizeValue(cellA.innerText) : "";
+                    const valB = cellB ? normalizeValue(cellB.innerText) : "";
+
+                    // در نظر گرفتن اولویت برای مقادیر خالی یا خط تیره (-)
+                    if (valA === "" || valA === "-") return 1;
+                    if (valB === "" || valB === "-") return -1;
+
+                    let comparison = 0;
+                    if (typeof valA === "number" && typeof valB === "number") {
+                        comparison = valA - valB;
+                    } else {
+                        comparison = String(valA).localeCompare(String(valB), "fa", { numeric: true, sensitivity: "base" });
+                    }
+
+                    return isAscending ? comparison : -comparison;
+                });
+
+                // رندر مجدد ردیف‌ها بدون چشمک زدن و به‌هم‌خوردن پیوستگی
                 const fragment = document.createDocumentFragment();
-                rows.forEach(row => {
-                    fragment.appendChild(row);
-                    const nextRow = row.nextElementSibling;
-                    if (nextRow && nextRow.classList.contains("details-row")) {
-                        fragment.appendChild(nextRow);
+                rowPairs.forEach(pair => {
+                    fragment.appendChild(pair.main);
+                    if (pair.details) {
+                        fragment.appendChild(pair.details);
                     }
                 });
+
                 tbody.appendChild(fragment);
             });
         });
