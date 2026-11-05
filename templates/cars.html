@@ -2,16 +2,6 @@
 <html lang="fa" dir="rtl">
 <head>
 <!-- ۱. استایل تقویم -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
-
-<!-- ۲. جی‌کوئری -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    
-<!-- ۳. هسته تاریخ شمسی (persian-date) -->
-<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
-
-<!-- ۴. تقویم شمسی (persian-datepicker) -->
-<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">    
@@ -1303,128 +1293,178 @@ td.col-chassis {
         }
     });
     
+//     document.addEventListener("DOMContentLoaded", function () {
+//     const table = document.getElementById("carsTable");
+//     if (!table) return;
+
+//     const tbody = table.tBodies[0];
+//     const headers = Array.from(table.querySelectorAll("thead th.sortable"));
+//     const collator = new Intl.Collator("fa", {
+//         numeric: true,
+//         sensitivity: "base"
+//     });
+
+//     function normalizeDigits(value) {
+//         return String(value)
+//             .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+//             .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+//     }
+
+//     function sortValue(cell) {
+//         const text = normalizeDigits(cell?.textContent || "")
+//             .replace(/ي/g, "ی")
+//             .replace(/ك/g, "ک")
+//             .replace(/\u200c/g, " ")
+//             .trim();
+
+//         if (!text || text === "-" || text === "—") {
+//             return { empty: true, text: "", number: null };
+//         }
+
+//         const numericText = text
+//             .replace(/[,\u066c،\s]/g, "")
+//             .replace(/\u066b/g, ".");
+
+//         const isNumber = /^[+-]?\d+(?:\.\d+)?$/.test(numericText);
+
+//         return {
+//             empty: false,
+//             text,
+//             number: isNumber ? Number(numericText) : null
+//         };
+//     }
+
+//     function getRowPairs() {
+//         return Array.from(tbody.querySelectorAll("tr.car-row")).map(
+//             (mainRow, originalIndex) => {
+//                 const nextRow = mainRow.nextElementSibling;
+
+//                 return {
+//                     mainRow,
+//                     detailsRow: nextRow?.classList.contains("details-row")
+//                         ? nextRow
+//                         : null,
+//                     originalIndex
+//                 };
+//             }
+//         );
+//     }
+
+//     function renderRows(pairs) {
+//         const fragment = document.createDocumentFragment();
+
+//         for (const pair of pairs) {
+//             fragment.appendChild(pair.mainRow);
+
+//             if (pair.detailsRow) {
+//                 fragment.appendChild(pair.detailsRow);
+//             }
+//         }
+
+//         tbody.appendChild(fragment);
+//         requestAnimationFrame(updateTopScrollbar);
+//     }
+
+//     // ترتیب اولیه را main.py تعیین کرده است؛ اینجا هنگام لود سورت نکن.
+//     headers.forEach(th => {
+//         th.setAttribute("aria-sort", "none");
+
+//         th.addEventListener("click", function () {
+//             // شمارهٔ واقعی ستون جدول، نه شمارهٔ آن در فهرست هدرهای sortable
+//             const columnIndex = th.cellIndex;
+//             const direction = th.classList.contains("asc") ? "desc" : "asc";
+//             const multiplier = direction === "asc" ? 1 : -1;
+
+//             headers.forEach(header => {
+//                 header.classList.remove("asc", "desc");
+//                 header.setAttribute("aria-sort", "none");
+//             });
+
+//             th.classList.add(direction);
+//             th.setAttribute(
+//                 "aria-sort",
+//                 direction === "asc" ? "ascending" : "descending"
+//             );
+
+//             const pairs = getRowPairs();
+
+//             pairs.sort((a, b) => {
+//                 const valueA = sortValue(a.mainRow.cells[columnIndex]);
+//                 const valueB = sortValue(b.mainRow.cells[columnIndex]);
+
+//                 // خانه‌های خالی در هر دو جهت آخر بمانند.
+//                 if (valueA.empty !== valueB.empty) {
+//                     return valueA.empty ? 1 : -1;
+//                 }
+
+//                 let comparison;
+
+//                 if (valueA.number !== null && valueB.number !== null) {
+//                     comparison = valueA.number - valueB.number;
+//                 } else {
+//                     comparison = collator.compare(valueA.text, valueB.text);
+//                 }
+
+//                 return comparison === 0
+//                     ? a.originalIndex - b.originalIndex
+//                     : comparison * multiplier;
+//             });
+
+//             renderRows(pairs);
+//         });
+//     });
+// });
+
     document.addEventListener("DOMContentLoaded", function () {
     const table = document.getElementById("carsTable");
     if (!table) return;
 
     const tbody = table.tBodies[0];
-    const headers = Array.from(table.querySelectorAll("thead th.sortable"));
-    const collator = new Intl.Collator("fa", {
-        numeric: true,
-        sensitivity: "base"
-    });
+    if (!tbody) return;
 
-    function normalizeDigits(value) {
-        return String(value)
-            .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-            .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
-    }
+    // کش کردن هدرها و بهینه‌سازی رویداد کلیک
+    const headers = table.querySelectorAll("thead th.sortable");
+    if (headers.length === 0) return;
 
-    function sortValue(cell) {
-        const text = normalizeDigits(cell?.textContent || "")
-            .replace(/ي/g, "ی")
-            .replace(/ك/g, "ک")
-            .replace(/\u200c/g, " ")
-            .trim();
+    let currentSortColumn = -1;
+    let isAscending = true;
 
-        if (!text || text === "-" || text === "—") {
-            return { empty: true, text: "", number: null };
-        }
-
-        const numericText = text
-            .replace(/[,\u066c،\s]/g, "")
-            .replace(/\u066b/g, ".");
-
-        const isNumber = /^[+-]?\d+(?:\.\d+)?$/.test(numericText);
-
-        return {
-            empty: false,
-            text,
-            number: isNumber ? Number(numericText) : null
-        };
-    }
-
-    function getRowPairs() {
-        return Array.from(tbody.querySelectorAll("tr.car-row")).map(
-            (mainRow, originalIndex) => {
-                const nextRow = mainRow.nextElementSibling;
-
-                return {
-                    mainRow,
-                    detailsRow: nextRow?.classList.contains("details-row")
-                        ? nextRow
-                        : null,
-                    originalIndex
-                };
-            }
-        );
-    }
-
-    function renderRows(pairs) {
-        const fragment = document.createDocumentFragment();
-
-        for (const pair of pairs) {
-            fragment.appendChild(pair.mainRow);
-
-            if (pair.detailsRow) {
-                fragment.appendChild(pair.detailsRow);
-            }
-        }
-
-        tbody.appendChild(fragment);
-        requestAnimationFrame(updateTopScrollbar);
-    }
-
-    // ترتیب اولیه را main.py تعیین کرده است؛ اینجا هنگام لود سورت نکن.
-    headers.forEach(th => {
-        th.setAttribute("aria-sort", "none");
-
+    headers.forEach((th, index) => {
+        th.style.cursor = "pointer";
         th.addEventListener("click", function () {
-            // شمارهٔ واقعی ستون جدول، نه شمارهٔ آن در فهرست هدرهای sortable
-            const columnIndex = th.cellIndex;
-            const direction = th.classList.contains("asc") ? "desc" : "asc";
-            const multiplier = direction === "asc" ? 1 : -1;
-
-            headers.forEach(header => {
-                header.classList.remove("asc", "desc");
-                header.setAttribute("aria-sort", "none");
-            });
-
-            th.classList.add(direction);
-            th.setAttribute(
-                "aria-sort",
-                direction === "asc" ? "ascending" : "descending"
-            );
-
-            const pairs = getRowPairs();
-
-            pairs.sort((a, b) => {
-                const valueA = sortValue(a.mainRow.cells[columnIndex]);
-                const valueB = sortValue(b.mainRow.cells[columnIndex]);
-
-                // خانه‌های خالی در هر دو جهت آخر بمانند.
-                if (valueA.empty !== valueB.empty) {
-                    return valueA.empty ? 1 : -1;
-                }
-
-                let comparison;
-
-                if (valueA.number !== null && valueB.number !== null) {
-                    comparison = valueA.number - valueB.number;
+            // استفاده از requestAnimationFrame برای جلوگیری از فریز شدن UI
+            requestAnimationFrame(() => {
+                if (currentSortColumn === index) {
+                    isAscending = !isAscending;
                 } else {
-                    comparison = collator.compare(valueA.text, valueB.text);
+                    isAscending = true;
+                    currentSortColumn = index;
                 }
 
-                return comparison === 0
-                    ? a.originalIndex - b.originalIndex
-                    : comparison * multiplier;
-            });
+                // مرتب‌سازی سبک‌تر
+                const rows = Array.from(tbody.querySelectorAll("tr.car-row"));
+                rows.sort((a, b) => {
+                    const aText = a.cells[index]?.innerText.trim() || "";
+                    const bText = b.cells[index]?.innerText.trim() || "";
+                    return isAscending ? aText.localeCompare(bText, 'fa') : bText.localeCompare(aText, 'fa');
+                });
 
-            renderRows(pairs);
+                // بازآرایی سریع DOM بدون رندر سنگین اضافی
+                const fragment = document.createDocumentFragment();
+                rows.forEach(row => {
+                    fragment.appendChild(row);
+                    const nextRow = row.nextElementSibling;
+                    if (nextRow && nextRow.classList.contains("details-row")) {
+                        fragment.appendChild(nextRow);
+                    }
+                });
+                tbody.appendChild(fragment);
+            });
         });
     });
 });
 
+    
 $(document).ready(function() {
     // ۱. فعال‌سازی تقویم شمسی برای شروع گارانتی
     const warrantyPicker = $("#warrantyStartInput").pDatepicker({
@@ -1670,6 +1710,16 @@ function closeUsersModal() {
     m.style.display = 'none';
 }
 </script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css">
+
+<!-- ۲. جی‌کوئری -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    
+<!-- ۳. هسته تاریخ شمسی (persian-date) -->
+<script src="https://cdn.jsdelivr.net/npm/persian-date@1.1.0/dist/persian-date.min.js"></script>
+
+<!-- ۴. تقویم شمسی (persian-datepicker) -->
+<script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 
 </body>
