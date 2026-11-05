@@ -1362,7 +1362,14 @@ td.col-chassis {
         th.style.cursor = "pointer";
         th.addEventListener("click", function () {
             // استفاده مستقیم از cellIndex واقعی برای جلوگیری از شیفت ستون‌ها
-            const colIndex = this.cellIndex;
+            const colName = this.getAttribute("data-col");
+            if (!colName) return;
+
+            // پیدا کردن سلول دقیق داخل هر سطر که attribute یا ایندکس معادل آن ستون را دارد
+            // از آنجا که ستون اول 'سایر' است، ستون‌ها را بر اساس data-col یا تطابق ایندکس پیدا می‌کنیم:
+            const headerList = Array.from(table.querySelectorAll("thead th"));
+            const colIndex = headerList.indexOf(this);
+            
 
             if (currentSortedTh === this) {
                 isAscending = !isAscending;
