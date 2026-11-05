@@ -865,37 +865,44 @@ td.col-chassis {
 </div>
 
 <!-- ۲. مودال لیست کاربران -->
+<!-- مودال لیست و مدیریت کاربران -->
 <div id="usersModal" class="app-modal" style="display: none;">
     <div class="app-modal-overlay" onclick="closeUsersModal()"></div>
-    <div class="app-modal-dialog app-modal-lg"> <!-- این مودال به خاطر جدولش کمی عریض‌تر است -->
+    <div class="app-modal-dialog app-modal-lg">
         <div class="app-modal-header">
             <h3 class="app-modal-title">👥 لیست و مشخصات تمام کاربران سامانه</h3>
             <button type="button" class="app-modal-close" onclick="closeUsersModal()" aria-label="بستن">&times;</button>
         </div>
-        <div class="app-modal-body">
-            <div id="usersLoading" style="text-align: center; padding: 25px; color: #64748b;">
+        <div class="app-modal-body" style="padding: 20px;">
+            <!-- پیام بارگذاری -->
+            <div id="usersLoading" style="text-align: center; padding: 20px; font-weight: bold; color: #0284c7;">
                 در حال بارگذاری اطلاعات کاربران...
             </div>
-            <div class="table-responsive" id="usersTableWrapper" style="display: none;">
-                <table class="users-table">
+            
+            <!-- جدول کاربران -->
+            <div id="usersTableWrapper" style="display: none; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 13px;">
                     <thead>
-                        <tr>
-                            <th>کد کاربر</th>
-                            <th>نام کاربری</th>
-                            <th>کلمه عبور</th>
-                            <th>نام و نام خانوادگی</th>
-                            <th>نقش</th>
-                            <th>شماره همراه</th>
-                            <th>شناسه بله</th>
-                            <th>وضعیت اتصال بله</th>
+                        <tr style="background-color: #f1f5f9; color: #334155;">
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">کد کاربر</th>
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">نام کاربری</th>
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">رمز عبور</th>
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">نام و نام خانوادگی</th>
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">نقش</th>
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">موبایل</th>
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">شناسه بله</th>
+                            <th style="padding: 10px; border: 1px solid #cbd5e1;">وضعیت بله</th>
                         </tr>
                     </thead>
-                    <tbody id="usersTableBody"></tbody>
+                    <tbody id="usersTableBody">
+                        <!-- داده‌ها از طریق جاوااسکریپت پر می‌شوند -->
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 </div>
+
 
             
 <div class="container">
@@ -1572,11 +1579,6 @@ $(document).on("click", ".history-btn", function() {
     fetchCarHistory();
 });
 
-function closeHistoryModal() {
-    $("#historyModal").attr("hidden", true);
-    currentHistCarCode = null;
-    currentHistOffset = 0;
-}
 
 // بستن پنجره با دکمه Esc کیبورد
 $(document).on("keydown", function(e) {
@@ -1725,25 +1727,13 @@ window.addEventListener("click", function(e) {
     }
 });
 
-function openHistoryModal() {
-    const m = document.getElementById('historyModal');
-    m.style.display = 'flex';
-}
 
 function closeHistoryModal() {
     const m = document.getElementById('historyModal');
     m.style.display = 'none';
 }
 
-function openUsersModal() {
-    const m = document.getElementById('usersModal');
-    m.style.display = 'flex';
-}
 
-function closeUsersModal() {
-    const m = document.getElementById('usersModal');
-    m.style.display = 'none';
-}
 </script>
 
 </body>
