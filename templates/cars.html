@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
     <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    
     <title>مدیریت موجودی نمایشگاه خودرو</title>
     <style>
         :root {
@@ -28,17 +28,33 @@
             --card-bg: #ffffff;
         }
 
-        html, body {
-            touch-action: auto;
-        }
+        .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* اسکرول بسیار روان در آیفون */
+    margin-bottom: 1rem;
+}
 
-        body {
-            font-family: 'Vazirmatn', Tahoma, sans-serif;
-            background-color: var(--bg);
-            margin: 0;
-            padding: 20px;
-            color: #1e293b;
-        }
+/* ۱. این قانون را بالای فایل CSS بگذارید تا پدینگ‌ها عرض صفحه را خراب نکنند */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* ۲. تنظیم بدنه و صفحه (بدون تداخل و کاملاً یکپارچه) */
+html {
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
+body {
+    font-family: 'Vazirmatn', Tahoma, sans-serif;
+    background-color: var(--bg);
+    margin: 0;
+    padding: 20px;
+    color: #1e293b;
+    max-width: 100%;
+    overflow-x: hidden;
+}
 
         .container {
             max-width: 1400px;
@@ -826,6 +842,7 @@ td.col-chassis {
 </div>
     <!-- جدول نمایش خودروها -->
     <div class="table-responsive" id="tableBottomScroll" dir="rtl">
+        <div class="table-container">
         <table id="carsTable">
             <thead>
                 <tr>
@@ -929,6 +946,7 @@ td.col-chassis {
                 {% endfor %}
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 
