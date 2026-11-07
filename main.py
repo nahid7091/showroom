@@ -257,14 +257,7 @@ def clean_phone_field(val) -> str:
         cleaned = "0" + cleaned[2:]
     return cleaned
   
-def load_sheet(sheet_name: str) -> pd.DataFrame:
-    # ستون‌های اکسل خوانده می‌شوند بدون اینکه اعداد و مقادیر خالی به هم بریزند
-    df = pd.read_excel(
-        "database.xlsx",
-        sheet_name=sheet_name,
-        dtype={col: str for col in ID_TEXT_COLS}  # تنها این کلیدها رشته می‌شوند
-    )
-    return df
+
 
 PENDING_VERIFICATIONS = {}
 
@@ -351,7 +344,7 @@ def normalize_digits_value(val):
         return val.translate(PERSIAN_ARABIC_DIGITS)
     return val
 
-def read_sheet(sheet_name: str) -> pd.DataFrame:
+def read_sheet(sheet_name=None) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
             df = pd.read_excel( DB_PATH, sheet_name=sheet_name, dtype={col: str for col in ID_TEXT_COLS})
@@ -365,7 +358,7 @@ def read_sheet(sheet_name: str) -> pd.DataFrame:
 def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame, logs_df: Optional[pd.DataFrame] = None):
     with FileLock(LOCK_PATH):
         try:
-            all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
+            all_sheets = read_sheet()
         except Exception:
             all_sheets = {}
         all_sheets[USERS_SHEET] = users_df.fillna("")
@@ -667,7 +660,7 @@ async def bale_webhook(request: Request):
                 target_username = parts[1].strip()
                 
                 with FileLock(LOCK_PATH):
-                    users_df = pd.read_excel(DB_PATH, sheet_name=USERS_SHEET, dtype=str)
+                    users_df = read_sheet(DB_PATH, sheet_name=USERS_SHEET, dtype=str)
                     users_df["username"] = users_df["username"].astype(str).str.strip()
                     
                     if target_username in users_df["username"].values:
@@ -703,7 +696,7 @@ async def bale_webhook(request: Request):
             target_user = PENDING_VERIFICATIONS.get(str(chat_id))
 
             with FileLock(LOCK_PATH):
-                all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
+                all_sheets = read_sheet()
                 users_df = all_sheets.get(USERS_SHEET)
                 
                 if users_df is not None:
@@ -996,45 +989,27 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         }
     )
 
-def get_next_id(file_path: str, sheet_name: str, id_column: str = "id") -> int:
-    """
-    بیشترین مقدار ستون شناسه را پیدا کرده و مقدار بعدی (+1) را برمی‌گرداند.
-    اگر شیت خالی باشد یا هیچ رکوردی نباشد، عدد 1 را برمی‌گرداند.
-    
-    مثال استفاده:
-        next_car_id = get_next_id("/data/showroom/database.xlsx", "cars", "car_code")
-        next_log_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
-    """
+def get_next_id(file_path: str, sheet_name: str, id_column: str = "id") -> str:
     try:
-        # فقط همان شیت مورد نظر خوانده می‌شود
-        df = pd.read_excel(file_path, sheet_name=sheet_name)
-        
-        # اگر ستون وجود نداشت یا دیتایی نبود
+        df = read_sheet(file_path, sheet_name=sheet_name)
         if df.empty or id_column not in df.columns:
-            return 1
-            
-        # تبدیل ستون به رشته، نرمال‌سازی ارقام فارسی/عربی و تبدیل امن به عدد
-        s = df[id_column].astype(str)
+            return "00001"  # مقدار اولیه با ۵ رقم
         
-        # تبدیل اعداد فارسی/عربی به انگلیسی در صورت وجود
+        s = df[id_column].astype(str)
         persian_digits = "۰۱۲۳۴۵۶۷۸۹"
         arabic_digits = "٠١٢٣٤٥٦٧٨٩"
         for i in range(10):
             s = s.str.replace(persian_digits[i], str(i))
             s = s.str.replace(arabic_digits[i], str(i))
             
-        # استخراج مقادیر عددی (خطاها تبدیل به NaN می‌شوند)
         numeric_ids = pd.to_numeric(s, errors="coerce").dropna()
-        
         if numeric_ids.empty:
-            return 1
+            return "00001"
             
-        # بزرگترین مقدار را گرفته و یک واحد اضافه می‌کند
-        return int(numeric_ids.max()) + 1
-
+        next_num = int(numeric_ids.max()) + 1
+        return f"{next_num:05d}"  # قالب ۵ رقمی با صفرهای اول (مثلا 00098)
     except Exception:
-        # در صورت نبود شیت یا فایل، پیش‌فرض از 1 شروع می‌شود
-        return 1
+        return "00001"
 
 # -----------------------------
 # روت فرم افزودن خودرو
@@ -1092,7 +1067,7 @@ async def add_car(
 
     try:
         with FileLock(LOCK_PATH, timeout=10):
-            all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
+            all_sheets = read_sheet(DB_PATH, sheet_name=None, dtype=str)
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS)).fillna("")
             logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS)).fillna("")
 
@@ -1201,7 +1176,7 @@ async def update_status(
 
     with FileLock(LOCK_PATH, timeout=10):
         try:
-            all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
+            all_sheets = read_sheet(DB_PATH, sheet_name=None, dtype=str)
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
             if cars_df.empty or "car_code" not in cars_df.columns:
                 raise HTTPException(status_code=404, detail="اطلاعات خودروها یافت نشد.")
@@ -1304,7 +1279,7 @@ async def add_user(
         # ۲. فقط یک بار قفل و یک بار باز کردن کل اکسل
         with FileLock(LOCK_PATH, timeout=10):
             try:
-                all_sheets = pd.read_excel(DB_PATH, sheet_name=None, dtype=str)
+                all_sheets = read_sheet()
             except Exception:
                 all_sheets = {}
 
