@@ -111,29 +111,11 @@ REQUIRED_USER_COLS = [
 ]
 
 REQUIRED_CAR_COLS = [
-    "car_code",
-    "VIN",
-    "title",
-    "model_year",
-    "production_year",
-    "color",
-    "owner",
-    "place",
-    "status",
-    "reserved_until",
-    "last_updated_at",
-    "last_updated_by",
-    "options",
-    "No_Guarantee",
-    "Due",
-    "technical_issue",
-    "physical_issue",
-    "doc",
-    "plate",
-    "price(Rials)",
-    "buyer",
-    "bime",
-    "keys"
+    "car_code", "VIN", "title", "model_year", "production_year", 
+    "color", "owner", "place", "last_updated_at", "last_updated_by", 
+    "expert", "reserved_until", "status", "options", "No_Guarantee", 
+    "Due", "technical_issue", "physical_issue", "doc", "plate", 
+    "price(Rials)", "buyer", "bime", "keys"
 ]
 
 REQUIRED_HISTORY_COLS = [
