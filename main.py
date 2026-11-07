@@ -206,7 +206,65 @@ LTR_CAR_FORM_COLS = [
     "bime",
     "keys",
 ]
+# فقط ستون‌هایی که صفر ابتدایی دارند یا نباید به عدد تبدیل شوند
+ID_TEXT_COLS = {
+    "car_code": str,      # مثلاً '00098'
+    "user_code": str,     # مثلاً '00012'
+    "id": str,            # شناسه لاگ‌ها
+    "VIN": str,           # شماره شاسی
+    "phone": str,         # شماره تلفن همراه (برای حفظ صفر اول مثل 0912...)
+    "bale_chat_id": str,  # شناسه بله
+    "plate": str          # پلاک خودرو
+}
 
+def normalize_persian_digits(text: str) -> str:
+    if not text:
+        return ""
+    persian_nums = "۰۱۲۳۴۵۶۷۸۹"
+    arabic_nums = "٠١٢٣٤٥٦٧٨٩"
+    english_nums = "0123456789"
+    
+    trans_table = str.maketrans(persian_nums + arabic_nums, english_nums * 2)
+    return str(text).translate(trans_table)
+
+def clean_integer_field(val, default=0) -> int:
+    """برای فیلدهایی مثل keys یا تعداد"""
+    if val is None:
+        return default
+    cleaned = normalize_persian_digits(str(val))
+    # فقط ارقام را استخراج کن
+    digits = "".join(re.findall(r'\d+', cleaned))
+    return int(digits) if digits else default
+
+def clean_price_field(val) -> int:
+    """برای قیمت که ممکن است کاما یا حروف داشته باشد"""
+    if val is None:
+        return 0
+    cleaned = normalize_persian_digits(str(val))
+    # استخراج تمام ارقام قیمت
+    digits = "".join(re.findall(r'\d+', cleaned))
+    return int(digits) if digits else 0
+
+def clean_phone_field(val) -> str:
+    """برای شماره موبایل"""
+    if not val:
+        return ""
+    cleaned = normalize_persian_digits(str(val))
+    # برداشتن فاصله و کاراکترهای اضافی
+    cleaned = re.sub(r'\D', '', cleaned)
+    # اصلاح فرمت‌های مثل 98912... یا 0912...
+    if cleaned.startswith("98") and len(cleaned) == 12:
+        cleaned = "0" + cleaned[2:]
+    return cleaned
+  
+def load_sheet(sheet_name: str) -> pd.DataFrame:
+    # ستون‌های اکسل خوانده می‌شوند بدون اینکه اعداد و مقادیر خالی به هم بریزند
+    df = pd.read_excel(
+        "database.xlsx",
+        sheet_name=sheet_name,
+        dtype={col: str for col in ID_TEXT_COLS}  # تنها این کلیدها رشته می‌شوند
+    )
+    return df
 
 PENDING_VERIFICATIONS = {}
 
@@ -296,7 +354,7 @@ def normalize_digits_value(val):
 def read_sheet(sheet_name: str) -> pd.DataFrame:
     with FileLock(LOCK_PATH):
         try:
-            df = pd.read_excel(DB_PATH, sheet_name=sheet_name, dtype=str)
+            df = pd.read_excel( DB_PATH, sheet_name=sheet_name, dtype={col: str for col in ID_TEXT_COLS})
         except Exception:
             df = pd.DataFrame()
         if not df.empty:
@@ -1023,8 +1081,9 @@ async def add_car(
     # بررسی دسترسی: فقط ادمین و مدیر نمایشگاه
     if not user or user.get("role") not in ROLES_CAN_MANAGE:
         return JSONResponse(status_code=403, content={"success": False, "message": "فقط مدیران اجازه ثبت خودرو دارند."})
-
-    clean_vin = VIN.strip()
+    clean_keys = clean_integer_field(keys, default=1)  # پیش‌فرض مثلا ۱ کلید
+    clean_price = clean_price_field(price_rials)             # تبدیل قیمت به عدد خالص
+    clean_vin = VIN.strip().upper()
     clean_place = place.strip()
     clean_status = status.strip()
     now_jalali = get_current_jalali_now()
@@ -1046,8 +1105,8 @@ async def add_car(
                 "car_code": next_car_code,
                 "VIN": clean_vin,
                 "title": title.strip(),
-                "model_year": model_year.strip(),
-                "production_year": production_year.strip(),
+                "model_year": normalize_persian_digits(model_year),
+                "production_year": normalize_persian_digits(production_year),
                 "color": color.strip(),
                 "owner": owner.strip(),
                 "place": final_place,
@@ -1063,10 +1122,10 @@ async def add_car(
                 "physical_issue": physical_issue.strip(),
                 "doc": doc.strip(),                 # <--- ذخیره در اکسل
                 "plate": "",                         # اگر فیلد پلاک در فرم هست اضافه شود
-                "price(Rials)": price_rials.strip(), # <--- ذخیره با نام دقیق اکسل
+                "price(Rials)": clean_price, # <--- ذخیره با نام دقیق اکسل
                 "buyer": "",
                 "bime": "",
-                "keys": keys.strip()                 # <--- ذخیره در اکسل
+                "keys": clean_keys                 # <--- ذخیره در اکسل
             }
             cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
             all_sheets[CARS_SHEET] = cars_df
@@ -1231,14 +1290,14 @@ async def add_user(
     password: str = Form(...),
     name: str = Form(...),
     lastname: str = Form(...),
-    role: str = Form("expert"),
+    role: str = Form(...),
     phone: str = Form(""),
     user: dict = Depends(get_current_user)
 ):
     if not user or user.get("role") not in ROLES_CAN_MANAGE:
         return JSONResponse(status_code=403, content={"success": False, "message": "فقط مدیران امکان تعریف کاربر دارند."})
 
-    clean_uname = username.strip()
+    clean_uname = username.strip().lower()
     cleaned_phone = clean_phone(phone)
 
     try:
