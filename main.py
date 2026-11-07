@@ -379,7 +379,7 @@ def save_users(users_df: pd.DataFrame):
 
 def append_history(car_code: str, changed_by: str, from_status: str, to_status: str, from_place: str, to_place: str):
     history_df = read_sheet(HISTORY_SHEET)
-    next_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
+    next_id = get_next_id("car_logs", "id")
 
     new_log = {
         "id": str(next_id),
@@ -660,7 +660,7 @@ async def bale_webhook(request: Request):
                 target_username = parts[1].strip()
                 
                 with FileLock(LOCK_PATH):
-                    users_df = read_sheet(DB_PATH, sheet_name=USERS_SHEET, dtype=str)
+                    users_df = read_sheet(USERS_SHEET)
                     users_df["username"] = users_df["username"].astype(str).str.strip()
                     
                     if target_username in users_df["username"].values:
@@ -989,9 +989,9 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         }
     )
 
-def get_next_id(file_path: str, sheet_name: str, id_column: str = "id") -> str:
+def get_next_id(sheet_name: str, id_column: str = "id") -> str:
     try:
-        df = read_sheet(file_path, sheet_name=sheet_name)
+        df = read_sheet(sheet_name=sheet_name)
         if df.empty or id_column not in df.columns:
             return "00001"  # مقدار اولیه با ۵ رقم
         
@@ -1067,7 +1067,7 @@ async def add_car(
 
     try:
         with FileLock(LOCK_PATH, timeout=10):
-            all_sheets = read_sheet(DB_PATH, sheet_name=None, dtype=str)
+            all_sheets = read_sheet()
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS)).fillna("")
             logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS)).fillna("")
 
@@ -1075,7 +1075,7 @@ async def add_car(
             if not cars_df.empty and "VIN" in cars_df.columns:
                 if clean_vin and clean_vin in cars_df["VIN"].astype(str).str.strip().values:
                     return JSONResponse(status_code=400, content={"success": False, "message": "این شماره شاسی (VIN) قبلاً ثبت شده است."})
-            next_car_code = get_next_id("/data/showroom/database.xlsx", "cars", "car_code")     
+            next_car_code = get_next_id("cars", "car_code")     
             new_car = {
                 "car_code": next_car_code,
                 "VIN": clean_vin,
@@ -1105,7 +1105,7 @@ async def add_car(
             cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
             all_sheets[CARS_SHEET] = cars_df
             new_log = {
-                "id": get_next_id("/data/showroom/database.xlsx", "car_logs", "id"),
+                "id": get_next_id("car_logs", "id"),
                 "car_code": str(next_car_code),
                 "changed_at": now_jalali,
                 "changed_by": user.get("username", "سیستم"),
@@ -1176,7 +1176,7 @@ async def update_status(
 
     with FileLock(LOCK_PATH, timeout=10):
         try:
-            all_sheets = read_sheet(DB_PATH, sheet_name=None, dtype=str)
+            all_sheets = read_sheet()
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
             if cars_df.empty or "car_code" not in cars_df.columns:
                 raise HTTPException(status_code=404, detail="اطلاعات خودروها یافت نشد.")
@@ -1217,7 +1217,7 @@ async def update_status(
                 )
                    
             logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS))
-            new_id = get_next_id("/data/showroom/database.xlsx", "car_logs", "id")
+            new_id = get_next_id("car_logs", "id")
                 
             new_log = {
                 "id": new_id,
@@ -1293,7 +1293,7 @@ async def add_user(
                         status_code=400, 
                         content={"success": False, "message": "این نام کاربری قبلاً استفاده شده است."}
                     )
-            next_user_code = get_next_id("/data/showroom/database.xlsx", "users", "user_code")
+            next_user_code = get_next_id( "users", "user_code")
 
             new_user_data = {
                 "user_code": str(next_user_code),
