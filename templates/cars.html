@@ -235,6 +235,14 @@ body {
             background-color: #f8fafc;
         }
 
+        #carsTable thead th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #ffffff; /* یا رنگ پس‌زمینه دلخواه هدر تا ردیف‌های زیرین دیده نشوند */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); /* سایه ملایم برای تمایز هدر از ردیف‌ها */
+        }
+        
         /* ستون‌های طولانی */
         th.col-options,
         td.col-options,
