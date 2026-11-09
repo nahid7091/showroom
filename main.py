@@ -44,7 +44,12 @@ BALE_BOT_TOKEN = os.getenv("APP_BALE_TOKEN", "").strip()
 BALE_API_URL = f"https://tapi.bale.ai/bot{BALE_BOT_TOKEN}"
 BALE_BOT_USERNAME = os.getenv("BALE_BOT_USERNAME", "sammotor_bot")
 BALE_BOT_LINK = f"https://ble.ir/{BALE_BOT_USERNAME}"
-
+ALLOWED_ROLES = [
+    {"value": "expert", "label": "متخصص"},
+    {"value": "seller", "label": "کارشناس فروش"},
+    {"value": "manager", "label": "مدیر"},
+    {"value": "admin", "label": "ادمین"},
+]
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
 captcha_serializer = URLSafeSerializer(APP_SECRET, salt="captcha-salt")
 
