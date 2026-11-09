@@ -1259,7 +1259,33 @@ td.col-chassis {
             event.target.style.display = "none";
         }
     };
-
+// تابع مدیریت تیک «فاقد گارانتی»
+function toggleWarrantyInput(checkbox) {
+    const $input = $("#warrantyStartInput");
+    
+    if (checkbox.checked) {
+        // ذخیره مقدار قبلی و غیرفعال‌سازی موقت تقویم
+        $input.data("prev-val", $input.val());
+        $input.val("فاقد گارانتی");
+        $input.prop("readonly", true);
+        $input.css({
+            "background-color": "#f1f5f9",
+            "color": "#64748b",
+            "cursor": "not-allowed"
+        });
+    } else {
+        // بازگرداندن به حالت انتخاب تاریخ
+        $input.prop("readonly", false);
+        $input.val($input.data("prev-val") || "");
+        $input.attr("placeholder", "انتخاب تاریخ شروع گارانتی...");
+        $input.css({
+            "background-color": "",
+            "color": "",
+            "cursor": "text"
+        });
+        $input.focus();
+    }
+}
     // باز و بسته کردن سطر اطلاعات تکمیلی خودرو (OTHER_CAR_COLS)
     function toggleDetails(index, button) {
         const row = document.getElementById('details-' + index);
@@ -1461,55 +1487,31 @@ td.col-chassis {
 
     
 $(document).ready(function() {
-    // ۱. فعال‌سازی تقویم شمسی برای شروع گارانتی
-    const warrantyPicker = $("#warrantyStartInput").pDatepicker({
-        format: 'YYYY/MM/DD',
-        autoClose: true,
-        initialValue: false,
-        toolbox: {
-            calendarSwitch: { enabled: false }
+    try {
+    if (typeof $.fn.pDatepicker === 'function') {
+            if ($("#warrantyStartInput").length) {
+                $("#warrantyStartInput").pDatepicker({
+                    format: 'YYYY/MM/DD',
+                    autoClose: true,
+                    initialValue: false,
+                    toolbox: { calendarSwitch: { enabled: false } }
+                });
+            }
+            if ($("#dueDateInput").length) {
+                $("#dueDateInput").pDatepicker({
+                    format: 'YYYY/MM/DD',
+                    autoClose: true,
+                    initialValue: false,
+                    toolbox: { calendarSwitch: { enabled: false } }
+                });
+            }
         }
-    });
-
-    // ۲. فعال‌سازی تقویم شمسی برای موعد سررسید وکالت
-    $("#dueDateInput").pDatepicker({
-        format: 'YYYY/MM/DD',
-        autoClose: true,
-        initialValue: false,
-        toolbox: {
-            calendarSwitch: { enabled: false }
-        }
-    });
-
+    } catch (err) {
+        console.warn("خطا در راه‌اندازی تقویم شمسی:", err);
+    }
 });
 
-// تابع مدیریت تیک «فاقد گارانتی»
-function toggleWarrantyInput(checkbox) {
-    const $input = $("#warrantyStartInput");
-    
-    if (checkbox.checked) {
-        // ذخیره مقدار قبلی و غیرفعال‌سازی موقت تقویم
-        $input.data("prev-val", $input.val());
-        $input.val("فاقد گارانتی");
-        $input.prop("readonly", true);
-        $input.css({
-            "background-color": "#f1f5f9",
-            "color": "#64748b",
-            "cursor": "not-allowed"
-        });
-    } else {
-        // بازگرداندن به حالت انتخاب تاریخ
-        $input.prop("readonly", false);
-        $input.val($input.data("prev-val") || "");
-        $input.attr("placeholder", "انتخاب تاریخ شروع گارانتی...");
-        $input.css({
-            "background-color": "",
-            "color": "",
-            "cursor": "text"
-        });
-        $input.focus();
-    }
-}
+
 
 let currentHistCarCode = null;
 let currentHistOffset = 0;
