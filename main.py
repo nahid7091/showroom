@@ -344,24 +344,46 @@ def normalize_digits_value(val):
         return val.translate(PERSIAN_ARABIC_DIGITS)
     return val
 
-def read_sheet_unlocked(sheet_name=None):
+def read_sheet_unlocked(sheet_name=None)-> pd.DataFrame:
     try:
-        df = pd.read_excel(
+        data = pd.read_excel(
             DB_PATH,
             sheet_name=sheet_name,
             dtype={col: str for col in ID_TEXT_COLS}
         )
-    except Exception:
-        df = pd.DataFrame()
 
-    if not df.empty:
-        df = df.map(normalize_digits_value)
-        df = df.fillna("")
+        # When sheet_name=None, pandas returns a dictionary
+        if isinstance(data, dict):
+            return {
+                name: normalize_dataframe(sheet)
+                for name, sheet in data.items()
+            }
+
+        return normalize_dataframe(data)
+
+    except Exception as ex:
+        print(f"EXCEL READ ERROR: {ex}")
+
+        if sheet_name is None:
+            return {}
+
+        return pd.DataFrame()
+
+def normalize_dataframe(df):
+    """Normalize values in an Excel sheet."""
+    if not isinstance(df, pd.DataFrame):
+        return pd.DataFrame()
+
+    df = df.map(normalize_digits_value)
+
+    # Avoid Pandas fillna dtype warning
+    df = df.astype(object).where(pd.notna(df), "")
 
     return df
 
 
-def read_sheet(sheet_name=None):
+
+def read_sheet(sheet_name=None)-> pd.DataFrame:
     with FileLock(LOCK_PATH):
         return read_sheet_unlocked(sheet_name)
 
