@@ -13,7 +13,9 @@ from fastapi.templating import Jinja2Templates
 from filelock import FileLock
 from itsdangerous import URLSafeSerializer, BadSignature
 from openpyxl import load_workbook
-
+import json
+import uuid
+import time
 import jdatetime
 from zoneinfo import ZoneInfo
 
@@ -29,7 +31,12 @@ HISTORY_PAGE_SIZE = 50
 APP_SECRET = os.getenv("APP_SECRET", "CHANGE_ME_SUPER_SECRET")
 DB_PATH = os.getenv("EXCEL_DB_PATH", "/data/showroom/database.xlsx")
 LOCK_PATH = DB_PATH + ".lock"
+BALE_FLOW_STATE_PATH = DB_PATH + ".bale_flows.json"
+BALE_FLOW_LOCK_PATH = BALE_FLOW_STATE_PATH + ".lock"
 
+BALE_FLOW_TTL_SECONDS = 1200
+
+PUBLIC_BASE_URL = "https://iranianmoqim.ir"
 # تنظیمات پیام‌رسان بله
 BALE_BOT_TOKEN = os.getenv("APP_BALE_TOKEN", "").strip()
 BALE_API_URL = f"https://tapi.bale.ai/bot{BALE_BOT_TOKEN}"
@@ -671,6 +678,11 @@ async def list_users(request: Request, user: dict = Depends(get_current_user)):
     users_list = users_df.to_dict(orient="records")
     return {"users": users_list}
 
+create_bale_login_flow(username)
+
+get_bale_login_flow(flow_id)
+
+mark_bale_login_clicked(flow_id, username)
 
 @app.post("/bale/webhook")
 async def bale_webhook(request: Request):
@@ -763,7 +775,7 @@ async def bale_webhook(request: Request):
                                     f"✅ احراز هویت با موفقیت انجام شد!\nحساب کاربری «{target_user}» فعال شد.\n\nبرای ورود مستقیم به پنل روی دکمه زیر کلیک کنید:",
                                     reply_markup={
                                         "inline_keyboard": [
-                                            [{"text": "🌐 ورود به سامانه شوروم", "url": f"https://iranianmoqim.ir/auth/bale-login?token={login_token}"}]
+                                            [{"text": "🌐 ورود به سامانه شوروم", "url": f"https://iranianmoqim.ir/auth/bale-login-click?token={login_token}"}]
                                         ]
                                     }
                                 )
@@ -802,6 +814,10 @@ async def bale_webhook(request: Request):
 # -----------------------------
 # UI Pages
 # -----------------------------
+@app.get("/auth/bale-login-click")
+
+@app.get("/auth/bale-login-status")
+
 @app.get("/auth/bale-login")
 def bale_auto_login(token: str):
     try:
@@ -826,8 +842,10 @@ def activate_bale_page(request: Request, user: dict = Depends(get_current_user))
     if user_has_bale(request):
         return RedirectResponse(url="/cars", status_code=303)
 
-    bale_link = f"{BALE_BOT_LINK}?start={user['username']}"
-    
+    # bale_link = f"{BALE_BOT_LINK}?start={user['username']}"
+    flow_id = create_bale_login_flow(user["username"])
+    bale_link = f"{BALE_BOT_LINK}?start={flow_id}"    
+  
     return templates.TemplateResponse(
         request=request,
         name="activate_bale.html",
