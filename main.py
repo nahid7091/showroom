@@ -849,7 +849,12 @@ def activate_bale_page(request: Request, user: dict = Depends(get_current_user))
     return templates.TemplateResponse(
         request=request,
         name="activate_bale.html",
-        context={"request": request, "user": user, "bale_link": bale_link}
+        context={
+            "request": request,
+            "user": user,
+            "bale_link": bale_link,
+            "flow_id": flow_id
+        }
     )
 
 @app.get("/")
