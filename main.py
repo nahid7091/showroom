@@ -491,7 +491,7 @@ def normalize_shamsi_date(date_val: str) -> str:
         
     return val
 
-def set_session(response: RedirectResponse, username: str)-> RedirectResponse:
+def set_session(response, username: str):
     token = serializer.dumps({"username": str(username)})
     response.set_cookie(
         key="session",
@@ -933,9 +933,86 @@ async def bale_webhook(request: Request):
 # -----------------------------
 # UI Pages
 # -----------------------------
-@app.get("/auth/bale-login-click")
+@app.get("/auth/bale-login-click", response_class=HTMLResponse)
+def bale_login_click(token: str):
+    try:
+        data = serializer.loads(token)
+
+        username = data.get("auto_login")
+        flow_id = data.get("flow_id")
+
+        if not username or not flow_id:
+            return HTMLResponse(
+                "درخواست ورود معتبر نیست.",
+                status_code=400
+            )
+
+        flow = get_bale_login_flow(flow_id)
+
+        if not flow or flow.get("username") != username:
+            return HTMLResponse(
+                "درخواست ورود منقضی شده است. لطفاً دوباره از سایت اقدام کنید.",
+                status_code=400
+            )
+
+        if not flow.get("verified"):
+            return HTMLResponse(
+                "هنوز احراز هویت کامل نشده است.",
+                status_code=403
+            )
+
+        if not update_bale_login_flow(flow_id, clicked=True):
+            return HTMLResponse(
+                "درخواست ورود منقضی شده است.",
+                status_code=400
+            )
+
+        return HTMLResponse("""
+            <!doctype html>
+            <html lang="fa" dir="rtl">
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <body style="font-family:Tahoma;text-align:center;padding:35px;line-height:2">
+                <h3>✅ درخواست ورود ثبت شد</h3>
+                <p>به مرورگر قبلی خود برگردید؛ ورود به سامانه به‌صورت خودکار انجام می‌شود.</p>
+                <p>می‌توانید این صفحه را ببندید.</p>
+            </body>
+            </html>
+        """)
+
+    except Exception as e:
+        print(f"BALE LOGIN CLICK ERROR: {e}")
+        return HTMLResponse(
+            "خطا در ثبت درخواست ورود.",
+            status_code=400
+        )
+
 
 @app.get("/auth/bale-login-status")
+def bale_login_status(flow_id: str):
+    flow = get_bale_login_flow(flow_id)
+
+    if not flow:
+        return JSONResponse(
+            {"status": "expired"},
+            status_code=404
+        )
+
+    if not flow.get("verified") or not flow.get("clicked"):
+        return JSONResponse({"status": "waiting"})
+
+    username = flow.get("username")
+
+    if not username:
+        return JSONResponse(
+            {"status": "error"},
+            status_code=400
+        )
+
+    response = JSONResponse({"status": "ready"})
+
+    # ثبت کوکی ورود در همان مرورگری که صفحه فعال‌سازی را باز کرده
+    return set_session(response, username)
 
 @app.get("/auth/bale-login")
 def bale_auto_login(token: str):
