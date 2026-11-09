@@ -1,11 +1,25 @@
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
+# محیط مجازی پایتون (مهم‌ترین عامل حجم بالا)
 venv/
+.venv/
 env/
+ENV/
+
+# تاریخچه گیت
 .git/
-.idea/
+.gitignore
+
+# کش و فایل‌های موقت پایتون
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# فایل‌ها و تنظیمات ویرایشگرها
 .vscode/
-*.xlsx
+.idea/
+
+# فایل‌های لاگ و سیستم عامل
 *.log
+.DS_Store
+Thumbs.db
