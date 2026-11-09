@@ -1214,10 +1214,10 @@ td.col-chassis {
                 </div>
                 <div class="form-group">
                     <label>نقش *</label>
-                    <select name="role">
-                        <option value="expert">کارشناس فروش (expert)</option>
-                        <option value="showroom_manager">مدیر نمایشگاه (showroom_manager)</option>
-                        <option value="admin">مدیر سیستم (admin)</option>
+                    <select name="role" id="userRoleSelect" class="form-control" required>
+                        {% for r in allowed_roles %}
+                            <option value="{{ r.value }}">{{ r.label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="form-group">
