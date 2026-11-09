@@ -48,7 +48,7 @@ BALE_BOT_LINK = f"https://ble.ir/{BALE_BOT_USERNAME}"
 serializer = URLSafeSerializer(APP_SECRET, salt="session")
 captcha_serializer = URLSafeSerializer(APP_SECRET, salt="captcha-salt")
 
-ROLES_CAN_MANAGE = {"admin", "manager"}
+ROLES_CAN_MANAGE = {"admin"}
 
 USERS_SHEET = "users"
 CARS_SHEET = "cars"
