@@ -1405,7 +1405,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
 
 def get_next_id(sheet_name: str, id_column: str = "id") -> str:
     try:
-        df = read_sheet(sheet_name=sheet_name)
+        df = read_sheet_unlocked(sheet_name=sheet_name)
         if df.empty or id_column not in df.columns:
             return "00001"  # مقدار اولیه با ۵ رقم
         
