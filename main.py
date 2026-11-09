@@ -268,7 +268,6 @@ def clean_phone_field(val) -> str:
   
 
 
-PENDING_VERIFICATIONS = {}
 
 # -----------------------------
 # App
@@ -722,6 +721,41 @@ def create_bale_login_flow(username):
     return flow_id
 
 
+def get_bale_login_flow_by_chat_id(chat_id):
+    chat_id = str(chat_id)
+    now = time.time()
+
+    with FileLock(BALE_FLOW_LOCK_PATH):
+        flows = read_bale_flows()
+
+        candidates = []
+
+        for flow_id, flow in flows.items():
+            created_at = flow.get("created_at", 0)
+
+            if now - created_at > BALE_FLOW_TTL:
+                continue
+
+            if str(flow.get("chat_id", "")) != chat_id:
+                continue
+
+            if flow.get("verified"):
+                continue
+
+            candidates.append((flow_id, flow))
+
+        if not candidates:
+            return None, None
+
+        # جدیدترین درخواست فعال این چت
+        flow_id, flow = max(
+            candidates,
+            key=lambda item: item[1].get("created_at", 0)
+        )
+
+        return flow_id, flow
+
+
 def get_bale_login_flow(flow_id):
     with FileLock(BALE_FLOW_LOCK_PATH):
         flows = read_bale_flows()
@@ -758,177 +792,306 @@ def update_bale_login_flow(flow_id, **updates):
     return True
 
 
+
+
 @app.post("/bale/webhook")
 async def bale_webhook(request: Request):
     try:
         body = await request.json()
         print(f"BALE WEBHOOK RECEIVED: {body}")
-        
-        message = body.get("message", {})
+
+        message = body.get("message") or {}
         chat_id = message.get("chat", {}).get("id")
-        text = (message.get("text") or "").strip()
-        contact = message.get("contact")
-        
+
         if not chat_id:
             return {"status": "ok"}
 
+        chat_key = str(chat_id)
+        text = (message.get("text") or "").strip()
+        contact = message.get("contact")
+
+        # ===============================================
+        # مرحله اول: شروع درخواست ورود از طریق /start
+        # ===============================================
         if text.startswith("/start"):
-            parts = text.split()
-            if len(parts) > 1:
-                flow_id = parts[1].strip()
-                flow = get_bale_login_flow(flow_id)
-                
-                if not flow:
-                    send_bale_message(
-                        chat_id,
-                        "❌ این درخواست ورود معتبر نیست یا منقضی شده است. لطفاً دوباره از سایت اقدام کنید."
-                    )
-                    return {"status": "ok"}
-                
-                target_username = str(flow["username"]).strip()
-                
-                with FileLock(LOCK_PATH):
-                    users_df = read_sheet_unlocked(USERS_SHEET)
-                    users_df["username"] = users_df["username"].astype(str).str.strip()
-                
-                    if target_username in users_df["username"].values:
-                        PENDING_VERIFICATIONS[str(chat_id)] = {
-                            "username": target_username,
-                            "flow_id": flow_id
-                        }
-                
-                        keyboard = {
-                            "keyboard": [[{
-                                "text": "📱 ارسال و تأیید شماره موبایل",
-                                "request_contact": True
-                            }]],
-                            "resize_keyboard": True,
-                            "one_time_keyboard": True
-                        }
-                
-                        send_bale_message(
-                            chat_id,
-                            f"سلام! شما در حال فعال‌سازی دسترسی برای نام کاربری «{target_username}» هستید.\n\n"
-                            "⚠️ جهت راستی‌آزمایی و امنیت سامانه، لطفاً دکمه زیر را لمس نمایید تا شماره همراه اکانت بله شما با شماره تلفن ثبت‌شده در سیستم مقایسه شود:",
-                            reply_markup=keyboard
-                        )
-                    else:
-                        send_bale_message(
-                            chat_id,
-                            f"❌ کاربری با نام «{target_username}» در سامانه یافت نشد."
-                        )
-                        
-                        keyboard = {
-                            "keyboard": [[{"text": "📱 ارسال و تأیید شماره موبایل", "request_contact": True}]],
-                            "resize_keyboard": True,
-                            "one_time_keyboard": True
-                        }
-                        send_bale_message(
-                            chat_id,
-                            f"سلام! شما در حال فعال‌سازی دسترسی برای نام کاربری «{target_username}» هستید.\n\n"
-                            f"⚠️ جهت راستی‌آزمایی و امنیت سامانه، لطفاً دکمه زیر را لمس نمایید تا شماره همراه اکانت بله شما با شماره تلفن ثبت‌شده در سیستم مقایسه شود:",
-                            reply_markup=keyboard
-                        )
-                    else:
-                        send_bale_message(chat_id, f"❌ کاربری با نام «{target_username}» در سامانه یافت نشد.")
-            else:
-                keyboard = {
-                    "keyboard": [[{"text": "📱 ارسال و تأیید شماره موبایل", "request_contact": True}]],
-                    "resize_keyboard": True,
-                    "one_time_keyboard": True
-                }
+
+            parts = text.split(maxsplit=1)
+
+            if len(parts) < 2 or not parts[1].strip():
                 send_bale_message(
                     chat_id,
-                    "سلام! جهت احراز هویت و فعال‌سازی حساب، لطفاً دکمه زیر را لمس کرده و شماره تلفن خود را ارسال کنید:",
-                    reply_markup=keyboard
+                    "سلام! برای فعال‌سازی حساب، ابتدا از داخل سایت شوروم "
+                    "روی دکمه «ورود به ربات بله» بزنید و سپس Start را انتخاب کنید."
                 )
+                return {"status": "ok"}
 
-        elif contact:
-            user_phone = clean_phone(str(contact.get("phone_number", "")))
-            pending_data = PENDING_VERIFICATIONS.get(str(chat_id)) or {}
-            target_user = pending_data.get("username")
-            flow_id = pending_data.get("flow_id")
+            flow_id = parts[1].strip()
+            flow = get_bale_login_flow(flow_id)
+
+            if not flow:
+                send_bale_message(
+                    chat_id,
+                    "❌ درخواست ورود معتبر نیست یا منقضی شده است. "
+                    "لطفاً دوباره از سایت شوروم اقدام کنید."
+                )
+                return {"status": "ok"}
+
+            target_username = str(flow.get("username") or "").strip()
+
+            if not target_username:
+                send_bale_message(
+                    chat_id,
+                    "❌ اطلاعات درخواست ورود ناقص است. لطفاً دوباره از سایت اقدام کنید."
+                )
+                return {"status": "ok"}
+
+            # اگر این درخواست قبلاً به چت دیگری متصل شده باشد،
+            # اجازه استفاده مجدد از آن را نمی‌دهیم.
+            assigned_chat = flow.get("chat_id")
+
+            if assigned_chat and str(assigned_chat) != chat_key:
+                send_bale_message(
+                    chat_id,
+                    "❌ این درخواست قبلاً در یک حساب بله دیگر استفاده شده است. "
+                    "لطفاً از سایت یک درخواست جدید ایجاد کنید."
+                )
+                return {"status": "ok"}
+
+            if flow.get("verified"):
+                send_bale_message(
+                    chat_id,
+                    "✅ شماره این درخواست قبلاً تأیید شده است. "
+                    "به صفحه قبلی سایت برگردید."
+                )
+                return {"status": "ok"}
+
+            # کنترل وجود کاربر در اکسل
             with FileLock(LOCK_PATH):
+                users_df = read_sheet_unlocked(USERS_SHEET)
+
+                if users_df is None or users_df.empty:
+                    user_exists = False
+                else:
+                    users_df["username"] = (
+                        users_df["username"].astype(str).str.strip()
+                    )
+                    user_exists = (
+                        users_df["username"] == target_username
+                    ).any()
+
+            if not user_exists:
+                send_bale_message(
+                    chat_id,
+                    f"❌ کاربری با نام «{target_username}» در سامانه یافت نشد."
+                )
+                return {"status": "ok"}
+
+            # اتصال درخواست به چت بله و ذخیره پایدار آن
+            updated = update_bale_login_flow(
+                flow_id,
+                chat_id=chat_key
+            )
+
+            if not updated:
+                send_bale_message(
+                    chat_id,
+                    "❌ درخواست ورود منقضی شده است. لطفاً دوباره از سایت اقدام کنید."
+                )
+                return {"status": "ok"}
+
+            keyboard = {
+                "keyboard": [[{
+                    "text": "📱 ارسال و تأیید شماره موبایل",
+                    "request_contact": True
+                }]],
+                "resize_keyboard": True,
+                "one_time_keyboard": True
+            }
+
+            send_bale_message(
+                chat_id,
+                f"سلام! شما در حال فعال‌سازی دسترسی برای نام کاربری "
+                f"«{target_username}» هستید.\n\n"
+                "لطفاً دکمه زیر را بزنید تا شماره موبایل شما با شماره "
+                "ثبت‌شده در سامانه مقایسه شود:",
+                reply_markup=keyboard
+            )
+
+            return {"status": "ok"}
+
+        # ===============================================
+        # مرحله دوم: دریافت شماره موبایل
+        # ===============================================
+        if contact:
+
+            # بازیابی درخواست از فایل پایدار، نه حافظه موقت
+            flow_id, flow = get_bale_login_flow_by_chat_id(chat_key)
+
+            if not flow_id or not flow:
+                send_bale_message(
+                    chat_id,
+                    "❌ درخواست فعالی برای شما پیدا نشد. "
+                    "ابتدا از طریق سایت شوروم وارد ربات شوید."
+                )
+                return {"status": "ok"}
+
+            target_user = str(flow.get("username") or "").strip()
+
+            if not target_user:
+                send_bale_message(
+                    chat_id,
+                    "❌ اطلاعات درخواست ناقص است. لطفاً دوباره از سایت اقدام کنید."
+                )
+                return {"status": "ok"}
+
+            user_phone = clean_phone(
+                str(contact.get("phone_number") or "")
+            )
+
+            if not user_phone:
+                send_bale_message(
+                    chat_id,
+                    "❌ شماره موبایل دریافتی معتبر نیست. لطفاً دوباره ارسال کنید."
+                )
+                return {"status": "ok"}
+
+            # ===========================================
+            # مرحله سوم: بررسی شماره و ذخیره اکسل
+            # ===========================================
+            with FileLock(LOCK_PATH):
+
                 all_sheets = read_sheet_unlocked()
                 users_df = all_sheets.get(USERS_SHEET)
-                
-                if users_df is not None:
-                    users_df["username"] = users_df["username"].astype(str).str.strip()
-                    
-                    if "bale_chat_id" not in users_df.columns:
-                        users_df["bale_chat_id"] = ""
-                    if "user_has_bale" not in users_df.columns:
-                        users_df["user_has_bale"] = "false"                    
-                                    
-                    users_df["norm_phone"] = users_df["phone"].apply(clean_phone)
 
-                    if target_user:
-                        match_row = users_df[users_df["username"] == target_user]
-                        if not match_row.empty:
-                            expected_phone = match_row.iloc[0]["norm_phone"]
-                            
-                            if expected_phone and expected_phone == user_phone:
-                                users_df.loc[users_df["username"] == target_user, "bale_chat_id"] = str(chat_id)
-                                users_df.loc[users_df["username"] == target_user, "user_has_bale"] = "true"
-                                users_df.drop(columns=["norm_phone"], inplace=True)
-                                all_sheets[USERS_SHEET] = users_df
-                                
-                                with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
-                                    for s_name, s_df in all_sheets.items():
-                                        s_df.to_excel(writer, sheet_name=s_name, index=False)
-                                if flow_id:
-                                  update_bale_login_flow(flow_id, verified=True)
-                                PENDING_VERIFICATIONS.pop(str(chat_id), None)
-                                login_token = serializer.dumps({
-                                  "auto_login": target_user,
-                                  "flow_id": flow_id
-                                })
-                                
-                                send_bale_message(
-                                    chat_id,
-                                    f"✅ احراز هویت با موفقیت انجام شد!\n"
-                                    f"حساب کاربری «{target_user}» فعال شد.\n\n"
-                                    "برای تکمیل ورود، روی دکمه زیر کلیک کنید:",
-                                    reply_markup={
-                                        "inline_keyboard": [
-                                            [{
-                                                "text": "🌐 ورود به سامانه شوروم",
-                                                "url": f"https://iranianmoqim.ir/auth/bale-login-click?token={login_token}"
-                                            }]
-                                        ]
-                                    }
-                                )
-                            else:
-                                users_df.drop(columns=["norm_phone"], inplace=True)
-                                send_bale_message(
-                                    chat_id,
-                                    f"⛔️ عدم تطابق شماره همراه!\n\n"
-                                    f"شماره اکانت بله شما ({user_phone}) با شماره تلفن ثبت‌شده برای کاربر «{target_user}» یکسان نیست."
-                                )
-                        else:
-                            users_df.drop(columns=["norm_phone"], inplace=True)
-                            send_bale_message(chat_id, "❌ کاربری برای تکمیل این درخواست یافت نشد.")
+                if users_df is None or users_df.empty:
+                    send_bale_message(
+                        chat_id,
+                        "❌ اطلاعات کاربران در سامانه قابل دسترسی نیست."
+                    )
+                    return {"status": "ok"}
 
-                    else:
-                        match_users = users_df[users_df["norm_phone"] == user_phone]
-                        if not match_users.empty:
-                            matched_username = match_users.iloc[0]["username"]
-                            users_df.loc[users_df["username"] == matched_username, "bale_chat_id"] = str(chat_id)
-                            users_df.loc[users_df["username"] == matched_username, "user_has_bale"] = "true"
-                            users_df.drop(columns=["norm_phone"], inplace=True, errors="ignore")
-                            all_sheets[USERS_SHEET] = users_df
-                            
-                            with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
-                                for s_name, s_df in all_sheets.items():
-                                    s_df.to_excel(writer, sheet_name=s_name, index=False)
-                                    
-                            send_bale_message(chat_id, f"✅ حساب کاربری «{matched_username}» با موفقیت فعال شد.")
-                        else:
-                            users_df.drop(columns=["norm_phone"], inplace=True, errors="ignore")
-                            send_bale_message(chat_id, "❌ شماره موبایل شما در لیست کاربران سیستم یافت نشد.")
+                users_df["username"] = (
+                    users_df["username"].astype(str).str.strip()
+                )
+
+                if "phone" not in users_df.columns:
+                    send_bale_message(
+                        chat_id,
+                        "❌ ستون شماره موبایل در اطلاعات کاربران یافت نشد."
+                    )
+                    return {"status": "ok"}
+
+                if "bale_chat_id" not in users_df.columns:
+                    users_df["bale_chat_id"] = ""
+
+                if "user_has_bale" not in users_df.columns:
+                    users_df["user_has_bale"] = "false"
+
+                match_row = users_df[
+                    users_df["username"] == target_user
+                ]
+
+                if match_row.empty:
+                    send_bale_message(
+                        chat_id,
+                        "❌ کاربر موردنظر در سامانه یافت نشد."
+                    )
+                    return {"status": "ok"}
+
+                raw_phone = match_row.iloc[0]["phone"]
+
+                expected_phone = (
+                    ""
+                    if pd.isna(raw_phone)
+                    else clean_phone(str(raw_phone))
+                )
+
+                if not expected_phone or expected_phone != user_phone:
+                    send_bale_message(
+                        chat_id,
+                        "⛔️ شماره همراه مطابقت ندارد!\n\n"
+                        f"شماره ارسال‌شده ({user_phone}) با شماره ثبت‌شده "
+                        f"برای کاربر «{target_user}» یکسان نیست."
+                    )
+                    return {"status": "ok"}
+
+                # شماره صحیح است؛ اطلاعات کاربر را به‌روزرسانی می‌کنیم.
+                users_df.loc[
+                    users_df["username"] == target_user,
+                    "bale_chat_id"
+                ] = chat_key
+
+                users_df.loc[
+                    users_df["username"] == target_user,
+                    "user_has_bale"
+                ] = "true"
+
+                all_sheets[USERS_SHEET] = users_df
+
+                # ذخیره تمام شیت‌ها
+                with pd.ExcelWriter(
+                    DB_PATH,
+                    engine="openpyxl"
+                ) as writer:
+                    for sheet_name, sheet_df in all_sheets.items():
+                        sheet_df.to_excel(
+                            writer,
+                            sheet_name=sheet_name,
+                            index=False
+                        )
+
+            # ===========================================
+            # مرحله چهارم: ثبت موفقیت جریان ورود
+            # ===========================================
+            flow_updated = update_bale_login_flow(
+                flow_id,
+                verified=True
+            )
+
+            if not flow_updated:
+                print(
+                    f"BALE FLOW UPDATE FAILED: {flow_id}"
+                )
+
+                send_bale_message(
+                    chat_id,
+                    "⚠️ شماره شما در سامانه ثبت شد، اما درخواست ورود منقضی شده است. "
+                    "لطفاً دوباره از سایت اقدام کنید."
+                )
+                return {"status": "ok"}
+
+            login_token = serializer.dumps({
+                "auto_login": target_user,
+                "flow_id": flow_id
+            })
+
+            send_bale_message(
+                chat_id,
+                f"✅ احراز هویت با موفقیت انجام شد!\n"
+                f"حساب کاربری «{target_user}» فعال شد.\n\n"
+                "برای تکمیل ورود، روی دکمه زیر کلیک کنید:",
+                reply_markup={
+                    "inline_keyboard": [[{
+                        "text": "🌐 ورود به سامانه شوروم",
+                        "url": (
+                            "https://iranianmoqim.ir/"
+                            "auth/bale-login-click?token="
+                            f"{login_token}"
+                        )
+                    }]]
+                }
+            )
+
+            return {"status": "ok"}
+
+        # ===============================================
+        # سایر پیام‌ها
+        # ===============================================
+        return {"status": "ok"}
 
     except Exception as e:
         print(f"WEBHOOK PROCESSING ERROR: {e}")
+        return {"status": "ok"}
 
 # -----------------------------
 # UI Pages
@@ -936,7 +1099,7 @@ async def bale_webhook(request: Request):
 @app.get("/auth/bale-login-click", response_class=HTMLResponse)
 def bale_login_click(token: str):
     try:
-        data = serializer.loads(token)
+        data = serializer.loads(token, max_age=600)
 
         username = data.get("auto_login")
         flow_id = data.get("flow_id")
