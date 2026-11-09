@@ -31,5 +31,29 @@
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;">
         <p class="muted">اگر دکمه ارسال شماره را در بات ندیدید، یک‌بار دستور <code>/start</code> را تایپ و ارسال کنید.</p>
       </div>
+        <script>
+            const flowId = "{{ flow_id }}";
+            
+            async function checkBaleLogin() {
+                try {
+                    const response = await fetch(
+                        `/auth/bale-login-status?flow_id=${encodeURIComponent(flowId)}`,
+                        { credentials: "same-origin" }
+                    );
+            
+                    if (!response.ok) return;
+            
+                    const data = await response.json();
+            
+                    if (data.status === "ready") {
+                        window.location.href = "/cars";
+                    }
+                } catch (error) {
+                    console.error("Bale login check:", error);
+                }
+            }
+            
+            setInterval(checkBaleLogin, 2000);
+        </script>
     </body>
     </html>
