@@ -1244,27 +1244,29 @@ td.col-chassis {
 
 
 <script>
-    function openModal(id) {
-        const modal = document.getElementById(id);
-        if (modal) modal.style.display = "block";
-    }
+// ۱. توابع سراسری برای باز و بسته کردن مدال‌ها (باید بیرون از ready باشند تا onclick کار کند)
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = "block";
+}
 
-    function closeModal(id) {
-        const modal = document.getElementById(id);
-        if (modal) modal.style.display = "none";    
-    }
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.style.display = "none";    
+}
 
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal')) {
-            event.target.style.display = "none";
-        }
-    };
+// بستن مدال با کلیک روی پس‌زمینه تیره
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+    }
+};
+
 // تابع مدیریت تیک «فاقد گارانتی»
 function toggleWarrantyInput(checkbox) {
     const $input = $("#warrantyStartInput");
     
     if (checkbox.checked) {
-        // ذخیره مقدار قبلی و غیرفعال‌سازی موقت تقویم
         $input.data("prev-val", $input.val());
         $input.val("فاقد گارانتی");
         $input.prop("readonly", true);
@@ -1274,7 +1276,6 @@ function toggleWarrantyInput(checkbox) {
             "cursor": "not-allowed"
         });
     } else {
-        // بازگرداندن به حالت انتخاب تاریخ
         $input.prop("readonly", false);
         $input.val($input.data("prev-val") || "");
         $input.attr("placeholder", "انتخاب تاریخ شروع گارانتی...");
@@ -1286,6 +1287,31 @@ function toggleWarrantyInput(checkbox) {
         $input.focus();
     }
 }
+$(document).ready(function() {
+    try {
+    if (typeof $.fn.pDatepicker === 'function') {
+            if ($("#warrantyStartInput").length) {
+                $("#warrantyStartInput").pDatepicker({
+                    format: 'YYYY/MM/DD',
+                    autoClose: true,
+                    initialValue: false,
+                    toolbox: { calendarSwitch: { enabled: false } }
+                });
+            }
+            if ($("#dueDateInput").length) {
+                $("#dueDateInput").pDatepicker({
+                    format: 'YYYY/MM/DD',
+                    autoClose: true,
+                    initialValue: false,
+                    toolbox: { calendarSwitch: { enabled: false } }
+                });
+            }
+        }
+    } catch (err) {
+        console.warn("خطا در راه‌اندازی تقویم شمسی:", err);
+    }
+});
+
     // باز و بسته کردن سطر اطلاعات تکمیلی خودرو (OTHER_CAR_COLS)
     function toggleDetails(index, button) {
         const row = document.getElementById('details-' + index);
@@ -1486,30 +1512,7 @@ function toggleWarrantyInput(checkbox) {
 });
 
     
-$(document).ready(function() {
-    try {
-    if (typeof $.fn.pDatepicker === 'function') {
-            if ($("#warrantyStartInput").length) {
-                $("#warrantyStartInput").pDatepicker({
-                    format: 'YYYY/MM/DD',
-                    autoClose: true,
-                    initialValue: false,
-                    toolbox: { calendarSwitch: { enabled: false } }
-                });
-            }
-            if ($("#dueDateInput").length) {
-                $("#dueDateInput").pDatepicker({
-                    format: 'YYYY/MM/DD',
-                    autoClose: true,
-                    initialValue: false,
-                    toolbox: { calendarSwitch: { enabled: false } }
-                });
-            }
-        }
-    } catch (err) {
-        console.warn("خطا در راه‌اندازی تقویم شمسی:", err);
-    }
-});
+
 
 
 
