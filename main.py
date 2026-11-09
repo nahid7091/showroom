@@ -18,6 +18,7 @@ import uuid
 import time
 import jdatetime
 from zoneinfo import ZoneInfo
+from pathlib import Path
 
 IRAN_TZ = ZoneInfo("Asia/Tehran")
 
@@ -30,11 +31,12 @@ HISTORY_PAGE_SIZE = 50
 # -----------------------------
 APP_SECRET = os.getenv("APP_SECRET", "CHANGE_ME_SUPER_SECRET")
 DB_PATH = os.getenv("EXCEL_DB_PATH", "/data/showroom/database.xlsx")
-LOCK_PATH = DB_PATH + ".lock"
-BALE_FLOW_STATE_PATH = DB_PATH + ".bale_flows.json"
-BALE_FLOW_LOCK_PATH = BALE_FLOW_STATE_PATH + ".lock"
+BALE_FLOW_STATE_PATH = Path(DB_PATH).with_name("bale_login_flows.json")
+BALE_FLOW_LOCK_PATH = str(BALE_FLOW_STATE_PATH) + ".lock"
 
-BALE_FLOW_TTL_SECONDS = 1200
+BALE_FLOW_TTL = 1200  # 20 minutes
+LOCK_PATH = DB_PATH + ".lock"
+
 
 PUBLIC_BASE_URL = "https://iranianmoqim.ir"
 # تنظیمات پیام‌رسان بله
@@ -678,11 +680,83 @@ async def list_users(request: Request, user: dict = Depends(get_current_user)):
     users_list = users_df.to_dict(orient="records")
     return {"users": users_list}
 
-create_bale_login_flow(username)
+def read_bale_flows():
+    if not BALE_FLOW_STATE_PATH.exists():
+        return {}
 
-get_bale_login_flow(flow_id)
+    try:
+        with open(BALE_FLOW_STATE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
 
-mark_bale_login_clicked(flow_id, username)
+
+def write_bale_flows(flows):
+    with open(BALE_FLOW_STATE_PATH, "w", encoding="utf-8") as f:
+        json.dump(flows, f, ensure_ascii=False)
+
+
+def create_bale_login_flow(username):
+    flow_id = uuid.uuid4().hex
+
+    with FileLock(BALE_FLOW_LOCK_PATH):
+        flows = read_bale_flows()
+        now = time.time()
+
+        # حذف جریان‌های منقضی‌شده
+        flows = {
+            key: value
+            for key, value in flows.items()
+            if now - value.get("created_at", 0) < BALE_FLOW_TTL
+        }
+
+        flows[flow_id] = {
+            "username": str(username),
+            "created_at": now,
+            "verified": False,
+            "clicked": False
+        }
+
+        write_bale_flows(flows)
+
+    return flow_id
+
+
+def get_bale_login_flow(flow_id):
+    with FileLock(BALE_FLOW_LOCK_PATH):
+        flows = read_bale_flows()
+        flow = flows.get(flow_id)
+
+        if not flow:
+            return None
+
+        if time.time() - flow.get("created_at", 0) > BALE_FLOW_TTL:
+            flows.pop(flow_id, None)
+            write_bale_flows(flows)
+            return None
+
+        return flow
+
+
+def update_bale_login_flow(flow_id, **updates):
+    with FileLock(BALE_FLOW_LOCK_PATH):
+        flows = read_bale_flows()
+        flow = flows.get(flow_id)
+
+        if not flow:
+            return False
+
+        if time.time() - flow.get("created_at", 0) > BALE_FLOW_TTL:
+            flows.pop(flow_id, None)
+            write_bale_flows(flows)
+            return False
+
+        flow.update(updates)
+        flows[flow_id] = flow
+        write_bale_flows(flows)
+
+    return True
+
 
 @app.post("/bale/webhook")
 async def bale_webhook(request: Request):
@@ -701,14 +775,48 @@ async def bale_webhook(request: Request):
         if text.startswith("/start"):
             parts = text.split()
             if len(parts) > 1:
-                target_username = parts[1].strip()
+                flow_id = parts[1].strip()
+                flow = get_bale_login_flow(flow_id)
+                
+                if not flow:
+                    send_bale_message(
+                        chat_id,
+                        "❌ این درخواست ورود معتبر نیست یا منقضی شده است. لطفاً دوباره از سایت اقدام کنید."
+                    )
+                    return {"status": "ok"}
+                
+                target_username = str(flow["username"]).strip()
                 
                 with FileLock(LOCK_PATH):
                     users_df = read_sheet_unlocked(USERS_SHEET)
                     users_df["username"] = users_df["username"].astype(str).str.strip()
-                    
+                
                     if target_username in users_df["username"].values:
-                        PENDING_VERIFICATIONS[str(chat_id)] = target_username
+                        PENDING_VERIFICATIONS[str(chat_id)] = {
+                            "username": target_username,
+                            "flow_id": flow_id
+                        }
+                
+                        keyboard = {
+                            "keyboard": [[{
+                                "text": "📱 ارسال و تأیید شماره موبایل",
+                                "request_contact": True
+                            }]],
+                            "resize_keyboard": True,
+                            "one_time_keyboard": True
+                        }
+                
+                        send_bale_message(
+                            chat_id,
+                            f"سلام! شما در حال فعال‌سازی دسترسی برای نام کاربری «{target_username}» هستید.\n\n"
+                            "⚠️ جهت راستی‌آزمایی و امنیت سامانه، لطفاً دکمه زیر را لمس نمایید تا شماره همراه اکانت بله شما با شماره تلفن ثبت‌شده در سیستم مقایسه شود:",
+                            reply_markup=keyboard
+                        )
+                    else:
+                        send_bale_message(
+                            chat_id,
+                            f"❌ کاربری با نام «{target_username}» در سامانه یافت نشد."
+                        )
                         
                         keyboard = {
                             "keyboard": [[{"text": "📱 ارسال و تأیید شماره موبایل", "request_contact": True}]],
@@ -737,8 +845,9 @@ async def bale_webhook(request: Request):
 
         elif contact:
             user_phone = clean_phone(str(contact.get("phone_number", "")))
-            target_user = PENDING_VERIFICATIONS.get(str(chat_id))
-
+            pending_data = PENDING_VERIFICATIONS.get(str(chat_id)) or {}
+            target_user = pending_data.get("username")
+            flow_id = pending_data.get("flow_id")
             with FileLock(LOCK_PATH):
                 all_sheets = read_sheet_unlocked()
                 users_df = all_sheets.get(USERS_SHEET)
@@ -767,15 +876,25 @@ async def bale_webhook(request: Request):
                                 with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
                                     for s_name, s_df in all_sheets.items():
                                         s_df.to_excel(writer, sheet_name=s_name, index=False)
-                                
+                                if flow_id:
+                                  update_bale_login_flow(flow_id, verified=True)
                                 PENDING_VERIFICATIONS.pop(str(chat_id), None)
-                                login_token = serializer.dumps({"auto_login": target_user})
+                                login_token = serializer.dumps({
+                                  "auto_login": target_user,
+                                  "flow_id": flow_id
+                                })
+                                
                                 send_bale_message(
                                     chat_id,
-                                    f"✅ احراز هویت با موفقیت انجام شد!\nحساب کاربری «{target_user}» فعال شد.\n\nبرای ورود مستقیم به پنل روی دکمه زیر کلیک کنید:",
+                                    f"✅ احراز هویت با موفقیت انجام شد!\n"
+                                    f"حساب کاربری «{target_user}» فعال شد.\n\n"
+                                    "برای تکمیل ورود، روی دکمه زیر کلیک کنید:",
                                     reply_markup={
                                         "inline_keyboard": [
-                                            [{"text": "🌐 ورود به سامانه شوروم", "url": f"https://iranianmoqim.ir/auth/bale-login-click?token={login_token}"}]
+                                            [{
+                                                "text": "🌐 ورود به سامانه شوروم",
+                                                "url": f"https://iranianmoqim.ir/auth/bale-login-click?token={login_token}"
+                                            }]
                                         ]
                                     }
                                 )
