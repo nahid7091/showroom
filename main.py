@@ -1403,6 +1403,7 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
             "other_cols": OTHER_CAR_COLS,
             "column_titles": COLUMN_TITLES_FA,
             "allowed_statuses": ALLOWED_STATUSES,
+            "allowed_roles": ALLOWED_ROLES, 
             "allowed_places": ALLOWED_PLACES,
             "roles_can_manage": ROLES_CAN_MANAGE
         }
