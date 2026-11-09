@@ -24,30 +24,51 @@
           <li>به این صفحه برگردید و روی دکمه سبز بزنید.</li>
         </ol>
         <p style="margin-top:25px;">
-          <a class="btn" href="{{bale_link}}" >🚀 ورود به ربات بله</a>
-        </p>
+<a class="btn"
+   href="{{bale_link}}"
+   target="_blank"
+   rel="noopener noreferrer">        </p>
         <hr style="border:none; border-top:1px solid #eee; margin:20px 0;">
         <p class="muted">اگر دکمه ارسال شماره را در بات ندیدید، یک‌بار دستور <code>/start</code> را تایپ و ارسال کنید.</p>
       </div>
-        <script>
+       <script>
     const flowId = "{{ flow_id }}";
 
+    console.log("BALE FLOW ID:", flowId);
+
+    let checking = false;
+
     async function checkBaleLogin() {
+        if (checking) return;
+
+        checking = true;
+
         try {
             const response = await fetch(
                 `/auth/bale-login-status?flow_id=${encodeURIComponent(flowId)}`,
-                { credentials: "same-origin" }
+                {
+                    credentials: "same-origin",
+                    cache: "no-store"
+                }
             );
 
-            if (!response.ok) return;
+            if (!response.ok) {
+                console.log("Login status:", response.status);
+                return;
+            }
 
             const data = await response.json();
 
+            console.log("Login status:", data.status);
+
             if (data.status === "ready") {
-                window.location.href = "/cars";
+                window.location.replace("/cars");
             }
+
         } catch (error) {
             console.error("Bale login check:", error);
+        } finally {
+            checking = false;
         }
     }
 
