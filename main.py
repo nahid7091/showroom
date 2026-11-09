@@ -1479,69 +1479,64 @@ async def add_car(
     reserved_until = get_jalali_reserve_expiry(4) if status == "reserved(4 hours)" else ""
     final_place="تحویل خریدار" if status=="فروخته شده" else clean_place
 
-    try:
-        with FileLock(LOCK_PATH, timeout=10):
-            all_sheets = read_sheet_unlocked()
-            cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS)).fillna("")
-            logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS)).fillna("")
+    
+    with FileLock(LOCK_PATH, timeout=10):
+        all_sheets = read_sheet_unlocked()
+        cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS)).fillna("")
+        logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS)).fillna("")
 
-            # بررسی تکراری نبودن شاسی
-            if not cars_df.empty and "VIN" in cars_df.columns:
-                if clean_vin and clean_vin in cars_df["VIN"].astype(str).str.strip().values:
-                    return JSONResponse(status_code=400, content={"success": False, "message": "این شماره شاسی (VIN) قبلاً ثبت شده است."})
-            next_car_code = get_next_id("cars", "car_code")     
-            new_car = {
-                "car_code": next_car_code,
-                "VIN": clean_vin,
-                "title": title.strip(),
-                "model_year": normalize_persian_digits(model_year),
-                "production_year": normalize_persian_digits(production_year),
-                "color": color.strip(),
-                "owner": owner.strip(),
-                "place": final_place,
-                "status": clean_status,
-                "last_updated_at": now_jalali,
-                "last_updated_by": user.get("username", "system"),
-                "expert": "", # ستون اکسل
-                "reserved_until": "",
-                "options": options.strip(),
-                "No_Guarantee": normalize_shamsi_date(No_Guarantee),
-                "Due": normalize_shamsi_date(Due),
-                "technical_issue": technical_issue.strip(),
-                "physical_issue": physical_issue.strip(),
-                "doc": doc.strip(),                 # <--- ذخیره در اکسل
-                "plate": "",                         # اگر فیلد پلاک در فرم هست اضافه شود
-                "price(Rials)": clean_price, # <--- ذخیره با نام دقیق اکسل
-                "buyer": "",
-                "bime": "",
-                "keys": clean_keys                 # <--- ذخیره در اکسل
-            }
-            cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
-            all_sheets[CARS_SHEET] = cars_df
-            new_log = {
-                "id": get_next_id("car_logs", "id"),
-                "car_code": str(next_car_code),
-                "changed_at": now_jalali,
-                "changed_by": user.get("username", "سیستم"),
-                "from_status": "-",
-                "to_status": clean_status,
-                "from_place": "-",
-                "to_place": final_place
-            }
-            logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
-            all_sheets[HISTORY_SHEET] = logs_df
+        # بررسی تکراری نبودن شاسی
+        if not cars_df.empty and "VIN" in cars_df.columns:
+            if clean_vin and clean_vin in cars_df["VIN"].astype(str).str.strip().values:
+                return JSONResponse(status_code=400, content={"success": False, "message": "این شماره شاسی (VIN) قبلاً ثبت شده است."})
+        next_car_code = get_next_id("cars", "car_code")     
+        new_car = {
+            "car_code": next_car_code,
+            "VIN": clean_vin,
+            "title": title.strip(),
+            "model_year": normalize_persian_digits(model_year),
+            "production_year": normalize_persian_digits(production_year),
+            "color": color.strip(),
+            "owner": owner.strip(),
+            "place": final_place,
+            "status": clean_status,
+            "last_updated_at": now_jalali,
+            "last_updated_by": user.get("username", "system"),
+            "expert": "", # ستون اکسل
+            "reserved_until": "",
+            "options": options.strip(),
+            "No_Guarantee": normalize_shamsi_date(No_Guarantee),
+            "Due": normalize_shamsi_date(Due),
+            "technical_issue": technical_issue.strip(),
+            "physical_issue": physical_issue.strip(),
+            "doc": doc.strip(),                 # <--- ذخیره در اکسل
+            "plate": "",                         # اگر فیلد پلاک در فرم هست اضافه شود
+            "price(Rials)": clean_price, # <--- ذخیره با نام دقیق اکسل
+            "buyer": "",
+            "bime": "",
+            "keys": clean_keys                 # <--- ذخیره در اکسل
+        }
+        cars_df = pd.concat([cars_df, pd.DataFrame([new_car])], ignore_index=True)
+        all_sheets[CARS_SHEET] = cars_df
+        new_log = {
+            "id": get_next_id("car_logs", "id"),
+            "car_code": str(next_car_code),
+            "changed_at": now_jalali,
+            "changed_by": user.get("username", "سیستم"),
+            "from_status": "-",
+            "to_status": clean_status,
+            "from_place": "-",
+            "to_place": final_place
+        }
+        logs_df = pd.concat([logs_df, pd.DataFrame([new_log])], ignore_index=True)
+        all_sheets[HISTORY_SHEET] = logs_df
 
-            # ذخیره نهایی اکسل فقط با ۱ بار باز شدن
-            with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
-                for s_name, s_df in all_sheets.items():
-                    s_df.to_excel(writer, sheet_name=s_name, index=False)
-            
-        return JSONResponse(content={"success": True, "message": "خودرو با موفقیت اضافه شد.", "car": new_car})
-
-    except Exception as e:
-      print(f"Error in add_car: {e}")
-      return JSONResponse(status_code=500, content={"success": False, "message": f"خطا در ثبت خودرو: {str(e)}"})
-
+        # ذخیره نهایی اکسل فقط با ۱ بار باز شدن
+        with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+            for s_name, s_df in all_sheets.items():
+                s_df.to_excel(writer, sheet_name=s_name, index=False)
+        
+    return JSONResponse(content={"success": True, "message": "خودرو با موفقیت اضافه شد.", "car": new_car})
 
     
 
@@ -1673,6 +1668,18 @@ async def update_status(
 # -----------------------------
 # Admin helper: create users
 # -----------------------------
+def get_next_id_from_df(df, id_column):
+    if df is None or df.empty or id_column not in df.columns:
+        return "00001"
+
+    s = df[id_column].astype(str).str.translate(PERSIAN_ARABIC_DIGITS)
+    numeric_ids = pd.to_numeric(s, errors="coerce").dropna()
+
+    if numeric_ids.empty:
+        return "00001"
+
+    return f"{int(numeric_ids.max()) + 1:05d}"
+  
 @app.post("/users/add")
 async def add_user(
     username: str = Form(...),
@@ -1689,55 +1696,50 @@ async def add_user(
     clean_uname = username.strip().lower()
     cleaned_phone = clean_phone(phone)
 
-    try:
-        # ۲. فقط یک بار قفل و یک بار باز کردن کل اکسل
-        with FileLock(LOCK_PATH, timeout=10):
-            try:
-                all_sheets = read_sheet_unlocked()
-            except Exception:
-                all_sheets = {}
+    
+    # ۲. فقط یک بار قفل و یک بار باز کردن کل اکسل
+    with FileLock(LOCK_PATH, timeout=10):
+        try:
+            all_sheets = read_sheet_unlocked()
+        except Exception:
+            all_sheets = {}
 
-            users_df = all_sheets.get(USERS_SHEET, pd.DataFrame(columns=REQUIRED_USER_COLS)).fillna("")
+        users_df = all_sheets.get(USERS_SHEET, pd.DataFrame(columns=REQUIRED_USER_COLS)).fillna("")
 
-            # بررسی تکراری نبودن نام کاربری
-            if not users_df.empty and "username" in users_df.columns:
-                existing_users = users_df["username"].astype(str).str.strip().values
-                if clean_uname in existing_users:
-                    return JSONResponse(
-                        status_code=400, 
-                        content={"success": False, "message": "این نام کاربری قبلاً استفاده شده است."}
-                    )
-            next_user_code = get_next_id( "users", "user_code")
+        # بررسی تکراری نبودن نام کاربری
+        if not users_df.empty and "username" in users_df.columns:
+            existing_users = users_df["username"].astype(str).str.strip().values
+            if clean_uname in existing_users:
+                return JSONResponse(
+                    status_code=400, 
+                    content={"success": False, "message": "این نام کاربری قبلاً استفاده شده است."}
+                )
+        next_user_code = get_next_id( "users", "user_code")
 
-            new_user_data = {
-                "user_code": str(next_user_code),
-                "username": clean_uname,
-                "password": password.strip(),
-                "name": name.strip(),
-                "lastname": lastname.strip(),
-                "role": role.strip(),
-                "phone": cleaned_phone,
-                "bale_chat_id": "",
-                "user_has_bale": "false"
-            }
-            users_df = pd.concat([users_df, pd.DataFrame([new_user_data])], ignore_index=True)
-            all_sheets[USERS_SHEET] = users_df
+        new_user_data = {
+            "user_code": str(next_user_code),
+            "username": clean_uname,
+            "password": password.strip(),
+            "name": name.strip(),
+            "lastname": lastname.strip(),
+            "role": role.strip(),
+            "phone": cleaned_phone,
+            "bale_chat_id": "",
+            "user_has_bale": "false"
+        }
+        users_df = pd.concat([users_df, pd.DataFrame([new_user_data])], ignore_index=True)
+        all_sheets[USERS_SHEET] = users_df
 
-            # ذخیره تمیز و سریع
-            with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
-                for s_name, s_df in all_sheets.items():
-                    s_df.to_excel(writer, sheet_name=s_name, index=False)
+        # ذخیره تمیز و سریع
+        with pd.ExcelWriter(DB_PATH, engine="openpyxl") as writer:
+            for s_name, s_df in all_sheets.items():
+                s_df.to_excel(writer, sheet_name=s_name, index=False)
 
-        return JSONResponse(
-            content={"success": True, "message": f"کاربر {name} {lastname} با موفقیت ثبت شد."}
-        )
+    return JSONResponse(
+        content={"success": True, "message": f"کاربر {name} {lastname} با موفقیت ثبت شد."}
+    )
 
-    except Exception as e:
-        print(f"Error in add_user: {e}")
-        return JSONResponse(
-            status_code=500, 
-            content={"success": False, "message": f"خطا در ثبت کاربر: {str(e)}"}
-        )
+   
 
 if __name__ == "__main__":
     import uvicorn
