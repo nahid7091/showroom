@@ -344,21 +344,31 @@ def normalize_digits_value(val):
         return val.translate(PERSIAN_ARABIC_DIGITS)
     return val
 
-def read_sheet(sheet_name=None) -> pd.DataFrame:
+def read_sheet_unlocked(sheet_name=None):
+    try:
+        df = pd.read_excel(
+            DB_PATH,
+            sheet_name=sheet_name,
+            dtype={col: str for col in ID_TEXT_COLS}
+        )
+    except Exception:
+        df = pd.DataFrame()
+
+    if not df.empty:
+        df = df.map(normalize_digits_value)
+        df = df.fillna("")
+
+    return df
+
+
+def read_sheet(sheet_name=None):
     with FileLock(LOCK_PATH):
-        try:
-            df = pd.read_excel( DB_PATH, sheet_name=sheet_name, dtype={col: str for col in ID_TEXT_COLS})
-        except Exception:
-            df = pd.DataFrame()
-        if not df.empty:
-            df = df.map(normalize_digits_value)
-            df = df.fillna("")
-        return df
+        return read_sheet_unlocked(sheet_name)
 
 def write_sheets(users_df: pd.DataFrame, cars_df: pd.DataFrame, logs_df: Optional[pd.DataFrame] = None):
     with FileLock(LOCK_PATH):
         try:
-            all_sheets = read_sheet()
+            all_sheets = read_sheet_unlocked()
         except Exception:
             all_sheets = {}
         all_sheets[USERS_SHEET] = users_df.fillna("")
@@ -660,7 +670,7 @@ async def bale_webhook(request: Request):
                 target_username = parts[1].strip()
                 
                 with FileLock(LOCK_PATH):
-                    users_df = read_sheet(USERS_SHEET)
+                    users_df = read_sheet_unlocked(USERS_SHEET)
                     users_df["username"] = users_df["username"].astype(str).str.strip()
                     
                     if target_username in users_df["username"].values:
@@ -696,7 +706,7 @@ async def bale_webhook(request: Request):
             target_user = PENDING_VERIFICATIONS.get(str(chat_id))
 
             with FileLock(LOCK_PATH):
-                all_sheets = read_sheet()
+                all_sheets = read_sheet_unlocked()
                 users_df = all_sheets.get(USERS_SHEET)
                 
                 if users_df is not None:
@@ -1067,7 +1077,7 @@ async def add_car(
 
     try:
         with FileLock(LOCK_PATH, timeout=10):
-            all_sheets = read_sheet()
+            all_sheets = read_sheet_unlocked()
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS)).fillna("")
             logs_df = all_sheets.get(HISTORY_SHEET, pd.DataFrame(columns=REQUIRED_HISTORY_COLS)).fillna("")
 
@@ -1176,7 +1186,7 @@ async def update_status(
 
     with FileLock(LOCK_PATH, timeout=10):
         try:
-            all_sheets = read_sheet()
+            all_sheets = read_sheet_unlocked()
             cars_df = all_sheets.get(CARS_SHEET, pd.DataFrame(columns=REQUIRED_CAR_COLS))
             if cars_df.empty or "car_code" not in cars_df.columns:
                 raise HTTPException(status_code=404, detail="اطلاعات خودروها یافت نشد.")
@@ -1279,7 +1289,7 @@ async def add_user(
         # ۲. فقط یک بار قفل و یک بار باز کردن کل اکسل
         with FileLock(LOCK_PATH, timeout=10):
             try:
-                all_sheets = read_sheet()
+                all_sheets = read_sheet_unlocked()
             except Exception:
                 all_sheets = {}
 
