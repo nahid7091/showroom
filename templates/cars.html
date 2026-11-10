@@ -1380,7 +1380,12 @@ $(document).ready(function() {
                     alert("خطا: " + (data.message || "خطا در ثبت خودرو"));
                 }
             } catch (err) {
-                alert("خطای ارتباط با سرور");
+                // alert("خطای ارتباط با سرور");
+                error: function(xhr) {
+                    if (xhr.status === 401 || xhr.status === 403) {
+                        window.location.href = "https://iranianmoqim.ir";
+                    }
+                }
             } finally {
                 btn.disabled = false;
                 btn.innerText = "ثبت خودرو";
