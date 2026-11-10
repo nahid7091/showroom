@@ -1434,20 +1434,20 @@ def get_next_id(sheet_name: str, id_column: str = "id") -> str:
 # -----------------------------
 # روت فرم افزودن خودرو
 # -----------------------------
-@app.get("/cars/add", response_class=HTMLResponse)
-async def add_car_page(request: Request, user: dict = Depends(get_current_user)):
+# @app.get("/cars/add", response_class=HTMLResponse)
+# async def add_car_page(request: Request, user: dict = Depends(get_current_user)):
     
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
-    if not user_has_bale(request):
-        return RedirectResponse(url="/activate-bale", status_code=303)
-    if user.get("role") not in ["admin", "manager"]:
-        raise HTTPException(status_code=403, detail="شما دسترسی لازم برای افزودن خودرو را ندارید.")
-    return templates.TemplateResponse(
-        request=request,
-        name="add_car.html",
-        context={"request": request, "user": user}
-    )
+#     if not user:
+#         return RedirectResponse(url="/login", status_code=303)
+#     if not user_has_bale(request):
+#         return RedirectResponse(url="/activate-bale", status_code=303)
+#     if user.get("role") not in ["admin", "manager"]:
+#         raise HTTPException(status_code=403, detail="شما دسترسی لازم برای افزودن خودرو را ندارید.")
+#     return templates.TemplateResponse(
+#         request=request,
+#         name="add_car.html",
+#         context={"request": request, "user": user}
+#     )
 
 # -----------------------------
 # ذخیره خودرو جدید
