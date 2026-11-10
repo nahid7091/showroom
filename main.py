@@ -902,7 +902,7 @@ async def bale_webhook(request: Request):
                     chat_id,
                     "❌ درخواست ورود منقضی شده است. لطفاً دوباره از سایت اقدام کنید."
                 )
-                return {"status": "ok"}
+                return {"status": 403}
 
             keyboard = {
                 "keyboard": [[{
