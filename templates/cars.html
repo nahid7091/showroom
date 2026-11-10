@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-<!-- ۱. استایل تقویم -->
-
+    <!-- ۱. استایل تقویم -->
     <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=0.5, minimum-scale=0.0025, maximum-scale=5.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=0.5, minimum-scale=0.0025, maximum-scale=5.0, user-scalable=yes">
     <title>مدیریت موجودی نمایشگاه خودرو</title>
     <style>
         :root {
@@ -19,30 +18,30 @@
         }
 
         .table-container {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch; /* اسکرول بسیار روان در آیفون */
-    margin-bottom: 1rem;
-}
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* اسکرول بسیار روان در آیفون */
+            margin-bottom: 1rem;
+        }
 
-/* ۱. این قانون را بالای فایل CSS بگذارید تا پدینگ‌ها عرض صفحه را خراب نکنند */
-*, *::before, *::after {
-    box-sizing: border-box;
-}
+        /* ۱. این قانون را بالای فایل CSS بگذارید تا پدینگ‌ها عرض صفحه را خراب نکنند */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
 
-/* ۲. تنظیم بدنه و صفحه (بدون تداخل و کاملاً یکپارچه) */
-html {
-    max-width: 100%;
-}
+        /* ۲. تنظیم بدنه و صفحه (بدون تداخل و کاملاً یکپارچه) */
+        html {
+            max-width: 100%;
+        }
 
-body {
-    font-family: 'Vazirmatn', Tahoma, sans-serif;
-    background-color: var(--bg);
-    margin: 0;
-    padding: 20px;
-    color: #1e293b;
-    max-width: 100%;
-}
+        body {
+            font-family: 'Vazirmatn', Tahoma, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            padding: 20px;
+            color: #1e293b;
+            max-width: 100%;
+        }
 
         .container {
             max-width: 1400px;
@@ -194,7 +193,6 @@ body {
 
         /* استایل جدول اصلی */
         #carsTable {
-           
             border-collapse: separate !important;
             font-size: 13px;
             text-align: center;
@@ -211,18 +209,18 @@ body {
 
         #carsTable th,
         #carsTable td {
-            
             border: 1px solid #cbd5e1 !important; /* کادر مشخص برای تمام سلول‌ها */
             padding: 10px 8px;
             vertical-align: middle;
             background: #fff;
         }
+
         .table-responsive {
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch; /* اسکرول نرم با لمس دست در آیفون و اندروید */
             width: 100%;
         }
-        
+
         #carsTable th {
             white-space: nowrap !important; /* متن تیتر در یک خط باقی می‌ماند */
             vertical-align: middle;
@@ -242,7 +240,7 @@ body {
             background-color: #ffffff; /* یا رنگ پس‌زمینه دلخواه هدر تا ردیف‌های زیرین دیده نشوند */
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08); /* سایه ملایم برای تمایز هدر از ردیف‌ها */
         }
-        
+
         /* ستون‌های طولانی */
         th.col-options,
         td.col-options,
@@ -263,6 +261,7 @@ body {
             line-height: 1.5;
             text-align: right;
         }
+
         #carsTable .cell-wrap {
             display: inline-block;
             max-width: 220px;
@@ -390,13 +389,13 @@ body {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
-        
+
         @media (max-width: 600px) {
             .other-details-grid {
                 grid-template-columns: repeat(4, minmax(0, 1fr));
             }
         }
-                
+
         .form-group {
             display: flex;
             flex-direction: column;
@@ -446,1259 +445,1300 @@ body {
         .btn-modal-submit:hover {
             background-color: var(--primary-hover);
         }
+
         /* استایل ستون‌های قابل مرتب‌سازی */
-th.sortable {
-    cursor: pointer;
-    user-select: none;
-    position: relative;
-    padding-left: 28px !important; /* فضا برای فلش */
-    transition: background-color 0.2s;
-}
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-left: 28px !important; /* فضا برای فلش */
+            transition: background-color 0.2s;
+        }
 
-th.sortable:hover {
-    background-color: rgba(0, 0, 0, 0.06);
-}
+        th.sortable:hover {
+            background-color: rgba(0, 0, 0, 0.06);
+        }
 
-th.sortable::after {
-    content: " ⇅";
-    font-size: 1.1em !important;
-    font-weight: bold !important;
-    opacity: 0.8 !important;
-    position: absolute;
-    color: #1e3a8a !important;
-    left: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-}
+        th.sortable::after {
+            content: " ⇅";
+            font-size: 1.1em !important;
+            font-weight: bold !important;
+            opacity: 0.8 !important;
+            position: absolute;
+            color: #1e3a8a !important;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
 
-th.sortable.asc::after {
-    content: " ▲" !important;
-    color: var(--primary, #1e3a8a); /* رنگ اصلی دکمه‌ها */
-    opacity: 1 !important;
-}
+        th.sortable.asc::after {
+            content: " ▲" !important;
+            color: var(--primary, #1e3a8a); /* رنگ اصلی دکمه‌ها */
+            opacity: 1 !important;
+        }
 
-th.sortable.desc::after {
-    content: " ▼" !important;
-    color: var(--primary, #1e3a8a) !important;
-    opacity: 1 !important;
-}
-/* استایل پنجره پاپ‌آپ تاریخچه */
-.hist-modal[hidden] {
-    display: none !important;
-}
-.hist-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 99999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-}
-.hist-overlay {
-    position: absolute;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.65);
-    backdrop-filter: blur(2px);
-}
-.hist-dialog {
-    position: relative;
-    width: 100%;
-    max-width: 650px;
-    max-height: 85vh;
-    background: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    direction: rtl;
-    text-align: right;
-    font-family: inherit;
-}
-.hist-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 20px;
-    background: #f1f5f9;
-    border-bottom: 1px solid #cbd5e1;
-}
-.hist-header h3 {
-    margin: 0;
-    font-size: 16px;
-    color: #0f172a;
-    font-weight: 700;
-}
-.hist-close-btn {
-    background: none;
-    border: none;
-    font-size: 26px;
-    line-height: 1;
-    color: #64748b;
-    cursor: pointer;
-    padding: 0;
-}
-.hist-close-btn:hover {
-    color: #0f172a;
-}
-.hist-body {
-    padding: 16px 20px;
-    overflow-y: auto;
-    flex: 1;
-}
-.hist-msg {
-    text-align: center;
-    padding: 24px;
-    color: #64748b;
-    font-size: 14px;
-}
-.hist-timeline {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-.hist-card {
-    border: 1px solid #e2e8f0;
-    border-right: 4px solid #3b82f6;
-    border-radius: 8px;
-    padding: 12px 14px;
-    background: #f8fafc;
-    font-size: 13px;
-}
-.hist-card-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 8px;
-    color: #475569;
-    font-size: 12px;
-    border-bottom: 1px dashed #e2e8f0;
-    padding-bottom: 6px;
-}
-.hist-card-changes {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-}
-.hist-from, .hist-to {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 8px;
-    line-height: 1.6;
-}
-.hist-from {
-    background: #fff1f2;
-    border-color: #fecdd3;
-    color: #9f1239;
-}
-.hist-to {
-    background: #f0fdf4;
-    border-color: #bbf7d0;
-    color: #166534;
-}
-.hist-footer {
-    text-align: center;
-    margin-top: 14px;
-}
-.hist-btn-more {
-    background: #0284c7;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 20px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-.hist-btn-more:hover {
-    background: #0369a1;
-}
-.history-btn {
-    background: #e0f2fe;
-    color: #0369a1;
-    border: 1px solid #bae6fd;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s;
-}
-.history-btn:hover {
-    background: #0284c7;
-    color: #ffffff;
-}
+        th.sortable.desc::after {
+            content: " ▼" !important;
+            color: var(--primary, #1e3a8a) !important;
+            opacity: 1 !important;
+        }
 
-/* استایل مودال مدیریت کاربران */
-.users-modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.55);
-    z-index: 1050;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.users-modal-content {
-    background: #fff;
-    width: 95%;
-    max-width: 1050px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.25);
-    overflow: hidden;
-    direction: rtl;
-    display: flex;
-    flex-direction: column;
-}
-.users-modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 20px;
-    background: #1f2937;
-    color: #fff;
-}
-.users-close-btn {
-    background: transparent;
-    border: none;
-    color: #fff;
-    font-size: 26px;
-    cursor: pointer;
-    line-height: 1;
-}
-.users-modal-body {
-    padding: 16px 20px;
-}
-.users-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    text-align: center;
-}
-.users-table th {
-    background: #f3f4f6;
-    color: #374151;
-    padding: 10px 8px;
-    border: 1px solid #d1d5db;
-    font-weight: bold;
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-.users-table td {
-    padding: 8px;
-    border: 1px solid #e5e7eb;
-    vertical-align: middle;
-}
-.users-table tr:hover {
-    background: #f9fafb;
-}
-.badge-bale-on {
-    background: #dcfce7;
-    color: #15803d;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: bold;
-}
-.badge-bale-off {
-    background: #fee2e2;
-    color: #b91c1c;
-    padding: 3px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: bold;
-}
-.col-chassis,
-th.col-chassis,
-td.col-chassis {
-    white-space: nowrap !important; /* هرگز متن شکسته نشود */
-    text-overflow: clip;            /* ۳ نقطه نشود و کامل نمایش یابد */
-    word-break: keep-all !important;
-    width: max-content
-}
-  /* کانتینر کلی پس‌زمینه مودال */
-.app-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1050;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 16px;
-}
+        /* استایل پنجره پاپ‌آپ تاریخچه */
+        .hist-modal[hidden] {
+            display: none !important;
+        }
 
-/* پرده تاریک پشت پنجره با افکت شیشه‌ای مدرن */
-.app-modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(15, 23, 42, 0.55);
-    backdrop-filter: blur(3px);
-}
+        .hist-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
 
-/* بدنه پنجره سفید مودال */
-.app-modal-dialog {
-    position: relative;
-    background: #ffffff;
-    border-radius: 14px;
-    width: 100%;
-    max-width: 600px; /* عرض استاندارد مودال تاریخچه */
-    max-height: 88vh;
-    display: flex;
-    flex-direction: column;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    z-index: 1;
-    overflow: hidden;
-    animation: modalFadeIn 0.2s ease-out;
-}
+        .hist-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(2px);
+        }
 
-/* مودال عریض‌تر مخصوص جدول کاربران */
-.app-modal-lg {
-    max-width: 950px;
-}
+        .hist-dialog {
+            position: relative;
+            width: 100%;
+            max-width: 650px;
+            max-height: 85vh;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            direction: rtl;
+            text-align: right;
+            font-family: inherit;
+        }
 
-@keyframes modalFadeIn {
-    from { opacity: 0; transform: scale(0.96); }
-    to { opacity: 1; transform: scale(1); }
-}
+        .hist-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            background: #f1f5f9;
+            border-bottom: 1px solid #cbd5e1;
+        }
 
-/* هدر مشترک */
-.app-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 20px;
-    border-bottom: 1px solid #e2e8f0;
-    background: #f8fafc;
-}
+        .hist-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #0f172a;
+            font-weight: 700;
+        }
 
-.app-modal-title {
-    margin: 0;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #1e293b;
-}
+        .hist-close-btn {
+            background: none;
+            border: none;
+            font-size: 26px;
+            line-height: 1;
+            color: #64748b;
+            cursor: pointer;
+            padding: 0;
+        }
 
-/* دکمه بستن (ضربدر) */
-.app-modal-close {
-    background: transparent;
-    border: none;
-    font-size: 1.6rem;
-    line-height: 1;
-    color: #94a3b8;
-    cursor: pointer;
-    padding: 0 4px;
-    transition: color 0.15s ease;
-}
+        .hist-close-btn:hover {
+            color: #0f172a;
+        }
 
-.app-modal-close:hover {
-    color: #ef4444;
-}
+        .hist-body {
+            padding: 16px 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
 
-/* بدنه مودال با اسکرول عمودی داخلی تمیز */
-.app-modal-body {
-    padding: 18px 20px;
-    overflow-y: auto;
-    flex: 1 1 auto;
-}
+        .hist-msg {
+            text-align: center;
+            padding: 24px;
+            color: #64748b;
+            font-size: 14px;
+        }
 
-/* فوتر (در صورت نیاز) */
-.app-modal-footer {
-    padding: 12px 20px;
-    border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
-    text-align: center;
-}
+        .hist-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-/* تنظیم جدول داخل مودال */
-.app-modal-body .table-responsive {
-    max-height: 60vh;
-    overflow-x: auto;
-    overflow-y: auto;
-}      
-</style>
+        .hist-card {
+            border: 1px solid #e2e8f0;
+            border-right: 4px solid #3b82f6;
+            border-radius: 8px;
+            padding: 12px 14px;
+            background: #f8fafc;
+            font-size: 13px;
+        }
+
+        .hist-card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            color: #475569;
+            font-size: 12px;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: 6px;
+        }
+
+        .hist-card-changes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .hist-from, .hist-to {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px;
+            line-height: 1.6;
+        }
+
+        .hist-from {
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #9f1239;
+        }
+
+        .hist-to {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .hist-footer {
+            text-align: center;
+            margin-top: 14px;
+        }
+
+        .hist-btn-more {
+            background: #0284c7;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .hist-btn-more:hover {
+            background: #0369a1;
+        }
+
+        .history-btn {
+            background: #e0f2fe;
+            color: #0369a1;
+            border: 1px solid #bae6fd;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .history-btn:hover {
+            background: #0284c7;
+            color: #ffffff;
+        }
+
+        /* استایل مودال مدیریت کاربران */
+        .users-modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.55);
+            z-index: 1050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .users-modal-content {
+            background: #fff;
+            width: 95%;
+            max-width: 1050px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25);
+            overflow: hidden;
+            direction: rtl;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .users-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            background: #1f2937;
+            color: #fff;
+        }
+
+        .users-close-btn {
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 26px;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .users-modal-body {
+            padding: 16px 20px;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .users-table th {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 10px 8px;
+            border: 1px solid #d1d5db;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .users-table td {
+            padding: 8px;
+            border: 1px solid #e5e7eb;
+            vertical-align: middle;
+        }
+
+        .users-table tr:hover {
+            background: #f9fafb;
+        }
+
+        .badge-bale-on {
+            background: #dcfce7;
+            color: #15803d;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .badge-bale-off {
+            background: #fee2e2;
+            color: #b91c1c;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .col-chassis,
+        th.col-chassis,
+        td.col-chassis {
+            white-space: nowrap !important; /* هرگز متن شکسته نشود */
+            text-overflow: clip;            /* ۳ نقطه نشود و کامل نمایش یابد */
+            word-break: keep-all !important;
+            width: max-content
+        }
+
+        /* کانتینر کلی پس‌زمینه مودال */
+        .app-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1050;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        /* پرده تاریک پشت پنجره با افکت شیشه‌ای مدرن */
+        .app-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.55);
+            backdrop-filter: blur(3px);
+        }
+
+        /* بدنه پنجره سفید مودال */
+        .app-modal-dialog {
+            position: relative;
+            background: #ffffff;
+            border-radius: 14px;
+            width: 100%;
+            max-width: 600px; /* عرض استاندارد مودال تاریخچه */
+            max-height: 88vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            z-index: 1;
+            overflow: hidden;
+            animation: modalFadeIn 0.2s ease-out;
+        }
+
+        /* مودال عریض‌تر مخصوص جدول کاربران */
+        .app-modal-lg {
+            max-width: 950px;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.96); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* هدر مشترک */
+        .app-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid #e2e8f0;
+            background: #f8fafc;
+        }
+
+        .app-modal-title {
+            margin: 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* دکمه بستن (ضربدر) */
+        .app-modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.6rem;
+            line-height: 1;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 0 4px;
+            transition: color 0.15s ease;
+        }
+
+        .app-modal-close:hover {
+            color: #ef4444;
+        }
+
+        /* بدنه مودال با اسکرول عمودی داخلی تمیز */
+        .app-modal-body {
+            padding: 18px 20px;
+            overflow-y: auto;
+            flex: 1 1 auto;
+        }
+
+        /* فوتر (در صورت نیاز) */
+        .app-modal-footer {
+            padding: 12px 20px;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            text-align: center;
+        }
+
+        /* تنظیم جدول داخل مودال */
+        .app-modal-body .table-responsive {
+            max-height: 60vh;
+            overflow-x: auto;
+            overflow-y: auto;
+        }
+    </style>
 </head>
+
 <body>
-<!-- <div id="historyModal" class="hist-modal" hidden>
-    <div class="hist-overlay" onclick="closeHistoryModal()"></div>
-    <div class="hist-dialog">
-        <div class="hist-header">
-            <h3 id="histTitle">تاریخچه تغییر وضعیت خودرو</h3>
-            <button type="button" class="hist-close-btn" onclick="closeHistoryModal()">&times;</button>
+    <!-- <div id="historyModal" class="hist-modal" hidden>
+        <div class="hist-overlay" onclick="closeHistoryModal()"></div>
+        <div class="hist-dialog">
+            <div class="hist-header">
+                <h3 id="histTitle">تاریخچه تغییر وضعیت خودرو</h3>
+                <button type="button" class="hist-close-btn" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div class="hist-body">
+                <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
+                <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
+                <div id="histTimeline" class="hist-timeline"></div>
+                <div class="hist-footer">
+                    <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
+                        بارگذاری ۵۰ تای بعدی
+                    </button>
+                </div>
+            </div>
         </div>
-        <div class="hist-body">
-            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
-            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
-            <div id="histTimeline" class="hist-timeline"></div>
-            <div class="hist-footer">
+    </div> -->
+    
+    <!-- ۱. مودال تاریخچه تغییر وضعیت -->
+    <div id="historyModal" class="app-modal" style="display: none;">
+        <div class="app-modal-overlay" onclick="closeHistoryModal()"></div>
+        <div class="app-modal-dialog">
+            <div class="app-modal-header">
+                <h3 id="histTitle" class="app-modal-title">تاریخچه تغییر وضعیت خودرو</h3>
+                <button type="button" class="app-modal-close" onclick="closeHistoryModal()" aria-label="بستن">&times;</button>
+            </div>
+            <div class="app-modal-body">
+                <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
+                <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
+                <div id="histTimeline" class="hist-timeline"></div>
+            </div>
+            <div class="app-modal-footer">
                 <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
                     بارگذاری ۵۰ تای بعدی
                 </button>
             </div>
         </div>
     </div>
-</div> -->
-<!-- ۱. مودال تاریخچه تغییر وضعیت -->
-<div id="historyModal" class="app-modal" style="display: none;">
-    <div class="app-modal-overlay" onclick="closeHistoryModal()"></div>
-    <div class="app-modal-dialog">
-        <div class="app-modal-header">
-            <h3 id="histTitle" class="app-modal-title">تاریخچه تغییر وضعیت خودرو</h3>
-            <button type="button" class="app-modal-close" onclick="closeHistoryModal()" aria-label="بستن">&times;</button>
+
+    <!-- ۲. مودال لیست کاربران -->
+    <!-- مودال لیست و مدیریت کاربران -->
+    <div id="usersModal" class="app-modal" style="display: none;">
+        <div class="app-modal-overlay" onclick="closeUsersModal()"></div>
+        <div class="app-modal-dialog app-modal-lg">
+            <div class="app-modal-header">
+                <h3 class="app-modal-title">👥 لیست و مشخصات تمام کاربران سامانه</h3>
+                <button type="button" class="app-modal-close" onclick="closeUsersModal()" aria-label="بستن">&times;</button>
+            </div>
+            <div class="app-modal-body" style="padding: 20px;">
+                <!-- پیام بارگذاری -->
+                <div id="usersLoading" style="text-align: center; padding: 20px; font-weight: bold; color: #0284c7;">
+                    در حال بارگذاری اطلاعات کاربران...
+                </div>
+
+                <!-- جدول کاربران -->
+                <div id="usersTableWrapper" style="display: none; overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 13px;">
+                        <thead>
+                            <tr style="background-color: #f1f5f9; color: #334155;">
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">کد کاربر</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">نام کاربری</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">رمز عبور</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">نام و نام خانوادگی</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">نقش</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">موبایل</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">شناسه بله</th>
+                                <th style="padding: 10px; border: 1px solid #cbd5e1;">وضعیت بله</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTableBody">
+                            <!-- داده‌ها از طریق جاوااسکریپت پر می‌شوند -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-        <div class="app-modal-body">
-            <div id="histLoading" class="hist-msg" style="display: none;">در حال دریافت اطلاعات...</div>
-            <div id="histEmpty" class="hist-msg" style="display: none;">هیچ سابقه تغییری برای این خودرو ثبت نشده است.</div>
-            <div id="histTimeline" class="hist-timeline"></div>
+    </div>
+
+    <div class="container">
+        <!-- هدر: اطلاعات کاربر و خروج -->
+        <div class="header-bar">
+            <div class="user-info">
+                <span class="user-badge">
+                    👤 {{ user.name }} {{ user.lastname }} ({{ user.username }})
+                </span>
+            </div>
+            <div>
+                <a href="/logout" class="btn-logout">خروج</a>
+            </div>
         </div>
-        <div class="app-modal-footer">
-            <button type="button" id="histLoadMoreBtn" class="hist-btn-more" style="display: none;">
-                بارگذاری ۵۰ تای بعدی
+
+        <!-- کنترل‌ها: فیلترها و دکمه‌های افزودن -->
+        {% if user.role in ["admin"]%}
+            <button type="button" class="btn btn-info text-white me-2" onclick="openUsersModal()">
+                👥 مدیریت و مشاهده کاربران
             </button>
-        </div>
-    </div>
-</div>
-
-<!-- ۲. مودال لیست کاربران -->
-<!-- مودال لیست و مدیریت کاربران -->
-<div id="usersModal" class="app-modal" style="display: none;">
-    <div class="app-modal-overlay" onclick="closeUsersModal()"></div>
-    <div class="app-modal-dialog app-modal-lg">
-        <div class="app-modal-header">
-            <h3 class="app-modal-title">👥 لیست و مشخصات تمام کاربران سامانه</h3>
-            <button type="button" class="app-modal-close" onclick="closeUsersModal()" aria-label="بستن">&times;</button>
-        </div>
-        <div class="app-modal-body" style="padding: 20px;">
-            <!-- پیام بارگذاری -->
-            <div id="usersLoading" style="text-align: center; padding: 20px; font-weight: bold; color: #0284c7;">
-                در حال بارگذاری اطلاعات کاربران...
-            </div>
-            
-            <!-- جدول کاربران -->
-            <div id="usersTableWrapper" style="display: none; overflow-x: auto;">
-                <table style="width: 100%; border-collapse: collapse; text-align: center; font-size: 13px;">
-                    <thead>
-                        <tr style="background-color: #f1f5f9; color: #334155;">
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">کد کاربر</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">نام کاربری</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">رمز عبور</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">نام و نام خانوادگی</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">نقش</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">موبایل</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">شناسه بله</th>
-                            <th style="padding: 10px; border: 1px solid #cbd5e1;">وضعیت بله</th>
-                        </tr>
-                    </thead>
-                    <tbody id="usersTableBody">
-                        <!-- داده‌ها از طریق جاوااسکریپت پر می‌شوند -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-
-            
-<div class="container">
-    <!-- هدر: اطلاعات کاربر و خروج -->
-    <div class="header-bar">
-        <div class="user-info">
-            <span class="user-badge">
-                👤 {{ user.name }} {{ user.lastname }} ({{ user.username }})
-            </span>
-        </div>
-        <div>
-            <a href="/logout" class="btn-logout">خروج</a>
-        </div>
-    </div>
-
-    <!-- کنترل‌ها: فیلترها و دکمه‌های افزودن -->
-    {% if user.role in ["admin"]%}
-    <button type="button" class="btn btn-info text-white me-2" onclick="openUsersModal()">
-        👥 مدیریت و مشاهده کاربران
-    </button>
-{% endif %}
-    <div class="controls-bar">
-        <form class="filter-form" method="GET" action="/cars">
-        <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
-        
-        <!-- انتخاب وضعیت بر اساس ALLOWED_STATUSES -->
-        <select name="status">
-            <option value="">-- همه وضعیت‌ها --</option>
-            {% for st in allowed_statuses %}
-                <option value="{{ st }}" {% if status == st %}selected{% endif %}>{{ st }}</option>
-            {% endfor %}
-        </select>
-        
-        <!-- انتخاب محل بر اساس ALLOWED_PLACES -->
-        <select name="place">
-            <option value="">-- همه موارد --</option>
-            {% for pl in allowed_places %}
-                <option value="{{ pl }}" {% if place == pl %}selected{% endif %}>{{ pl }}</option>
-            {% endfor %}
-        </select>
-        
-        <button type="submit">اعمال فیلتر</button>
-        {% if q or status or place %}
-            <a href="/cars">پاک کردن فیلترها</a>
         {% endif %}
-    </form>
-       <div class="admin-actions">
-            {% if user.role in roles_can_manage %}
-                <button class="btn-add-car" onclick="openModal('addCarModal')">➕ افزودن خودرو</button>
-                <button class="btn-add-car" style="background-color: var(--primary);" onclick="openModal('addUserModal')">👤 افزودن کاربر</button>
-            {% endif %}
-        </div>
-    </div>
+        
+        <div class="controls-bar">
+            <form class="filter-form" method="GET" action="/cars">
+                <input type="text" name="q" placeholder="جستجو در عنوان، شاسی، کد..." value="{{ q or '' }}">
 
-    <!-- اسکرول افقی هماهنگ بالا -->
-    <div id="tableTopScroll" class="top-scroll" dir="rtl" aria-label="پیمایش افقی جدول">
-        <div id="tableTopSpacer"></div>
-    </div>
-
-    
-    <!-- جدول نمایش خودروها -->
-    <div class="table-responsive" style="width: 100%; overflow-x: auto;" id="tableBottomScroll" dir="rtl">
-        <table id="carsTable" style="width: 100%;">
-            <thead>
-                <tr>
-                    <th style="width: 35px;">سایر</th>
-                    {% for col in shown_cols %}
-                    {% if col in ["VIN"]%}
-                        <th class="sortable col-chassis" data-col="{{ col }}">شماره شاسی</th>
-                    {% else %}
-                        <th class="sortable" data-col="{{ col }}">{{ column_titles.get(col, col) }}</th>    
-                    {% endif %}
+                <!-- انتخاب وضعیت بر اساس ALLOWED_STATUSES -->
+                <select name="status">
+                    <option value="">-- همه وضعیت‌ها --</option>
+                    {% for st in allowed_statuses %}
+                        <option value="{{ st }}" {% if status == st %}selected{% endif %}>{{ st }}</option>
                     {% endfor %}
-                    <th>عملیات تغییر وضعیت و محل</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for car in cars %}
-                    {% if status or place or (car.status not in ["فروخته شده", "غیرقابل فروش"]) %}
-                    <tr id="row-{{ car.car_code }}"
-                        class="car-row"
-                        data-car-code="{{ car.car_code }}" data-status="{{ car.status }}">
-                        <td>
-                            <button type="button"
-                                    class="toggle-btn"
-                                    aria-expanded="false"
-                                    aria-controls="details-{{ loop.index }}"
-                                    onclick="toggleDetails({{ loop.index }}, this)">◀</button>
-                        </td>
-                        
+                </select>
+
+                <!-- انتخاب محل بر اساس ALLOWED_PLACES -->
+                <select name="place">
+                    <option value="">-- همه موارد --</option>
+                    {% for pl in allowed_places %}
+                        <option value="{{ pl }}" {% if place == pl %}selected{% endif %}>{{ pl }}</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit">اعمال فیلتر</button>
+                {% if q or status or place %}
+                    <a href="/cars">پاک کردن فیلترها</a>
+                {% endif %}
+            </form>
+            <div class="admin-actions">
+                {% if user.role in roles_can_manage %}
+                    <button class="btn-add-car" onclick="openModal('addCarModal')">➕ افزودن خودرو</button>
+                    <button class="btn-add-car" style="background-color: var(--primary);" onclick="openModal('addUserModal')">👤 افزودن کاربر</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- اسکرول افقی هماهنگ بالا -->
+        <div id="tableTopScroll" class="top-scroll" dir="rtl" aria-label="پیمایش افقی جدول">
+            <div id="tableTopSpacer"></div>
+        </div>
+
+        <!-- جدول نمایش خودروها -->
+        <div class="table-responsive" style="width: 100%; overflow-x: auto;" id="tableBottomScroll" dir="rtl">
+            <table id="carsTable" style="width: 100%;">
+                <thead>
+                    <tr>
+                        <th style="width: 35px;">سایر</th>
                         {% for col in shown_cols %}
                             {% if col in ["VIN"]%}
-                                <td class="col-chassis" style="direction: ltr; font-family: monospace;">
-                                    {{ car.VIN }}
-                                </td>
+                                <th class="sortable col-chassis" data-col="{{ col }}">شماره شاسی</th>
                             {% else %}
-                            <td class="col-options">
-                                <span class="cell-wrap">{{ car[col] }}</span>
-                            </td>
-                        {% endif %}
+                                <th class="sortable" data-col="{{ col }}">{{ column_titles.get(col, col) }}</th>
+                            {% endif %}
                         {% endfor %}
-                        <td>
-                        {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
-                            <span style="display: inline-block; padding: 6px 12px; background-color: #e2e8f0; color: #64748b; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
-                                🔒 قفل (فقط مدیر)
-                            </span>
-                        {% else %}
-                            <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
-                                <input type="hidden" name="car_code" value="{{ car.car_code }}">
-
-                                <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
-                                    {% for st in allowed_statuses %}
-                                        <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
-                                    {% endfor %}
-                                </select>
-
-                                <select name="place" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
-                                    {% for pl in allowed_places %}
-                                        <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
-                                    {% endfor %}
-                                </select>
-
-                                <button type="submit" style="background-color: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">
-                                    ثبت
-                                </button>
-                            </form>
-                        {% endif %}
-                        <button type="button" 
-                            class="history-btn" 
-                            data-car-code="{{ car.car_code }}" 
-                            title="تاریخچه تغییرات">
-                            📋 تاریخچه
-                        </button>
-
-                        </td>
+                        <th>عملیات تغییر وضعیت و محل</th>
                     </tr>
+                </thead>
+                <tbody>
+                    {% for car in cars %}
+                        {% if status or place or (car.status not in ["فروخته شده", "غیرقابل فروش"]) %}
+                            <tr id="row-{{ car.car_code }}"
+                                class="car-row"
+                                data-car-code="{{ car.car_code }}" data-status="{{ car.status }}">
+                                <td>
+                                    <button type="button"
+                                            class="toggle-btn"
+                                            aria-expanded="false"
+                                            aria-controls="details-{{ loop.index }}"
+                                            onclick="toggleDetails({{ loop.index }}, this)">◀</button>
+                                </td>
 
-                    <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
-                    <tr id="details-{{ loop.index }}" 
-                        class="details-row"
-                        data-parent="{{ car.car_code }}" hidden style="background-color: #f8fafc;">
-                            <td colspan="{{ shown_cols|length + 2 }}" style="padding: 10px 15px;">
-                            <div class="other-details-container">
-                                <div class="other-details-grid">
-                                    {% for col in other_cols %}
-                                        {% set val = car.get(col) %}
-                                        <div class="other-detail-item">
-                                            <span class="other-detail-label">{{ column_titles.get(col, col) }}:</span>
-                                            <span class="other-detail-value">
-                                                {% if val and val|string != 'nan' and val|string != 'None' and val|string|trim != '' %}
-                                                    {{ val }}
-                                                {% else %}
-                                                    -
-                                                {% endif %}
-                                            </span>
+                                {% for col in shown_cols %}
+                                    {% if col in ["VIN"]%}
+                                        <td class="col-chassis" style="direction: ltr; font-family: monospace;">
+                                            {{ car.VIN }}
+                                        </td>
+                                    {% else %}
+                                        <td class="col-options">
+                                            <span class="cell-wrap">{{ car[col] }}</span>
+                                        </td>
+                                    {% endif %}
+                                {% endfor %}
+                                <td>
+                                    {% if car.status == 'فروخته شده' and user.role not in roles_can_manage %}
+                                        <span style="display: inline-block; padding: 6px 12px; background-color: #e2e8f0; color: #64748b; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: not-allowed;">
+                                            🔒 قفل (فقط مدیر)
+                                        </span>
+                                    {% else %}
+                                        <form method="POST" action="/cars/update_status" style="display: flex; gap: 5px; align-items: center; justify-content: center;">
+                                            <input type="hidden" name="car_code" value="{{ car.car_code }}">
+
+                                            <select name="status" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                                                {% for st in allowed_statuses %}
+                                                    <option value="{{ st }}" {% if car.status == st %}selected{% endif %}>{{ st }}</option>
+                                                {% endfor %}
+                                            </select>
+
+                                            <select name="place" required style="padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border); font-size: 12px;">
+                                                {% for pl in allowed_places %}
+                                                    <option value="{{ pl }}" {% if car.place == pl %}selected{% endif %}>{{ pl }}</option>
+                                                {% endfor %}
+                                            </select>
+
+                                            <button type="submit" style="background-color: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                                                ثبت
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    <button type="button"
+                                            class="history-btn"
+                                            data-car-code="{{ car.car_code }}"
+                                            title="تاریخچه تغییرات">
+                                        📋 تاریخچه
+                                    </button>
+
+                                </td>
+                            </tr>
+
+                            <!-- ردیف مخفی اطلاعات فرعی (OTHER_CAR_COLS) -->
+                            <tr id="details-{{ loop.index }}"
+                                class="details-row"
+                                data-parent="{{ car.car_code }}" hidden style="background-color: #f8fafc;">
+                                <td colspan="{{ shown_cols|length + 2 }}" style="padding: 10px 15px;">
+                                    <div class="other-details-container">
+                                        <div class="other-details-grid">
+                                            {% for col in other_cols %}
+                                                {% set val = car.get(col) %}
+                                                <div class="other-detail-item">
+                                                    <span class="other-detail-label">{{ column_titles.get(col, col) }}:</span>
+                                                    <span class="other-detail-value">
+                                                        {% if val and val|string != 'nan' and val|string != 'None' and val|string|trim != '' %}
+                                                            {{ val }}
+                                                        {% else %}
+                                                            -
+                                                        {% endif %}
+                                                    </span>
+                                                </div>
+                                            {% endfor %}
                                         </div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                {% endif %}
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Modal 1: ثبت خودرو جدید -->
-<div id="addCarModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 style="margin: 0;">ثبت اطلاعات خودرو جدید</h3>
-            <span class="close-btn" onclick="closeModal('addCarModal')">&times;</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-        <form id="addCarForm">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label>شماره شاسی (VIN) *</label>
-                    <input type="text" name="VIN" required placeholder="۱۷ رقمی">
-                </div>
-                <div class="form-group">
-                    <label>مشخصات / عنوان *</label>
-                    <input type="text" name="title" required placeholder="مثال: تارا اتوماتیک V4">
-                </div>
-                <div class="form-group">
-                    <label>سال مدل (میلادی) *</label>
-                    <input type="text" name="model_year" required placeholder="2026">
-                </div>
-                <div class="form-group">
-                    <label>سال ساخت (میلادی)</label>
-                    <input type="text" name="production_year" placeholder="2026">
-                </div>
-                <div class="form-group">
-                    <label>رنگ</label>
-                    <input type="text" name="color" placeholder="سفید">
-                </div>
-                <div class="form-group">
-                    <label>مالک</label>
-                    <input type="text" name="owner" placeholder="نام مالک">
-                </div>
-                <div class="form-group">
-                    <label>محل استقرار *</label>
-                    <select name="place" required>
-                        {% for pl in allowed_places %}
-                            <option value="{{ pl }}">{{ pl }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>وضعیت اولیه *</label>
-                    <select name="status" required>
-                        {% for st in allowed_statuses %}
-                            <option value="{{ st }}">{{ st }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <label for="warrantyStartInput" style="margin-bottom: 0;">شروع گارانتی</label>
-                        <label style="font-size: 11px; font-weight: normal; color: var(--danger); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-bottom: 0;">
-                            <input type="checkbox" id="noGuaranteeCheckbox" onchange="toggleWarrantyInput(this)">
-                            فاقد گارانتی
-                        </label>
+    </div>
+
+    <!-- Modal 1: ثبت خودرو جدید -->
+    <div id="addCarModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 style="margin: 0;">ثبت اطلاعات خودرو جدید</h3>
+                <span class="close-btn" onclick="closeModal('addCarModal')">&times;</span>
+            </div>
+            <form id="addCarForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>شماره شاسی (VIN) *</label>
+                        <input type="text" name="VIN" required placeholder="۱۷ رقمی">
                     </div>
-                    
-                    <input type="text" 
-                           id="warrantyStartInput" 
-                           name="No_Guarantee" 
-                           placeholder="انتخاب تاریخ شروع گارانتی..."
-                           autocomplete="off">
-                </div>
+                    <div class="form-group">
+                        <label>مشخصات / عنوان *</label>
+                        <input type="text" name="title" required placeholder="مثال: تارا اتوماتیک V4">
+                    </div>
+                    <div class="form-group">
+                        <label>سال مدل (میلادی) *</label>
+                        <input type="text" name="model_year" required placeholder="2026">
+                    </div>
+                    <div class="form-group">
+                        <label>سال ساخت (میلادی)</label>
+                        <input type="text" name="production_year" placeholder="2026">
+                    </div>
+                    <div class="form-group">
+                        <label>رنگ</label>
+                        <input type="text" name="color" placeholder="سفید">
+                    </div>
+                    <div class="form-group">
+                        <label>مالک</label>
+                        <input type="text" name="owner" placeholder="نام مالک">
+                    </div>
+                    <div class="form-group">
+                        <label>محل استقرار *</label>
+                        <select name="place" required>
+                            {% for pl in allowed_places %}
+                                <option value="{{ pl }}">{{ pl }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>وضعیت اولیه *</label>
+                        <select name="status" required>
+                            {% for st in allowed_statuses %}
+                                <option value="{{ st }}">{{ st }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <label for="warrantyStartInput" style="margin-bottom: 0;">شروع گارانتی</label>
+                            <label style="font-size: 11px; font-weight: normal; color: var(--danger); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-bottom: 0;">
+                                <input type="checkbox" id="noGuaranteeCheckbox" onchange="toggleWarrantyInput(this)">
+                                فاقد گارانتی
+                            </label>
+                        </div>
 
-                <!-- وضعیت مدارک / سند -->
-                <div class="form-group">
-                    <label>وضعیت سند / مدارک (doc)</label>
-                    <input type="text" name="doc" placeholder="مثال: نمایشگاه / نزد مالک / رهن">
-                </div>
-                
-                <!-- تعداد سوئیچ -->
-                <div class="form-group">
-                    <label>تعداد سوئیچ (keys)</label>
-                    <input type="text" name="keys" placeholder="مثال: ۲ عدد">
-                </div>
-                
-                <!-- قیمت ریالی -->
-                <div class="form-group">
-                    <label>قیمت (ریال)</label>
-                    <input type="text" name="price(Rials)" placeholder="مثال: 15,000,000,000" style="direction: ltr;">
-                </div>
+                        <input type="text"
+                               id="warrantyStartInput"
+                               name="No_Guarantee"
+                               placeholder="انتخاب تاریخ شروع گارانتی..."
+                               autocomplete="off">
+                    </div>
 
-                
-                <div class="form-group">
-                    <label for="dueDateInput">موعد سررسید وکالت</label>
-                    <input type="text" 
-                           id="dueDateInput" 
-                           name="Due" 
-                           placeholder="مثال: ۱۴۰۳/۰۵/۱۵ یا فوری"> 
-                           <!-- placeholder را کمی تغییر دادم تا حالت فوری هم در نظر گرفته شود -->
-                </div>
-                <div class="form-group full-span">
-                    <label>متعلقات و آپشن‌ها</label>
-                    <input type="text" name="options" placeholder="کیلس، گرمکن، رادار...">
-                </div>
-                <div class="form-group full-span">
-                    <label>مشکلات ظاهری / رنگ</label>
-                    <input type="text" name="physical_issue" placeholder="بدون رنگ یا لیسه...">
-                </div>
-                <div class="form-group full-span">
-                    <label>مشکلات فنی</label>
-                    <input type="text" name="technical_issue" placeholder="سالم / ایراد باتری...">
-                </div>
-            </div>
-            <button type="submit" class="btn-modal-submit" id="carSubmitBtn">ثبت خودرو</button>
-        </form>
-    </div>
-</div>
+                    <!-- وضعیت مدارک / سند -->
+                    <div class="form-group">
+                        <label>وضعیت سند / مدارک (doc)</label>
+                        <input type="text" name="doc" placeholder="مثال: نمایشگاه / نزد مالک / رهن">
+                    </div>
 
-<!-- Modal 2: افزودن کاربر جدید -->
-<div id="addUserModal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header">
-            <h3 style="margin: 0;">ثبت و افزودن کاربر جدید</h3>
-            <span class="close-btn" onclick="closeModal('addUserModal')">&times;</span>
+                    <!-- تعداد سوئیچ -->
+                    <div class="form-group">
+                        <label>تعداد سوئیچ (keys)</label>
+                        <input type="text" name="keys" placeholder="مثال: ۲ عدد">
+                    </div>
+
+                    <!-- قیمت ریالی -->
+                    <div class="form-group">
+                        <label>قیمت (ریال)</label>
+                        <input type="text" name="price(Rials)" placeholder="مثال: 15,000,000,000" style="direction: ltr;">
+                    </div>
+
+
+                    <div class="form-group">
+                        <label for="dueDateInput">موعد سررسید وکالت</label>
+                        <input type="text"
+                               id="dueDateInput"
+                               name="Due"
+                               placeholder="مثال: ۱۴۰۳/۰۵/۱۵ یا فوری">
+                        <!-- placeholder را کمی تغییر دادم تا حالت فوری هم در نظر گرفته شود -->
+                    </div>
+                    <div class="form-group full-span">
+                        <label>متعلقات و آپشن‌ها</label>
+                        <input type="text" name="options" placeholder="کیلس، گرمکن، رادار...">
+                    </div>
+                    <div class="form-group full-span">
+                        <label>مشکلات ظاهری / رنگ</label>
+                        <input type="text" name="physical_issue" placeholder="بدون رنگ یا لیسه...">
+                    </div>
+                    <div class="form-group full-span">
+                        <label>مشکلات فنی</label>
+                        <input type="text" name="technical_issue" placeholder="سالم / ایراد باتری...">
+                    </div>
+                </div>
+                <button type="submit" class="btn-modal-submit" id="carSubmitBtn">ثبت خودرو</button>
+            </form>
         </div>
-        <form id="addUserForm">
-            <div style="display: flex; flex-direction: column; gap: 12px;">
-                <div class="form-group">
-                    <label>نام کاربری (انگلیسی و بدون فاصله) *</label>
-                    <input type="text" name="username" required placeholder="مثال: ali_rezaei">
-                </div>
-                <div class="form-group">
-                    <label>رمز عبور *</label>
-                    <input type="text" name="password" required placeholder="رمز عبور">
-                </div>
-                <div class="form-group">
-                    <label>نام *</label>
-                    <input type="text" name="name" required placeholder="علی">
-                </div>
-                <div class="form-group">
-                    <label>نام خانوادگی *</label>
-                    <input type="text" name="lastname" required placeholder="رضایی">
-                </div>
-                <div class="form-group">
-                    <label>نقش *</label>
-                    <select name="role" id="userRoleSelect" class="form-control" required>
-                        {% for r in allowed_roles %}
-                            <option value="{{ r.value }}">{{ r.label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>شماره موبایل (جهت اتصال بله) *</label>
-                    <input type="text" name="phone" placeholder="0912xxxxxxx">
-                </div>
-            </div>
-            <button type="submit" class="btn-modal-submit" id="userSubmitBtn" style="background-color: var(--primary);">ثبت کاربر</button>
-        </form>
     </div>
-</div>
 
-<!-- استایل تقویم -->
-<link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
+    <!-- Modal 2: افزودن کاربر جدید -->
+    <div id="addUserModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="margin: 0;">ثبت و افزودن کاربر جدید</h3>
+                <span class="close-btn" onclick="closeModal('addUserModal')">&times;</span>
+            </div>
+            <form id="addUserForm">
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <div class="form-group">
+                        <label>نام کاربری (انگلیسی و بدون فاصله) *</label>
+                        <input type="text" name="username" required placeholder="مثال: ali_rezaei">
+                    </div>
+                    <div class="form-group">
+                        <label>رمز عبور *</label>
+                        <input type="text" name="password" required placeholder="رمز عبور">
+                    </div>
+                    <div class="form-group">
+                        <label>نام *</label>
+                        <input type="text" name="name" required placeholder="علی">
+                    </div>
+                    <div class="form-group">
+                        <label>نام خانوادگی *</label>
+                        <input type="text" name="lastname" required placeholder="رضایی">
+                    </div>
+                    <div class="form-group">
+                        <label>نقش *</label>
+                        <select name="role" id="userRoleSelect" class="form-control" required>
+                            {% for r in allowed_roles %}
+                                <option value="{{ r.value }}">{{ r.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>شماره موبایل (جهت اتصال بله) *</label>
+                        <input type="text" name="phone" placeholder="0912xxxxxxx">
+                    </div>
+                </div>
+                <button type="submit" class="btn-modal-submit" id="userSubmitBtn" style="background-color: var(--primary);">ثبت کاربر</button>
+            </form>
+        </div>
+    </div>
 
-<!-- ۱. جی‌کوئری -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- استایل تقویم -->
+    <link rel="stylesheet" href="https://unpkg.com/persian-datepicker@1.2.0/dist/css/persian-datepicker.min.css"/>
 
-<!-- ۲. هسته تاریخ شمسی -->
-<script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+    <!-- ۱. جی‌کوئری -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- ۳. تقویم شمسی -->
-<script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
+    <!-- ۲. هسته تاریخ شمسی -->
+    <script src="https://unpkg.com/persian-date@1.1.0/dist/persian-date.min.js"></script>
+
+    <!-- ۳. تقویم شمسی -->
+    <script src="https://unpkg.com/persian-datepicker@1.2.0/dist/js/persian-datepicker.min.js"></script>
 
 
-<script>
-// ۱. توابع سراسری برای باز و بسته کردن مدال‌ها (باید بیرون از ready باشند تا onclick کار کند)
-function openModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) modal.style.display = "block";
-}
+    <script>
+        // ۱. توابع سراسری برای باز و بسته کردن مدال‌ها (باید بیرون از ready باشند تا onclick کار کند)
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.style.display = "block";
+        }
 
-function closeModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) modal.style.display = "none";    
-}
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (modal) modal.style.display = "none";
+        }
 
-// بستن مدال با کلیک روی پس‌زمینه تیره
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = "none";
-    }
-};
-
-// تابع مدیریت تیک «فاقد گارانتی»
-function toggleWarrantyInput(checkbox) {
-    const $input = $("#warrantyStartInput");
-    
-    if (checkbox.checked) {
-        $input.data("prev-val", $input.val());
-        $input.val("فاقد گارانتی");
-        $input.prop("readonly", true);
-        $input.css({
-            "background-color": "#f1f5f9",
-            "color": "#64748b",
-            "cursor": "not-allowed"
-        });
-    } else {
-        $input.prop("readonly", false);
-        $input.val($input.data("prev-val") || "");
-        $input.attr("placeholder", "انتخاب تاریخ شروع گارانتی...");
-        $input.css({
-            "background-color": "",
-            "color": "",
-            "cursor": "text"
-        });
-        $input.focus();
-    }
-}
-$(document).ready(function() {
-    try {
-    if (typeof $.fn.pDatepicker === 'function') {
-            if ($("#warrantyStartInput").length) {
-                $("#warrantyStartInput").pDatepicker({
-                    format: 'YYYY/MM/DD',
-                    autoClose: true,
-                    initialValue: false,
-                    toolbox: { calendarSwitch: { enabled: false } }
-                });
+        // بستن مدال با کلیک روی پس‌زمینه تیره
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = "none";
             }
-            if ($("#dueDateInput").length) {
-                $("#dueDateInput").pDatepicker({
-                    format: 'YYYY/MM/DD',
-                    autoClose: true,
-                    initialValue: false,
-                    toolbox: { calendarSwitch: { enabled: false } }
+        };
+
+        // تابع مدیریت تیک «فاقد گارانتی»
+        function toggleWarrantyInput(checkbox) {
+            const $input = $("#warrantyStartInput");
+
+            if (checkbox.checked) {
+                $input.data("prev-val", $input.val());
+                $input.val("فاقد گارانتی");
+                $input.prop("readonly", true);
+                $input.css({
+                    "background-color": "#f1f5f9",
+                    "color": "#64748b",
+                    "cursor": "not-allowed"
                 });
+            } else {
+                $input.prop("readonly", false);
+                $input.val($input.data("prev-val") || "");
+                $input.attr("placeholder", "انتخاب تاریخ شروع گارانتی...");
+                $input.css({
+                    "background-color": "",
+                    "color": "",
+                    "cursor": "text"
+                });
+                $input.focus();
             }
         }
-    } catch (err) {
-        console.warn("خطا در راه‌اندازی تقویم شمسی:", err);
-    }
-});
-
-    // باز و بسته کردن سطر اطلاعات تکمیلی خودرو (OTHER_CAR_COLS)
-    function toggleDetails(index, button) {
-        const row = document.getElementById('details-' + index);
-        if (!row) return;
-
-        row.hidden = !row.hidden;
-        button.setAttribute('aria-expanded', String(!row.hidden));
-        button.textContent = row.hidden ? '◀' : '▼';
-
-        if (typeof updateTopScrollbar === "function") {
-            requestAnimationFrame(updateTopScrollbar);
-        }    
-    }
-
-    const topScroll = document.getElementById('tableTopScroll');
-    const bottomScroll = document.getElementById('tableBottomScroll');
-    const topSpacer = document.getElementById('tableTopSpacer');
-    const carsTable = document.getElementById('carsTable');
-
-    function updateTopScrollbar() {
-        if (!topScroll || !bottomScroll || !topSpacer || !carsTable) return;
-        topSpacer.style.width = carsTable.scrollWidth + 'px';
-        topScroll.scrollLeft = bottomScroll.scrollLeft;
-    }
-
-    if (topScroll && bottomScroll && carsTable) {
-        topScroll.addEventListener('scroll', () => {
-            if (Math.abs(bottomScroll.scrollLeft - topScroll.scrollLeft) > 1) {
-                bottomScroll.scrollLeft = topScroll.scrollLeft;
-            }
-        });
-
-        bottomScroll.addEventListener('scroll', () => {
-            if (Math.abs(topScroll.scrollLeft - bottomScroll.scrollLeft) > 1) {
-                topScroll.scrollLeft = bottomScroll.scrollLeft;
-            }
-        });
-
-        updateTopScrollbar();
-        window.addEventListener('resize', updateTopScrollbar);
-
-        if (window.ResizeObserver) {
-            new ResizeObserver(updateTopScrollbar).observe(carsTable);
-        }
-    }
-
-    // ثبت خودرو جدید به شکل AJAX و رفرش نرم صفحه
-    const addCarForm = document.getElementById("addCarForm");
-    if (addCarForm) {
-        addCarForm.addEventListener("submit", async function(e) {
-            e.preventDefault();
-            const btn = document.getElementById("carSubmitBtn");
-            btn.disabled = true;
-            btn.innerText = "در حال ذخیره...";
+        $(document).ready(function() {
             try {
-                const res = await fetch("/cars/add", {
+                if (typeof $.fn.pDatepicker === 'function') {
+                    if ($("#warrantyStartInput").length) {
+                        $("#warrantyStartInput").pDatepicker({
+                            format: 'YYYY/MM/DD',
+                            autoClose: true,
+                            initialValue: false,
+                            toolbox: { calendarSwitch: { enabled: false } }
+                        });
+                    }
+                    if ($("#dueDateInput").length) {
+                        $("#dueDateInput").pDatepicker({
+                            format: 'YYYY/MM/DD',
+                            autoClose: true,
+                            initialValue: false,
+                            toolbox: { calendarSwitch: { enabled: false } }
+                        });
+                    }
+                }
+            } catch (err) {
+                console.warn("خطا در راه‌اندازی تقویم شمسی:", err);
+            }
+        });
+
+        // باز و بسته کردن سطر اطلاعات تکمیلی خودرو (OTHER_CAR_COLS)
+        function toggleDetails(index, button) {
+            const row = document.getElementById('details-' + index);
+            if (!row) return;
+
+            row.hidden = !row.hidden;
+            button.setAttribute('aria-expanded', String(!row.hidden));
+            button.textContent = row.hidden ? '◀' : '▼';
+
+            if (typeof updateTopScrollbar === "function") {
+                requestAnimationFrame(updateTopScrollbar);
+            }
+        }
+
+        const topScroll = document.getElementById('tableTopScroll');
+        const bottomScroll = document.getElementById('tableBottomScroll');
+        const topSpacer = document.getElementById('tableTopSpacer');
+        const carsTable = document.getElementById('carsTable');
+
+        function updateTopScrollbar() {
+            if (!topScroll || !bottomScroll || !topSpacer || !carsTable) return;
+            topSpacer.style.width = carsTable.scrollWidth + 'px';
+            topScroll.scrollLeft = bottomScroll.scrollLeft;
+        }
+
+        if (topScroll && bottomScroll && carsTable) {
+            topScroll.addEventListener('scroll', () => {
+                if (Math.abs(bottomScroll.scrollLeft - topScroll.scrollLeft) > 1) {
+                    bottomScroll.scrollLeft = topScroll.scrollLeft;
+                }
+            });
+
+            bottomScroll.addEventListener('scroll', () => {
+                if (Math.abs(topScroll.scrollLeft - bottomScroll.scrollLeft) > 1) {
+                    topScroll.scrollLeft = bottomScroll.scrollLeft;
+                }
+            });
+
+            updateTopScrollbar();
+            window.addEventListener('resize', updateTopScrollbar);
+
+            if (window.ResizeObserver) {
+                new ResizeObserver(updateTopScrollbar).observe(carsTable);
+            }
+        }
+
+        // ثبت خودرو جدید به شکل AJAX و رفرش نرم صفحه
+        const addCarForm = document.getElementById("addCarForm");
+        if (addCarForm) {
+            addCarForm.addEventListener("submit", async function(e) {
+                e.preventDefault();
+                const btn = document.getElementById("carSubmitBtn");
+                btn.disabled = true;
+                btn.innerText = "در حال ذخیره...";
+                try {
+                    const res = await fetch("/cars/add", {
+                        method: "POST",
+                        body: new FormData(this)
+                    });
+                    // ۱. بررسی انقضای سشن یا دسترسی غیرمجاز (401 / 403)
+                    if (res.status === 401 || res.status === 403) {
+                        alert("نشست کاربری شما منقضی شده است. در حال انتقال به صفحه ورود...");
+                        window.location.href = "https://iranianmoqim.ir";
+                        return;
+                    }
+                    const data = await res.json();
+                    // ۲. بررسی پیام منقضی شدن در متن پاسخ (در صورتی که وضعیت 200 بود ولی پیام منقضی داده شد)
+                    if (data.message && data.message.includes("منقضی")) {
+                        alert(data.message);
+                        window.location.href = "https://iranianmoqim.ir";
+                        return;
+                    }
+                    // ۳. بررسی موفقیت ثبت خودرو
+                    if (res.ok && data.success) {
+                        alert(data.message || "خودرو با موفقیت ثبت شد.");
+                        closeModal("addCarModal");
+                        this.reset();
+                        location.reload(); // بازنشانی جدول و ماندن در همین صفحه بدون رفتن به صفحه دیگر
+                    } else {
+                        alert("خطا: " + (data.message || "خطا در ثبت خودرو"));
+                    }
+                } catch (err) {
+                    console.error("Submission error:", err);
+                    alert("خطا در ارتباط با سرور. لطفاً اتصال اینترنت را بررسی کنید.");
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = "ثبت خودرو";
+                    }
+                }
+            });
+        }
+
+        // ثبت کاربر جدید توسط مدیر
+        document.getElementById("addUserForm").addEventListener("submit", async function(e) {
+            e.preventDefault();
+            const btn = document.getElementById("userSubmitBtn");
+            btn.disabled = true;
+            btn.innerText = "در حال ثبت...";
+            try {
+                const res = await fetch("/users/add", {
                     method: "POST",
                     body: new FormData(this)
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
                     alert(data.message);
-                    closeModal("addCarModal");
+                    closeModal("addUserModal");
                     this.reset();
                 } else {
-                    alert("خطا: " + (data.message || "خطا در ثبت خودرو"));
+                    alert("خطا: " + (data.message || "خطا در ثبت کاربر"));
                 }
-            } catch (err) {
-                // alert("خطای ارتباط با سرور");
-                error: function(xhr) {
-                    if (xhr.status === 401 || xhr.status === 403) {
-                        window.location.href = "https://iranianmoqim.ir";
-                    }
-                }
+            } catch (e) {
+                alert("خطای ارتباط با سرور");
             } finally {
                 btn.disabled = false;
-                btn.innerText = "ثبت خودرو";
+                btn.innerText = "ثبت کاربر";
             }
         });
-    }
 
-    // ثبت کاربر جدید توسط مدیر
-    document.getElementById("addUserForm").addEventListener("submit", async function(e) {
-        e.preventDefault();
-        const btn = document.getElementById("userSubmitBtn");
-        btn.disabled = true;
-        btn.innerText = "در حال ثبت...";
-        try {
-            const res = await fetch("/users/add", {
-                method: "POST",
-                body: new FormData(this)
-            });
-            const data = await res.json();
-            if (res.ok && data.success) {
-                alert(data.message);
-                closeModal("addUserModal");
-                this.reset();
-            } else {
-                alert("خطا: " + (data.message || "خطا در ثبت کاربر"));
-            }
-        } catch (e) {
-            alert("خطای ارتباط با سرور");
-        } finally {
-            btn.disabled = false;
-            btn.innerText = "ثبت کاربر";
-        }
-    });
+        document.addEventListener("DOMContentLoaded", function () {
+            const table = document.getElementById("carsTable");
+            if (!table) return;
 
-    document.addEventListener("DOMContentLoaded", function () {
-    const table = document.getElementById("carsTable");
-    if (!table) return;
+            const tbody = table.tBodies[0];
+            const headers = table.querySelectorAll("thead th.sortable");
+            if (!headers.length) return;
 
-    const tbody = table.tBodies[0];
-    const headers = table.querySelectorAll("thead th.sortable");
-    if (!headers.length) return;
+            let currentSortedTh = null;
+            let isAscending = true;
 
-    let currentSortedTh = null;
-    let isAscending = true;
+            // تبدیل اعداد فارسی و عربی به انگلیسی برای مرتب‌سازی ریاضی صحیح
+            function normalizeValue(val) {
+                if (!val) return "";
+                let clean = val.trim()
+                    .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+                    .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+                    .replace(/,/g, "")
+                    .replace(/[\u200B-\u200D\uFEFF]/g, ""); // حذف فاصله‌های مجازی
 
-    // تبدیل اعداد فارسی و عربی به انگلیسی برای مرتب‌سازی ریاضی صحیح
-    function normalizeValue(val) {
-        if (!val) return "";
-        let clean = val.trim()
-            .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-            .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-            .replace(/,/g, "")
-            .replace(/[\u200B-\u200D\uFEFF]/g, ""); // حذف فاصله‌های مجازی
-
-        // بررسی اینکه آیا مقدار کاملاً عددی است
-        const num = parseFloat(clean);
-        return (!isNaN(num) && clean === String(num)) ? num : val.trim();
-    }
-
-    headers.forEach(th => {
-        th.style.cursor = "pointer";
-        th.addEventListener("click", function () {
-            // استفاده مستقیم از cellIndex واقعی برای جلوگیری از شیفت ستون‌ها
-            const colName = this.getAttribute("data-col");
-            if (!colName) return;
-
-            // پیدا کردن سلول دقیق داخل هر سطر که attribute یا ایندکس معادل آن ستون را دارد
-            // از آنجا که ستون اول 'سایر' است، ستون‌ها را بر اساس data-col یا تطابق ایندکس پیدا می‌کنیم:
-            const headerList = Array.from(table.querySelectorAll("thead th"));
-            const colIndex = headerList.indexOf(this);
-            
-
-            if (currentSortedTh === this) {
-                isAscending = !isAscending;
-            } else {
-                isAscending = true;
-                if (currentSortedTh) {
-                    currentSortedTh.classList.remove("asc", "desc");
-                }
-                currentSortedTh = this;
+                // بررسی اینکه آیا مقدار کاملاً عددی است
+                const num = parseFloat(clean);
+                return (!isNaN(num) && clean === String(num)) ? num : val.trim();
             }
 
-            // به‌روزرسانی جهت فلش‌ها در هدر جدول
-            this.classList.toggle("asc", isAscending);
-            this.classList.toggle("desc", !isAscending);
+            headers.forEach(th => {
+                th.style.cursor = "pointer";
+                th.addEventListener("click", function () {
+                    // استفاده مستقیم از cellIndex واقعی برای جلوگیری از شیفت ستون‌ها
+                    const colName = this.getAttribute("data-col");
+                    if (!colName) return;
 
-            requestAnimationFrame(() => {
-                // استخراج ردیف‌های اصلی و ردیف‌های جزئیات بازشونده (details-row) متناظر
-                const mainRows = Array.from(tbody.querySelectorAll("tr.car-row"));
-                const rowPairs = mainRows.map(row => {
-                    const next = row.nextElementSibling;
-                    const detailsRow = (next && next.classList.contains("details-row")) ? next : null;
-                    return { main: row, details: detailsRow };
-                });
+                    // پیدا کردن سلول دقیق داخل هر سطر که attribute یا ایندکس معادل آن ستون را دارد
+                    // از آنجا که ستون اول 'سایر' است، ستون‌ها را بر اساس data-col یا تطابق ایندکس پیدا می‌کنیم:
+                    const headerList = Array.from(table.querySelectorAll("thead th"));
+                    const colIndex = headerList.indexOf(this);
 
-                rowPairs.sort((a, b) => {
-                    const cellA = a.main.cells[colIndex];
-                    const cellB = b.main.cells[colIndex];
 
-                    const valA = cellA ? normalizeValue(cellA.innerText) : "";
-                    const valB = cellB ? normalizeValue(cellB.innerText) : "";
-
-                    // در نظر گرفتن اولویت برای مقادیر خالی یا خط تیره (-)
-                    if (valA === "" || valA === "-") return 1;
-                    if (valB === "" || valB === "-") return -1;
-
-                    let comparison = 0;
-                    if (typeof valA === "number" && typeof valB === "number") {
-                        comparison = valA - valB;
+                    if (currentSortedTh === this) {
+                        isAscending = !isAscending;
                     } else {
-                        comparison = String(valA).localeCompare(String(valB), "fa", { numeric: true, sensitivity: "base" });
+                        isAscending = true;
+                        if (currentSortedTh) {
+                            currentSortedTh.classList.remove("asc", "desc");
+                        }
+                        currentSortedTh = this;
                     }
 
-                    return isAscending ? comparison : -comparison;
-                });
+                    // به‌روزرسانی جهت فلش‌ها در هدر جدول
+                    this.classList.toggle("asc", isAscending);
+                    this.classList.toggle("desc", !isAscending);
 
-                // رندر مجدد ردیف‌ها بدون چشمک زدن و به‌هم‌خوردن پیوستگی
-                const fragment = document.createDocumentFragment();
-                rowPairs.forEach(pair => {
-                    fragment.appendChild(pair.main);
-                    if (pair.details) {
-                        fragment.appendChild(pair.details);
-                    }
-                });
+                    requestAnimationFrame(() => {
+                        // استخراج ردیف‌های اصلی و ردیف‌های جزئیات بازشونده (details-row) متناظر
+                        const mainRows = Array.from(tbody.querySelectorAll("tr.car-row"));
+                        const rowPairs = mainRows.map(row => {
+                            const next = row.nextElementSibling;
+                            const detailsRow = (next && next.classList.contains("details-row")) ? next : null;
+                            return { main: row, details: detailsRow };
+                        });
 
-                tbody.appendChild(fragment);
+                        rowPairs.sort((a, b) => {
+                            const cellA = a.main.cells[colIndex];
+                            const cellB = b.main.cells[colIndex];
+
+                            const valA = cellA ? normalizeValue(cellA.innerText) : "";
+                            const valB = cellB ? normalizeValue(cellB.innerText) : "";
+
+                            // در نظر گرفتن اولویت برای مقادیر خالی یا خط تیره (-)
+                            if (valA === "" || valA === "-") return 1;
+                            if (valB === "" || valB === "-") return -1;
+
+                            let comparison = 0;
+                            if (typeof valA === "number" && typeof valB === "number") {
+                                comparison = valA - valB;
+                            } else {
+                                comparison = String(valA).localeCompare(String(valB), "fa", { numeric: true, sensitivity: "base" });
+                            }
+
+                            return isAscending ? comparison : -comparison;
+                        });
+
+                        // رندر مجدد ردیف‌ها بدون چشمک زدن و به‌هم‌خوردن پیوستگی
+                        const fragment = document.createDocumentFragment();
+                        rowPairs.forEach(pair => {
+                            fragment.appendChild(pair.main);
+                            if (pair.details) {
+                                fragment.appendChild(pair.details);
+                            }
+                        });
+
+                        tbody.appendChild(fragment);
+                    });
+                });
             });
         });
-    });
-});
 
-    
+        let currentHistCarCode = null;
+        let currentHistOffset = 0;
+        let isHistLoading = false;
 
+        // کلیک روی دکمه تاریخچه
+        $(document).on("click", ".history-btn", function() {
+            const carCode = $(this).data("car-code");
+            if (!carCode) return;
 
+            currentHistCarCode = String(carCode).trim();
+            currentHistOffset = 0;
 
+            $("#histTitle").text("تاریخچه تغییرات خودرو کد " + currentHistCarCode);
+            $("#histTimeline").empty();
+            $("#histEmpty").hide();
+            $("#histLoadMoreBtn").hide();
+            $("#historyModal").css("display", "flex"); // این دستور، CSS را مجبور به نمایش می‌کند
 
-let currentHistCarCode = null;
-let currentHistOffset = 0;
-let isHistLoading = false;
-
-// کلیک روی دکمه تاریخچه
-$(document).on("click", ".history-btn", function() {
-    const carCode = $(this).data("car-code");
-    if (!carCode) return;
-
-    currentHistCarCode = String(carCode).trim();
-    currentHistOffset = 0;
-    
-    $("#histTitle").text("تاریخچه تغییرات خودرو کد " + currentHistCarCode);
-    $("#histTimeline").empty();
-    $("#histEmpty").hide();
-    $("#histLoadMoreBtn").hide();
-    $("#historyModal").css("display", "flex"); // این دستور، CSS را مجبور به نمایش می‌کند
-    
-    fetchCarHistory();
-});
+            fetchCarHistory();
+        });
 
 
-// بستن پنجره با دکمه Esc کیبورد
-$(document).on("keydown", function(e) {
-    if (e.key === "Escape" && !$("#historyModal").is("[hidden]")) {
-        closeHistoryModal();
-    }
-});
+        // بستن پنجره با دکمه Esc کیبورد
+        $(document).on("keydown", function(e) {
+            if (e.key === "Escape" && !$("#historyModal").is("[hidden]")) {
+                closeHistoryModal();
+            }
+        });
 
-// ارسال درخواست دریافت تاریخچه به سرور
-function fetchCarHistory() {
-    if (!currentHistCarCode || isHistLoading) return;
+        // ارسال درخواست دریافت تاریخچه به سرور
+        function fetchCarHistory() {
+            if (!currentHistCarCode || isHistLoading) return;
 
-    isHistLoading = true;
-    $("#histLoading").show();
-    $("#histLoadMoreBtn").prop("disabled", true);
+            isHistLoading = true;
+            $("#histLoading").show();
+            $("#histLoadMoreBtn").prop("disabled", true);
 
-    $.ajax({
-        url: `/api/cars/${encodeURIComponent(currentHistCarCode)}/history?offset=${currentHistOffset}`,
-        method: "GET",
-        success: function(res) {
-            $("#histLoading").hide();
-            isHistLoading = false;
-            $("#histLoadMoreBtn").prop("disabled", false);
+            $.ajax({
+                url: `/api/cars/${encodeURIComponent(currentHistCarCode)}/history?offset=${currentHistOffset}`,
+                method: "GET",
+                success: function(res) {
+                    $("#histLoading").hide();
+                    isHistLoading = false;
+                    $("#histLoadMoreBtn").prop("disabled", false);
 
-            if (!res.items || res.items.length === 0) {
-                if (currentHistOffset === 0) {
-                    $("#histEmpty").show();
+                    if (!res.items || res.items.length === 0) {
+                        if (currentHistOffset === 0) {
+                            $("#histEmpty").show();
+                        }
+                        $("#histLoadMoreBtn").hide();
+                        return;
+                    }
+
+                    res.items.forEach(function(item) {
+                        const card = `
+                            <div class="hist-card">
+                                <div class="hist-card-meta">
+                                    <span><strong>تغییردهنده:</strong> ${item.changed_by || '—'}</span>
+                                    <span><strong>زمان:</strong> ${item.changed_at || '—'}</span>
+                                </div>
+                                <div class="hist-card-changes">
+                                    <div class="hist-from">
+                                        <div><strong>از وضعیت:</strong> ${item.from_status || '—'}</div>
+                                        <div><strong>از مکان:</strong> ${item.from_place || '—'}</div>
+                                    </div>
+                                    <div class="hist-to">
+                                        <div><strong>به وضعیت:</strong> ${item.to_status || '—'}</div>
+                                        <div><strong>به مکان:</strong> ${item.to_place || '—'}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        $("#histTimeline").append(card);
+                    });
+
+                    currentHistOffset = res.next_offset;
+
+                    // نمایش یا پنهان‌سازی دکمه بارگذاری بیشتر
+                    if (res.has_more) {
+                        $("#histLoadMoreBtn").show();
+                    } else {
+                        $("#histLoadMoreBtn").hide();
+                    }
+                },
+                error: function(xhr) {
+                    $("#histLoading").hide();
+                    isHistLoading = false;
+                    $("#histLoadMoreBtn").prop("disabled", false);
+                    if (xhr.status === 401) {
+                        alert("نشست کاربری شما منقضی شده است. لطفاً مجدداً وارد شوید.");
+                        window.location.href = "/login";
+                    } else if (xhr.status === 403) {
+                        alert("حساب بله شما تأیید نشده است.");
+                        window.location.href = "/activate-bale";
+                    } else {
+                        alert("خطا در بارگذاری تاریخچه: " + (xhr.responseJSON?.detail || "خطای ناشناخته"));
+                    }
                 }
-                $("#histLoadMoreBtn").hide();
-                return;
-            }
-
-            res.items.forEach(function(item) {
-                const card = `
-                    <div class="hist-card">
-                        <div class="hist-card-meta">
-                            <span><strong>تغییردهنده:</strong> ${item.changed_by || '—'}</span>
-                            <span><strong>زمان:</strong> ${item.changed_at || '—'}</span>
-                        </div>
-                        <div class="hist-card-changes">
-                            <div class="hist-from">
-                                <div><strong>از وضعیت:</strong> ${item.from_status || '—'}</div>
-                                <div><strong>از مکان:</strong> ${item.from_place || '—'}</div>
-                            </div>
-                            <div class="hist-to">
-                                <div><strong>به وضعیت:</strong> ${item.to_status || '—'}</div>
-                                <div><strong>به مکان:</strong> ${item.to_place || '—'}</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                $("#histTimeline").append(card);
             });
-
-            currentHistOffset = res.next_offset;
-
-            // نمایش یا پنهان‌سازی دکمه بارگذاری بیشتر
-            if (res.has_more) {
-                $("#histLoadMoreBtn").show();
-            } else {
-                $("#histLoadMoreBtn").hide();
-            }
-        },
-        error: function(xhr) {
-            $("#histLoading").hide();
-            isHistLoading = false;
-            $("#histLoadMoreBtn").prop("disabled", false);
-            if (xhr.status === 401) {
-                alert("نشست کاربری شما منقضی شده است. لطفاً مجدداً وارد شوید.");
-                window.location.href = "/login";
-            } else if (xhr.status === 403) {
-                alert("حساب بله شما تأیید نشده است.");
-                window.location.href = "/activate-bale";
-            } else {
-                alert("خطا در بارگذاری تاریخچه: " + (xhr.responseJSON?.detail || "خطای ناشناخته"));
-            }
         }
-    });
-}
 
-// دکمه بارگذاری بیشتر
-$("#histLoadMoreBtn").on("click", function() {
-    fetchCarHistory();
-});
-function openUsersModal() {
-    const modal = document.getElementById("usersModal");
-    const loading = document.getElementById("usersLoading");
-    const wrapper = document.getElementById("usersTableWrapper");
-    const tbody = document.getElementById("usersTableBody");
-
-    modal.style.display = "flex";
-    loading.style.display = "block";
-    wrapper.style.display = "none";
-    tbody.innerHTML = "";
-
-    fetch("/api/users/list")
-        .then(res => {
-            if (!res.ok) throw new Error("دسترسی غیرمجاز یا خطای سرور");
-            return res.json();
-        })
-        .then(data => {
-            loading.style.display = "none";
-            wrapper.style.display = "block";
-
-            if (!data.users || data.users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8">هیچ کاربری یافت نشد.</td></tr>';
-                return;
-            }
-
-            data.users.forEach(u => {
-                const isBaleActive = String(u.user_has_bale || "").toLowerCase() === "true";
-                const baleBadge = isBaleActive 
-                    ? '<span class="badge-bale-on">فعال</span>' 
-                    : '<span class="badge-bale-off">غیرفعال</span>';
-                
-                const fullName = `${u.name || ""} ${u.lastname || ""}`.trim() || "—";
-
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td style="font-weight: bold; color: #4b5563;">${u.user_code || "—"}</td>
-                    <td><strong>${u.username || "—"}</strong></td>
-                    <td style="font-family: monospace; color: #6b7280; direction: ltr;">${u.password || "—"}</td>
-                    <td>${fullName}</td>
-                    <td><span class="badge bg-secondary">${u.role || "expert"}</span></td>
-                    <td style="direction: ltr;">${u.phone || "—"}</td>
-                    <td style="direction: ltr; font-family: monospace;">${u.bale_chat_id || "—"}</td>
-                    <td>${baleBadge}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        })
-        .catch(err => {
-            loading.innerHTML = `<span style="color:red;">خطا در دریافت لیست کاربران: ${err.message}</span>`;
+        // دکمه بارگذاری بیشتر
+        $("#histLoadMoreBtn").on("click", function() {
+            fetchCarHistory();
         });
-}
 
-function closeUsersModal() {
-    document.getElementById("usersModal").style.display = "none";
-}
+        function openUsersModal() {
+            const modal = document.getElementById("usersModal");
+            const loading = document.getElementById("usersLoading");
+            const wrapper = document.getElementById("usersTableWrapper");
+            const tbody = document.getElementById("usersTableBody");
 
-// بستن با کلیک روی پس‌زمینه
-window.addEventListener("click", function(e) {
-    const modal = document.getElementById("usersModal");
-    if (e.target === modal) {
-        closeUsersModal();
-    }
-});
+            modal.style.display = "flex";
+            loading.style.display = "block";
+            wrapper.style.display = "none";
+            tbody.innerHTML = "";
+
+            fetch("/api/users/list")
+                .then(res => {
+                    if (!res.ok) throw new Error("دسترسی غیرمجاز یا خطای سرور");
+                    return res.json();
+                })
+                .then(data => {
+                    loading.style.display = "none";
+                    wrapper.style.display = "block";
+
+                    if (!data.users || data.users.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="8">هیچ کاربری یافت نشد.</td></tr>';
+                        return;
+                    }
+
+                    data.users.forEach(u => {
+                        const isBaleActive = String(u.user_has_bale || "").toLowerCase() === "true";
+                        const baleBadge = isBaleActive
+                            ? '<span class="badge-bale-on">فعال</span>'
+                            : '<span class="badge-bale-off">غیرفعال</span>';
+
+                        const fullName = `${u.name || ""} ${u.lastname || ""}`.trim() || "—";
+
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td style="font-weight: bold; color: #4b5563;">${u.user_code || "—"}</td>
+                            <td><strong>${u.username || "—"}</strong></td>
+                            <td style="font-family: monospace; color: #6b7280; direction: ltr;">${u.password || "—"}</td>
+                            <td>${fullName}</td>
+                            <td><span class="badge bg-secondary">${u.role || "expert"}</span></td>
+                            <td style="direction: ltr;">${u.phone || "—"}</td>
+                            <td style="direction: ltr; font-family: monospace;">${u.bale_chat_id || "—"}</td>
+                            <td>${baleBadge}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => {
+                    loading.innerHTML = `<span style="color:red;">خطا در دریافت لیست کاربران: ${err.message}</span>`;
+                });
+        }
+
+        function closeUsersModal() {
+            document.getElementById("usersModal").style.display = "none";
+        }
+
+        // بستن با کلیک روی پس‌زمینه
+        window.addEventListener("click", function(e) {
+            const modal = document.getElementById("usersModal");
+            if (e.target === modal) {
+                closeUsersModal();
+            }
+        });
 
 
-function closeHistoryModal() {
-    const m = document.getElementById('historyModal');
-    m.style.display = 'none';
-}
-
-
-</script>
-
+        function closeHistoryModal() {
+            const m = document.getElementById('historyModal');
+            m.style.display = 'none';
+        }
+    </script>
 </body>
+
 </html>
