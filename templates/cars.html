@@ -1470,97 +1470,116 @@
             const table = document.getElementById("carsTable");
             if (!table) return;
 
-            const tbody = table.tBodies[0];
+            //     const tbody = table.tBodies[0];
+            //     const headers = table.querySelectorAll("thead th.sortable");
+            //     if (!headers.length) return;
+    
+            //     let currentSortedTh = null;
+            //     let isAscending = true;
+    
+            //     // تبدیل اعداد فارسی و عربی به انگلیسی برای مرتب‌سازی ریاضی صحیح
+            //     function normalizeValue(val) {
+            //         if (!val) return "";
+            //         let clean = val.trim()
+            //         .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
+            //         .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+            //         .replace(/,/g, "")
+            //         .replace(/[\u200B-\u200D\uFEFF]/g, ""); // حذف فاصله‌های مجازی
+
+            //     // بررسی اینکه آیا مقدار کاملاً عددی است
+            //     const num = parseFloat(clean);
+            //     return (!isNaN(num) && clean === String(num)) ? num : val.trim();
+            // }
+
             const headers = table.querySelectorAll("thead th.sortable");
-            if (!headers.length) return;
-
-            let currentSortedTh = null;
-            let isAscending = true;
-
-            // تبدیل اعداد فارسی و عربی به انگلیسی برای مرتب‌سازی ریاضی صحیح
-            function normalizeValue(val) {
-                if (!val) return "";
-                let clean = val.trim()
-                    .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d))
-                    .replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
-                    .replace(/,/g, "")
-                    .replace(/[\u200B-\u200D\uFEFF]/g, ""); // حذف فاصله‌های مجازی
-
-                // بررسی اینکه آیا مقدار کاملاً عددی است
-                const num = parseFloat(clean);
-                return (!isNaN(num) && clean === String(num)) ? num : val.trim();
-            }
-
             headers.forEach(th => {
-                th.style.cursor = "pointer";
                 th.addEventListener("click", function () {
-                    // استفاده مستقیم از cellIndex واقعی برای جلوگیری از شیفت ستون‌ها
-                    const colName = this.getAttribute("data-col");
-                    if (!colName) return;
-
-                    // پیدا کردن سلول دقیق داخل هر سطر که attribute یا ایندکس معادل آن ستون را دارد
-                    // از آنجا که ستون اول 'سایر' است، ستون‌ها را بر اساس data-col یا تطابق ایندکس پیدا می‌کنیم:
-                    const headerList = Array.from(table.querySelectorAll("thead th"));
-                    const colIndex = headerList.indexOf(this);
-
-
-                    if (currentSortedTh === this) {
-                        isAscending = !isAscending;
-                    } else {
-                        isAscending = true;
-                        if (currentSortedTh) {
-                            currentSortedTh.classList.remove("asc", "desc");
-                        }
-                        currentSortedTh = this;
-                    }
-
-                    // به‌روزرسانی جهت فلش‌ها در هدر جدول
-                    this.classList.toggle("asc", isAscending);
-                    this.classList.toggle("desc", !isAscending);
-
-                    requestAnimationFrame(() => {
-                        // استخراج ردیف‌های اصلی و ردیف‌های جزئیات بازشونده (details-row) متناظر
-                        const mainRows = Array.from(tbody.querySelectorAll("tr.car-row"));
-                        const rowPairs = mainRows.map(row => {
-                            const next = row.nextElementSibling;
-                            const detailsRow = (next && next.classList.contains("details-row")) ? next : null;
-                            return { main: row, details: detailsRow };
-                        });
-
-                        rowPairs.sort((a, b) => {
-                            const cellA = a.main.cells[colIndex];
-                            const cellB = b.main.cells[colIndex];
-
-                            const valA = cellA ? normalizeValue(cellA.innerText) : "";
-                            const valB = cellB ? normalizeValue(cellB.innerText) : "";
-
-                            // در نظر گرفتن اولویت برای مقادیر خالی یا خط تیره (-)
-                            if (valA === "" || valA === "-") return 1;
-                            if (valB === "" || valB === "-") return -1;
-
-                            let comparison = 0;
-                            if (typeof valA === "number" && typeof valB === "number") {
-                                comparison = valA - valB;
-                            } else {
-                                comparison = String(valA).localeCompare(String(valB), "fa", { numeric: true, sensitivity: "base" });
-                            }
-
-                            return isAscending ? comparison : -comparison;
-                        });
-
-                        // رندر مجدد ردیف‌ها بدون چشمک زدن و به‌هم‌خوردن پیوستگی
-                        const fragment = document.createDocumentFragment();
-                        rowPairs.forEach(pair => {
-                            fragment.appendChild(pair.main);
-                            if (pair.details) {
-                                fragment.appendChild(pair.details);
-                            }
-                        });
-
-                        tbody.appendChild(fragment);
-                    });
+                    const col = th.getAttribute("data-col");
+                    if (!col) return;
+        
+                    // تعیین جهت مرتب‌سازی بعدی
+                    let currentDir = th.classList.contains("asc") ? "asc" : (th.classList.contains("desc") ? "desc" : "none");
+                    let nextDir = (currentDir === "asc") ? "desc" : "asc";
+        
+                    // خواندن پارامترهای فعلی URL (مثل q, status, place) برای حفظ فیلترها
+                    const urlParams = new URLSearchParams(window.location.search);
+                    urlParams.set("sort_col", col);
+                    urlParams.set("sort_dir", nextDir);
+        
+                    // ارسال درخواست به سرور با حفظ فیلترها و افزودن موقت ستون
+                    window.location.href = "/cars?" + urlParams.toString();
                 });
             });
+            // headers.forEach(th => {                
+            //     th.style.cursor = "pointer";
+            //     th.addEventListener("click", function () {
+            //         // استفاده مستقیم از cellIndex واقعی برای جلوگیری از شیفت ستون‌ها
+            //         const colName = this.getAttribute("data-col");
+            //         if (!colName) return;
+
+            //         // پیدا کردن سلول دقیق داخل هر سطر که attribute یا ایندکس معادل آن ستون را دارد
+            //         // از آنجا که ستون اول 'سایر' است، ستون‌ها را بر اساس data-col یا تطابق ایندکس پیدا می‌کنیم:
+            //         const headerList = Array.from(table.querySelectorAll("thead th"));
+            //         const colIndex = headerList.indexOf(this);
+
+
+            //         if (currentSortedTh === this) {
+            //             isAscending = !isAscending;
+            //         } else {
+            //             isAscending = true;
+            //             if (currentSortedTh) {
+            //                 currentSortedTh.classList.remove("asc", "desc");
+            //             }
+            //             currentSortedTh = this;
+            //         }
+
+            //         // به‌روزرسانی جهت فلش‌ها در هدر جدول
+            //         this.classList.toggle("asc", isAscending);
+            //         this.classList.toggle("desc", !isAscending);
+
+            //         requestAnimationFrame(() => {
+            //             // استخراج ردیف‌های اصلی و ردیف‌های جزئیات بازشونده (details-row) متناظر
+            //             const mainRows = Array.from(tbody.querySelectorAll("tr.car-row"));
+            //             const rowPairs = mainRows.map(row => {
+            //                 const next = row.nextElementSibling;
+            //                 const detailsRow = (next && next.classList.contains("details-row")) ? next : null;
+            //                 return { main: row, details: detailsRow };
+            //             });
+
+            //             rowPairs.sort((a, b) => {
+            //                 const cellA = a.main.cells[colIndex];
+            //                 const cellB = b.main.cells[colIndex];
+
+            //                 const valA = cellA ? normalizeValue(cellA.innerText) : "";
+            //                 const valB = cellB ? normalizeValue(cellB.innerText) : "";
+
+            //                 // در نظر گرفتن اولویت برای مقادیر خالی یا خط تیره (-)
+            //                 if (valA === "" || valA === "-") return 1;
+            //                 if (valB === "" || valB === "-") return -1;
+
+            //                 let comparison = 0;
+            //                 if (typeof valA === "number" && typeof valB === "number") {
+            //                     comparison = valA - valB;
+            //                 } else {
+            //                     comparison = String(valA).localeCompare(String(valB), "fa", { numeric: true, sensitivity: "base" });
+            //                 }
+
+            //                 return isAscending ? comparison : -comparison;
+            //             });
+
+            //             // رندر مجدد ردیف‌ها بدون چشمک زدن و به‌هم‌خوردن پیوستگی
+            //             const fragment = document.createDocumentFragment();
+            //             rowPairs.forEach(pair => {
+            //                 fragment.appendChild(pair.main);
+            //                 if (pair.details) {
+            //                     fragment.appendChild(pair.details);
+            //                 }
+            //             });
+
+            //             tbody.appendChild(fragment);
+            //         });
+            //     });
+            // });
         });
 
         let currentHistCarCode = null;
