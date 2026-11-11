@@ -1310,8 +1310,15 @@ def logout():
     return resp
 
 @app.get("/cars", response_class=HTMLResponse)
-async def cars_page(request: Request, q: str = "", status: str = "", place: str = "",user: dict = Depends(get_current_user)):
-    
+async def cars_page(
+    request: Request, 
+    q: str = "", 
+    status: str = "", 
+    place: str = "", 
+    sort_col: Optional[str] = None,
+    sort_dir: str = "asc",
+    user: dict = Depends(get_current_user)
+):
     if not user:
         return RedirectResponse(url="/login", status_code=303)
 
@@ -1321,30 +1328,20 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
     cars_df = read_sheet(CARS_SHEET)
     cars_df = check_auto_release_reservations(cars_df)
 
-    # -------------------------------------------------------------
-    # اصلاح دائمی در اکسل: اگر فروخته شده و محل خالی است -> تحویل خریدار
-    # -------------------------------------------------------------
+    # اصلاح دائمی اکسل: اگر فروخته شده و محل خالی است -> تحویل خریدار
     if not cars_df.empty and "status" in cars_df.columns and "place" in cars_df.columns:
-        # پیدا کردن خودروهای فروخته شده‌ای که محل ندارند یا nan هستند
         is_sold = cars_df["status"].astype(str).str.strip() == "فروخته شده"
         is_empty_place = cars_df["place"].astype(str).str.strip().isin(["", "nan", "None"])
-        
         needs_update_mask = is_sold & is_empty_place
-        
-        # اگر موردی نیاز به اصلاح داشت، یک‌بار در اکسل ذخیره می‌کنیم
         if needs_update_mask.any():
             cars_df.loc[needs_update_mask, "place"] = "تحویل خریدار"
-            # استفاده از تابع امن خودتان که شیت‌های users و car_logs را حفظ می‌کند:
             save_cars(cars_df)
             
-    # -------------------------------------------------------------
-    # حالا فیلترهای جستجو را برای نمایش اعمال می‌کنیم:
-    # -------------------------------------------------------------
+    # اعمال فیلترها
     filtered_df = cars_df.copy()
     if not filtered_df.empty:
         if q and q.strip():
             q_clean = q.strip().lower()
-            # در تمام ستون‌ها می‌گردد؛ اگر در هر ستونی پیدا شد، آن ردیف را برمی‌دارد
             mask = filtered_df.astype(str).apply(
                 lambda row: row.str.lower().str.contains(q_clean, na=False).any(), 
                 axis=1
@@ -1357,57 +1354,175 @@ async def cars_page(request: Request, q: str = "", status: str = "", place: str 
         if place:
             filtered_df = filtered_df[filtered_df["place"].astype(str).str.strip() == place.strip()]
 
-    # ۱. تبدیل دیتافریم فیلتر شده به لیست دیکشنری
     cars_list = filtered_df.to_dict(orient="records") if not filtered_df.empty else []
 
-    # ۲. تابع مرتب‌سازی
-    def car_display_sort_key(car):
-        place = str(car.get("place") or "")
-        place = place.replace("ي", "ی").replace("ك", "ک").replace("\u200c", " ")
-        normalized_place = re.sub(r"\s+", "", place)
-    
-        is_not_fallahi = normalized_place != "شورومفلاحی"
-    
-        digits_map = str.maketrans(
-            "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩",
-            "01234567890123456789",
-        )
-        code = str(car.get("car_code", "")).strip().translate(digits_map)
-    
-        # کدهای عددی، از جمله کدهایی که از اکسل به شکل 123.0 خوانده شده‌اند
-        match = re.fullmatch(r"(\d+)(?:\.0+)?", code)
-        if match:
-            code_key = (0, int(match.group(1)), "")
-        elif code.lower() in ("", "nan", "none"):
-            code_key = (2, 0, "")
-        else:
-            code_key = (1, 0, code.casefold())
-    
-        return (is_not_fallahi, *code_key)
+    # تعیین ستون‌های نمایشی پویا (اضافه کردن موقت ستون انتخابی اگر در SHOWN_COLS نباشد)
+    current_shown_cols = list(SHOWN_COLS)
+    if sort_col and sort_col in cars_df.columns and sort_col not in current_shown_cols:
+        # اگر ستون در other_cols یا کلیدهای معتبر بود، موقتاً اضافه شود
+        current_shown_cols.append(sort_col)
 
-    # ۳. مرتب‌سازی لیست خودروها (بدون نیاز به hasattr)
-    cars = sorted(cars_list, key=car_display_sort_key)
+    # مرتب‌سازی سرور-ساید بر اساس درخواست کاربر یا پیش‌فرض
+    if sort_col and sort_col in cars_df.columns:
+        ascending = (sort_dir.lower() == "asc")
+        try:
+            # مرتب‌سازی امن با پشتیبانی از اعداد و متن
+            def dynamic_sort_key(car):
+                val = car.get(sort_col, "")
+                val_str = str(val if val is not None else "").strip()
+                # نرمال‌سازی ارقام برای مرتب‌سازی عددی صحیح
+                digits_map = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+                clean_val = val_str.translate(digits_map)
+                match = re.fullmatch(r"([+-]?\d+)(?:\.\d+)?", clean_val)
+                if match:
+                    return (0, float(match.group(1)), "")
+                elif clean_val.lower() in ("", "nan", "none", "-", "—"):
+                    return (2, 0, "")
+                else:
+                    return (1, 0, clean_val.casefold())
+            
+            cars_list = sorted(cars_list, key=dynamic_sort_key, reverse=not ascending)
+        except Exception:
+            pass
+    else:
+        # ترتیب پیش‌فرض سیستم (شوروم فلاحی ابتدا، سپس کد عددی)
+        def car_display_sort_key(car):
+            place = str(car.get("place") or "")
+            place = place.replace("ي", "ی").replace("ك", "ک").replace("\u200c", " ")
+            normalized_place = re.sub(r"\s+", "", place)
+            is_not_fallahi = normalized_place != "شورومفلاحی"
+            digits_map = str.maketrans("۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩", "01234567890123456789")
+            code = str(car.get("car_code", "")).strip().translate(digits_map)
+            match = re.fullmatch(r"(\d+)(?:\.0+)?", code)
+            if match:
+                code_key = (0, int(match.group(1)), "")
+            elif code.lower() in ("", "nan", "none"):
+                code_key = (2, 0, "")
+            else:
+                code_key = (1, 0, code.casefold())
+            return (is_not_fallahi, *code_key)
 
-    # ۴. ارسال به قالب
+        cars_list = sorted(cars_list, key=car_display_sort_key)
+
     return templates.TemplateResponse(
         request=request,
         name="cars.html",
         context={
             "request": request,
             "user": user,
-            "cars": cars,
+            "cars": cars_list,
             "q": q,
             "status": status,
             "place": place,
-            "shown_cols": SHOWN_COLS,
+            "sort_col": sort_col,
+            "sort_dir": sort_dir,
+            "shown_cols": current_shown_cols, # ارسال لیست پویا
             "other_cols": OTHER_CAR_COLS,
             "column_titles": COLUMN_TITLES_FA,
             "allowed_statuses": ALLOWED_STATUSES,
-            "allowed_roles": ALLOWED_ROLES, 
             "allowed_places": ALLOWED_PLACES,
             "roles_can_manage": ROLES_CAN_MANAGE
         }
     )
+
+# async def cars_page(request: Request, q: str = "", status: str = "", place: str = "",user: dict = Depends(get_current_user)):
+    
+#     if not user:
+#         return RedirectResponse(url="/login", status_code=303)
+
+#     if not user_has_bale(request):
+#         return RedirectResponse(url="/activate-bale", status_code=303)
+       
+#     cars_df = read_sheet(CARS_SHEET)
+#     cars_df = check_auto_release_reservations(cars_df)
+
+#     # -------------------------------------------------------------
+#     # اصلاح دائمی در اکسل: اگر فروخته شده و محل خالی است -> تحویل خریدار
+#     # -------------------------------------------------------------
+#     if not cars_df.empty and "status" in cars_df.columns and "place" in cars_df.columns:
+#         # پیدا کردن خودروهای فروخته شده‌ای که محل ندارند یا nan هستند
+#         is_sold = cars_df["status"].astype(str).str.strip() == "فروخته شده"
+#         is_empty_place = cars_df["place"].astype(str).str.strip().isin(["", "nan", "None"])
+        
+#         needs_update_mask = is_sold & is_empty_place
+        
+#         # اگر موردی نیاز به اصلاح داشت، یک‌بار در اکسل ذخیره می‌کنیم
+#         if needs_update_mask.any():
+#             cars_df.loc[needs_update_mask, "place"] = "تحویل خریدار"
+#             # استفاده از تابع امن خودتان که شیت‌های users و car_logs را حفظ می‌کند:
+#             save_cars(cars_df)
+            
+#     # -------------------------------------------------------------
+#     # حالا فیلترهای جستجو را برای نمایش اعمال می‌کنیم:
+#     # -------------------------------------------------------------
+#     filtered_df = cars_df.copy()
+#     if not filtered_df.empty:
+#         if q and q.strip():
+#             q_clean = q.strip().lower()
+#             # در تمام ستون‌ها می‌گردد؛ اگر در هر ستونی پیدا شد، آن ردیف را برمی‌دارد
+#             mask = filtered_df.astype(str).apply(
+#                 lambda row: row.str.lower().str.contains(q_clean, na=False).any(), 
+#                 axis=1
+#             )
+#             filtered_df = filtered_df[mask]
+
+#         if status:
+#             filtered_df = filtered_df[filtered_df["status"].astype(str).str.strip() == status.strip()]
+
+#         if place:
+#             filtered_df = filtered_df[filtered_df["place"].astype(str).str.strip() == place.strip()]
+
+#     # ۱. تبدیل دیتافریم فیلتر شده به لیست دیکشنری
+#     cars_list = filtered_df.to_dict(orient="records") if not filtered_df.empty else []
+
+#     # ۲. تابع مرتب‌سازی
+#     def car_display_sort_key(car):
+#         place = str(car.get("place") or "")
+#         place = place.replace("ي", "ی").replace("ك", "ک").replace("\u200c", " ")
+#         normalized_place = re.sub(r"\s+", "", place)
+    
+#         is_not_fallahi = normalized_place != "شورومفلاحی"
+    
+#         digits_map = str.maketrans(
+#             "۰۱۲۳۴۵۶۷۸۹٠١٢٣٤٥٦٧٨٩",
+#             "01234567890123456789",
+#         )
+#         code = str(car.get("car_code", "")).strip().translate(digits_map)
+    
+#         # کدهای عددی، از جمله کدهایی که از اکسل به شکل 123.0 خوانده شده‌اند
+#         match = re.fullmatch(r"(\d+)(?:\.0+)?", code)
+#         if match:
+#             code_key = (0, int(match.group(1)), "")
+#         elif code.lower() in ("", "nan", "none"):
+#             code_key = (2, 0, "")
+#         else:
+#             code_key = (1, 0, code.casefold())
+    
+#         return (is_not_fallahi, *code_key)
+
+#     # ۳. مرتب‌سازی لیست خودروها (بدون نیاز به hasattr)
+#     cars = sorted(cars_list, key=car_display_sort_key)
+
+#     # ۴. ارسال به قالب
+#     return templates.TemplateResponse(
+#         request=request,
+#         name="cars.html",
+#         context={
+#             "request": request,
+#             "user": user,
+#             "cars": cars,
+#             "q": q,
+#             "status": status,
+#             "place": place,
+#             "shown_cols": SHOWN_COLS,
+#             "other_cols": OTHER_CAR_COLS,
+#             "column_titles": COLUMN_TITLES_FA,
+#             "allowed_statuses": ALLOWED_STATUSES,
+#             "allowed_roles": ALLOWED_ROLES, 
+#             "allowed_places": ALLOWED_PLACES,
+#             "roles_can_manage": ROLES_CAN_MANAGE
+#         }
+#     )
 
 def get_next_id(sheet_name: str, id_column: str = "id") -> str:
     try:
