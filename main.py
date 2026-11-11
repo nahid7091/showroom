@@ -387,7 +387,7 @@ def normalize_dataframe(df):
     if not isinstance(df, pd.DataFrame):
         return pd.DataFrame()
 
-    df = df.map(normalize_digits_value)
+    df = df.map(normalize_persian_digits)
 
     # Avoid Pandas fillna dtype warning
     df = df.astype(object).where(pd.notna(df), "")
@@ -1500,8 +1500,8 @@ async def add_car(
             "car_code": next_car_code,
             "VIN": clean_vin,
             "title": title.strip(),
-            "model_year": normalize_digits_value(model_year),
-            "production_year": normalize_digits_value(production_year),
+            "model_year": normalize_persian_digits(model_year),
+            "production_year": normalize_persian_digits(production_year),
             "color": color.strip(),
             "owner": owner.strip(),
             "place": final_place,
